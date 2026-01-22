@@ -134,10 +134,9 @@ function RestaurantMarker({
   }
 
   const handleSave = () => {
-    if (tempPosition) {
-      onSaveLocation(restaurant.id, tempPosition[0], tempPosition[1])
-      setTempPosition(null)
-    }
+    const pos = tempPosition || [restaurant.latitude!, restaurant.longitude!]
+    onSaveLocation(restaurant.id, pos[0], pos[1])
+    setTempPosition(null)
   }
 
   const handleCancel = () => {
@@ -172,27 +171,27 @@ function RestaurantMarker({
           {isEditing ? (
             <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginTop: '8px' }}>
               <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
-                Drag the pin to move, then save.
+                {tempPosition ? 'New position set. Save to confirm.' : 'Drag the pin to move it.'}
               </p>
-              {tempPosition && (
-                <p style={{ fontSize: '11px', color: '#999', fontFamily: 'JetBrains Mono', marginBottom: '10px' }}>
-                  {tempPosition[0].toFixed(6)}, {tempPosition[1].toFixed(6)}
-                </p>
-              )}
+              <p style={{ fontSize: '11px', color: '#999', fontFamily: 'JetBrains Mono', marginBottom: '10px' }}>
+                {tempPosition
+                  ? `${tempPosition[0].toFixed(6)}, ${tempPosition[1].toFixed(6)}`
+                  : `${restaurant.latitude!.toFixed(6)}, ${restaurant.longitude!.toFixed(6)}`
+                }
+              </p>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={handleSave}
-                  disabled={!tempPosition}
                   style={{
                     padding: '6px 12px',
                     fontSize: '12px',
-                    background: tempPosition ? '#c45d3e' : '#ccc',
+                    background: '#c45d3e',
                     color: 'white',
                     border: 'none',
-                    cursor: tempPosition ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                   }}
                 >
-                  Save
+                  {tempPosition ? 'Save' : 'Done'}
                 </button>
                 <button
                   onClick={handleCancel}
