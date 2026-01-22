@@ -208,7 +208,7 @@ export function Dashboard(): JSX.Element {
               Click a marker for details, or find a place in the list below
             </p>
           </div>
-          <MapView restaurants={filteredRestaurants} />
+          <MapView restaurants={filteredRestaurants} onLocationUpdated={fetchData} />
         </div>
       </section>
 
