@@ -110,7 +110,9 @@ function RestaurantMarker({
   onStartEdit,
   onCancelEdit,
   onSaveLocation,
-  onClick
+  onClick,
+  saveError,
+  saving
 }: {
   restaurant: RestaurantWithReviews
   isHighlighted: boolean
@@ -119,6 +121,8 @@ function RestaurantMarker({
   onCancelEdit: () => void
   onSaveLocation: (id: string, lat: number, lng: number) => void
   onClick: (id: string) => void
+  saveError: string | null
+  saving: boolean
 }) {
   const isEditing = editingId === restaurant.id
   const markerRef = useRef<L.Marker>(null)
@@ -179,28 +183,35 @@ function RestaurantMarker({
                   : `${restaurant.latitude!.toFixed(6)}, ${restaurant.longitude!.toFixed(6)}`
                 }
               </p>
+              {saveError && (
+                <p style={{ fontSize: '12px', color: '#a64d4d', marginBottom: '10px' }}>
+                  {saveError}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={handleSave}
+                  disabled={saving}
                   style={{
                     padding: '6px 12px',
                     fontSize: '12px',
-                    background: '#c45d3e',
+                    background: saving ? '#ccc' : '#c45d3e',
                     color: 'white',
                     border: 'none',
-                    cursor: 'pointer',
+                    cursor: saving ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {tempPosition ? 'Save' : 'Done'}
+                  {saving ? 'Saving...' : tempPosition ? 'Save' : 'Done'}
                 </button>
                 <button
                   onClick={handleCancel}
+                  disabled={saving}
                   style={{
                     padding: '6px 12px',
                     fontSize: '12px',
                     background: 'none',
                     border: '1px solid #ddd',
-                    cursor: 'pointer',
+                    cursor: saving ? 'not-allowed' : 'pointer',
                   }}
                 >
                   Cancel
@@ -274,29 +285,47 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
   const { highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const validRestaurants = useMemo(() =>
     restaurants.filter(r => r.latitude !== null && r.longitude !== null),
     [restaurants]
   )
 
+  const handleStartEdit = (id: string) => {
+    setEditingId(id)
+    setSaveError(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setSaveError(null)
+  }
+
   const handleSaveLocation = async (id: string, lat: number, lng: number) => {
     setSaving(true)
+    setSaveError(null)
     try {
       const { error } = await supabase
         .from('restaurants')
         .update({ latitude: lat, longitude: lng })
         .eq('id', id)
 
-      if (error) throw error
+      if (error) {
+        if (error.message.includes('JWT') || error.code === 'PGRST301') {
+          throw new Error('Please sign in to edit locations')
+        }
+        throw error
+      }
 
       setEditingId(null)
       if (onLocationUpdated) {
         onLocationUpdated()
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save location'
+      setSaveError(message)
       console.error('Failed to update location:', err)
-      alert('Failed to save location')
     } finally {
       setSaving(false)
     }
@@ -334,10 +363,12 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
             restaurant={restaurant}
             isHighlighted={highlightedRestaurantId === restaurant.id}
             editingId={editingId}
-            onStartEdit={setEditingId}
-            onCancelEdit={() => setEditingId(null)}
+            onStartEdit={handleStartEdit}
+            onCancelEdit={handleCancelEdit}
             onSaveLocation={handleSaveLocation}
             onClick={setHighlightedRestaurantId}
+            saveError={editingId === restaurant.id ? saveError : null}
+            saving={saving}
           />
         ))}
       </MapContainer>
