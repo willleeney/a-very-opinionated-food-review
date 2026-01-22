@@ -1,6 +1,6 @@
-// Runway East London Bridge coordinates
-const OFFICE_LAT = 51.5045
-const OFFICE_LNG = -0.0865
+// Runway East Borough Market - 20 St Thomas St, SE1 9RS
+const OFFICE_LAT = 51.5047
+const OFFICE_LNG = -0.0886
 
 // Haversine formula to calculate distance between two points
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {

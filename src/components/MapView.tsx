@@ -9,9 +9,9 @@ interface MapViewProps {
   restaurants: RestaurantWithReviews[]
 }
 
-// Runway East London Bridge
-const OFFICE_LAT = 51.5045
-const OFFICE_LNG = -0.0865
+// Runway East Borough Market - 20 St Thomas St, SE1 9RS
+const OFFICE_LAT = 51.5047
+const OFFICE_LNG = -0.0886
 
 // Custom marker icons
 const createIcon = (color: string, size: number = 10) => {
