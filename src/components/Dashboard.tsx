@@ -302,7 +302,7 @@ export function Dashboard(): JSX.Element {
 
       {/* Stats - compact inline */}
       <div className="container" style={{ paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', gap: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>
+        <div className="stats-row" style={{ display: 'flex', gap: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>
           <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.total}</strong> places</span>
           <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.reviewed}</strong> reviewed</span>
           <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '—'}</strong> avg rating</span>
@@ -378,12 +378,12 @@ export function Dashboard(): JSX.Element {
           <table>
             <thead>
               <tr>
-                <th style={{ width: '30%' }}>Name</th>
-                <th style={{ width: '15%' }}>Type</th>
-                <th style={{ width: '12%' }}>Distance</th>
-                <th style={{ width: '18%' }}>Rating</th>
-                <th style={{ width: '10%' }}></th>
-                <th style={{ width: '15%' }}></th>
+                <th>Name</th>
+                <th className="hide-mobile">Type</th>
+                <th className="hide-mobile">Distance</th>
+                <th>Rating</th>
+                <th></th>
+                <th className="hide-mobile"></th>
               </tr>
             </thead>
             <tbody>
@@ -400,10 +400,10 @@ export function Dashboard(): JSX.Element {
                     <td>
                       <strong style={{ fontWeight: 500 }}>{restaurant.name}</strong>
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>
+                    <td className="hide-mobile" style={{ color: 'var(--text-secondary)' }}>
                       {restaurant.type}
                     </td>
-                    <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <td className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                       {formatDistance(restaurant.distance)}
                     </td>
                     <td>
@@ -418,7 +418,7 @@ export function Dashboard(): JSX.Element {
                     <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                       {restaurant.reviews.length} review{restaurant.reviews.length !== 1 ? 's' : ''}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td className="hide-mobile" style={{ textAlign: 'right' }}>
                       {restaurant.latitude && restaurant.longitude && (
                         <button
                           onClick={(e) => handleMapClick(e, restaurant)}

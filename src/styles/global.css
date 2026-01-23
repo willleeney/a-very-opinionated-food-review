@@ -414,3 +414,56 @@ nav.scrolled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  /* Hide type and distance columns on mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Tighter table padding */
+  td, th {
+    padding: 12px 8px 12px 0;
+  }
+
+  /* Smaller rating badge */
+  .rating-badge {
+    font-size: 12px;
+  }
+
+  /* Stack stats on mobile */
+  .stats-row {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .stats-row > span {
+    flex: 1 1 45%;
+  }
+
+  /* Smaller histogram on mobile */
+  .histogram-labels {
+    font-size: 10px !important;
+  }
+
+  .histogram-labels span:last-child {
+    font-size: 7px !important;
+  }
+
+  /* Reduce section padding */
+  section {
+    padding: 40px 0;
+  }
+
+  /* Smaller container padding */
+  .container {
+    padding: 0 16px;
+  }
+
+  /* Reduce hero height */
+  .hero {
+    min-height: 40vh;
+    padding-bottom: 40px;
+  }
+}
