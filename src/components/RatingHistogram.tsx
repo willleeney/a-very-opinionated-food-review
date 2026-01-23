@@ -124,11 +124,17 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps): JSX.Elem
             style={{
               flex: 1,
               textAlign: 'center',
-              fontSize: '11px',
-              color: 'var(--text-muted)'
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2px'
             }}
           >
-            {rating}
+            <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500 }}>
+              {rating}
+            </span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+              {ratingLabels[rating]}
+            </span>
           </div>
         ))}
       </div>
