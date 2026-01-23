@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { RestaurantWithReviews } from '../lib/database.types'
-import { distanceFromOffice, formatDistance } from '../lib/distance'
+import { distanceFrom, formatDistance } from '../lib/distance'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
@@ -27,12 +27,16 @@ function getRatingLabel(rating: number): string {
   return labels[Math.round(rating)] || ''
 }
 
+// Default office location (fallback if not set in database)
+const DEFAULT_OFFICE = { lat: 51.5047, lng: -0.0886 }
+
 export function Dashboard(): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
   const [users, setUsers] = useState<ReviewUser[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [officeLocation, setOfficeLocation] = useState(DEFAULT_OFFICE)
 
   const {
     selectedUserId,
@@ -43,12 +47,27 @@ export function Dashboard(): JSX.Element {
   } = useFilterStore()
 
   const fetchData = useCallback(async () => {
+    // Fetch office location from settings
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'office_location')
+      .single()
+
+    const office = settingsData?.value as { lat: number; lng: number } | null
+    if (office) {
+      setOfficeLocation(office)
+    }
+
     const { data: restaurantsData } = await supabase
       .from('restaurants')
       .select('*, reviews(*)')
       .order('name')
 
     if (restaurantsData) {
+      const officeLat = office?.lat ?? DEFAULT_OFFICE.lat
+      const officeLng = office?.lng ?? DEFAULT_OFFICE.lng
+
       const withCalculations = restaurantsData.map((r) => {
         const reviews = r.reviews || []
         const ratings = reviews
@@ -61,7 +80,7 @@ export function Dashboard(): JSX.Element {
         return {
           ...r,
           avgRating,
-          distance: distanceFromOffice(r.latitude, r.longitude),
+          distance: distanceFrom(officeLat, officeLng, r.latitude, r.longitude),
         }
       })
       setRestaurants(withCalculations)

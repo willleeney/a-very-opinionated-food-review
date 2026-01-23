@@ -141,6 +141,8 @@ function OfficeMarker({
     if (markerRef.current) {
       const newPos = markerRef.current.getLatLng()
       setTempPosition([newPos.lat, newPos.lng])
+      // Re-open popup after drag
+      setTimeout(() => markerRef.current?.openPopup(), 10)
     }
   }
 
@@ -272,6 +274,8 @@ function RestaurantMarker({
     if (markerRef.current) {
       const newPos = markerRef.current.getLatLng()
       setTempPosition([newPos.lat, newPos.lng])
+      // Re-open popup after drag
+      setTimeout(() => markerRef.current?.openPopup(), 10)
     }
   }
 

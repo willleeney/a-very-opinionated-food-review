@@ -1,6 +1,6 @@
-// Runway East Borough Market - 20 St Thomas St, SE1 9RS
-const OFFICE_LAT = 51.5047
-const OFFICE_LNG = -0.0886
+// Default office location (used as fallback)
+const DEFAULT_OFFICE_LAT = 51.5047
+const DEFAULT_OFFICE_LNG = -0.0886
 
 // Haversine formula to calculate distance between two points
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -18,10 +18,20 @@ function toRad(deg: number): number {
   return deg * (Math.PI / 180)
 }
 
-// Calculate distance from office in km
-export function distanceFromOffice(lat: number | null, lng: number | null): number | null {
+// Calculate distance from a reference point in km
+export function distanceFrom(
+  refLat: number,
+  refLng: number,
+  lat: number | null,
+  lng: number | null
+): number | null {
   if (lat === null || lng === null) return null
-  return haversineDistance(OFFICE_LAT, OFFICE_LNG, lat, lng)
+  return haversineDistance(refLat, refLng, lat, lng)
+}
+
+// Calculate distance from default office (for backwards compatibility)
+export function distanceFromOffice(lat: number | null, lng: number | null): number | null {
+  return distanceFrom(DEFAULT_OFFICE_LAT, DEFAULT_OFFICE_LNG, lat, lng)
 }
 
 // Convert km to walking time (assume 5 km/h walking speed)
