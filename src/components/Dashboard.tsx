@@ -30,6 +30,89 @@ function getRatingLabel(rating: number): string {
 // Default office location (fallback if not set in database)
 const DEFAULT_OFFICE = { lat: 51.5047, lng: -0.0886 }
 
+// Inline review form component
+function InlineReviewForm({
+  restaurantId,
+  userId,
+  existingReview,
+  onSaved
+}: {
+  restaurantId: string
+  userId: string
+  existingReview?: { id: string; rating: number | null; comment: string | null }
+  onSaved: () => void
+}) {
+  const [rating, setRating] = useState(existingReview?.rating?.toString() || '')
+  const [comment, setComment] = useState(existingReview?.comment || '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!rating) return
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      if (existingReview) {
+        // Update existing review
+        const { error } = await supabase
+          .from('reviews')
+          .update({ rating: parseInt(rating), comment: comment || null })
+          .eq('id', existingReview.id)
+        if (error) throw error
+      } else {
+        // Insert new review
+        const { error } = await supabase
+          .from('reviews')
+          .insert({
+            restaurant_id: restaurantId,
+            user_id: userId,
+            rating: parseInt(rating),
+            comment: comment || null,
+          })
+        if (error) throw error
+      }
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save review')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+      <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {existingReview ? 'Your review' : 'Add review'}
+      </span>
+      <select
+        value={rating}
+        onChange={(e) => setRating(e.target.value)}
+        required
+        style={{ width: '80px' }}
+      >
+        <option value="">—</option>
+        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+          <option key={r} value={r}>{r}/10</option>
+        ))}
+      </select>
+      <input
+        type="text"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Comment (optional)"
+        style={{ flex: 1, maxWidth: '300px' }}
+      />
+      <button type="submit" disabled={saving || !rating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
+        {saving ? '...' : existingReview ? 'Update' : 'Save'}
+      </button>
+      {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
+    </form>
+  )
+}
+
 export function Dashboard(): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
@@ -368,6 +451,14 @@ export function Dashboard(): JSX.Element {
                           </div>
                         ) : (
                           <p style={{ color: 'var(--text-muted)' }}>No reviews yet</p>
+                        )}
+                        {user && (
+                          <InlineReviewForm
+                            restaurantId={restaurant.id}
+                            userId={user.id}
+                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null } | undefined}
+                            onSaved={fetchData}
+                          />
                         )}
                       </td>
                     </tr>
