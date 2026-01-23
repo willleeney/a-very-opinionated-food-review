@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export function Auth(): JSX.Element {
@@ -6,7 +6,16 @@ export function Auth(): JSX.Element {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>('login')
+
+  // Check if user arrived via password reset link
+  useEffect(() => {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMode('reset')
+      }
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,6 +30,14 @@ export function Auth(): JSX.Element {
         setError(error.message)
       } else {
         setError('Check your email for the password reset link!')
+      }
+    } else if (mode === 'reset') {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        setError(error.message)
+      } else {
+        setError('Password updated successfully!')
+        setTimeout(() => { window.location.href = '/' }, 1500)
       }
     } else {
       const { error } = mode === 'login'
@@ -50,37 +67,41 @@ export function Auth(): JSX.Element {
 
         <div style={{ marginBottom: '40px' }}>
           <h1 style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', marginBottom: '16px' }}>
-            {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Join us' : 'Reset password'}
+            {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Join us' : mode === 'reset' ? 'Set new password' : 'Reset password'}
           </h1>
           <p style={{ color: 'var(--text-secondary)' }}>
             {mode === 'login'
               ? 'Sign in to rate your lunch spots'
               : mode === 'signup'
               ? 'Create an account to start reviewing'
+              : mode === 'reset'
+              ? 'Enter your new password below'
               : "Enter your email and we'll send you a reset link"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gap: '24px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="you@company.com"
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {mode !== 'forgot' && (
+            {mode !== 'reset' && (
               <div>
                 <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  Password
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="you@company.com"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
+
+            {(mode !== 'forgot') && (
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  {mode === 'reset' ? 'New Password' : 'Password'}
                 </label>
                 <input
                   type="password"
@@ -97,14 +118,14 @@ export function Auth(): JSX.Element {
             {error && (
               <p style={{
                 fontSize: '14px',
-                color: error.includes('Check') ? 'var(--great)' : 'var(--poor)'
+                color: (error.includes('Check') || error.includes('successfully')) ? 'var(--great)' : 'var(--poor)'
               }}>
                 {error}
               </p>
             )}
 
             <button type="submit" disabled={loading} className="btn btn-accent" style={{ width: '100%' }}>
-              {loading ? 'Loading...' : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}
+              {loading ? 'Loading...' : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : mode === 'reset' ? 'Update Password' : 'Send Reset Link'}
             </button>
 
             {mode === 'login' && (
