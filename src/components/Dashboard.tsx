@@ -168,6 +168,7 @@ export function Dashboard(): JSX.Element {
       })
       setRestaurants(withCalculations)
 
+      // Fetch profiles to get display names
       const userIds = new Set<string>()
       for (const restaurant of withCalculations) {
         for (const review of restaurant.reviews) {
@@ -177,7 +178,16 @@ export function Dashboard(): JSX.Element {
         }
       }
 
-      setUsers(Array.from(userIds).map((id) => ({ id, email: id.slice(0, 8) })))
+      if (userIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', Array.from(userIds))
+
+        if (profiles) {
+          setUsers(profiles.map(p => ({ id: p.id, email: p.display_name || p.id.slice(0, 8) })))
+        }
+      }
     }
 
     setLoading(false)
