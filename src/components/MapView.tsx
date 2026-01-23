@@ -11,9 +11,20 @@ interface MapViewProps {
   onLocationUpdated?: () => void
 }
 
-// Runway East Borough Market - 20 St Thomas St, SE1 9RS
-const OFFICE_LAT = 51.5047
-const OFFICE_LNG = -0.0886
+interface OfficeLocation {
+  lat: number
+  lng: number
+  name: string
+  address: string
+}
+
+// Default office location
+const DEFAULT_OFFICE: OfficeLocation = {
+  lat: 51.5047,
+  lng: -0.0886,
+  name: 'Runway East',
+  address: '20 St Thomas St, SE1 9RS'
+}
 
 // Custom marker icons
 const createIcon = (color: string, size: number = 10, editing: boolean = false) => {
@@ -34,15 +45,16 @@ const createIcon = (color: string, size: number = 10, editing: boolean = false) 
   })
 }
 
-const officeIcon = L.divIcon({
+const createOfficeIcon = (editing: boolean = false) => L.divIcon({
   className: 'custom-marker',
   html: `<div style="
     width: 14px;
     height: 14px;
     background: #c45d3e;
-    border: 2px solid white;
+    border: 2px solid ${editing ? '#1a1a1a' : 'white'};
     border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    box-shadow: 0 2px ${editing ? '8px' : '6px'} rgba(0,0,0,${editing ? '0.4' : '0.25'});
+    ${editing ? 'cursor: grab;' : ''}
   "></div>`,
   iconSize: [18, 18],
   iconAnchor: [9, 9],
@@ -102,7 +114,133 @@ function MapController({ highlightedId, restaurants }: { highlightedId: string |
   return null
 }
 
-// Individual marker component to handle editing state
+// Office marker component
+function OfficeMarker({
+  office,
+  isEditing,
+  onStartEdit,
+  onCancelEdit,
+  onSave,
+  saveError,
+  saving
+}: {
+  office: OfficeLocation
+  isEditing: boolean
+  onStartEdit: () => void
+  onCancelEdit: () => void
+  onSave: (lat: number, lng: number) => void
+  saveError: string | null
+  saving: boolean
+}) {
+  const markerRef = useRef<L.Marker>(null)
+  const [tempPosition, setTempPosition] = useState<[number, number] | null>(null)
+
+  const position: [number, number] = tempPosition || [office.lat, office.lng]
+
+  const handleDragEnd = () => {
+    if (markerRef.current) {
+      const newPos = markerRef.current.getLatLng()
+      setTempPosition([newPos.lat, newPos.lng])
+    }
+  }
+
+  const handleSave = () => {
+    const pos = tempPosition || [office.lat, office.lng]
+    onSave(pos[0], pos[1])
+    setTempPosition(null)
+  }
+
+  const handleCancel = () => {
+    setTempPosition(null)
+    onCancelEdit()
+  }
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={position}
+      icon={createOfficeIcon(isEditing)}
+      draggable={isEditing}
+      eventHandlers={{
+        dragend: handleDragEnd,
+      }}
+    >
+      <Popup>
+        <div style={{ fontFamily: 'Inter, sans-serif', padding: '4px 0', minWidth: '200px' }}>
+          <strong style={{ fontSize: '14px' }}>{office.name}</strong>
+          <p style={{ margin: '4px 0 0', color: '#666', fontSize: '12px' }}>{office.address}</p>
+
+          {isEditing ? (
+            <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginTop: '10px' }}>
+              <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
+                {tempPosition ? 'New position set. Save to confirm.' : 'Drag the pin to move it.'}
+              </p>
+              <p style={{ fontSize: '11px', color: '#999', fontFamily: 'JetBrains Mono', marginBottom: '10px' }}>
+                {tempPosition
+                  ? `${tempPosition[0].toFixed(6)}, ${tempPosition[1].toFixed(6)}`
+                  : `${office.lat.toFixed(6)}, ${office.lng.toFixed(6)}`
+                }
+              </p>
+              {saveError && (
+                <p style={{ fontSize: '12px', color: '#a64d4d', marginBottom: '10px' }}>
+                  {saveError}
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: saving ? '#ccc' : '#c45d3e',
+                    color: 'white',
+                    border: 'none',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {saving ? 'Saving...' : tempPosition ? 'Save' : 'Done'}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={saving}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: 'none',
+                    border: '1px solid #ddd',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={onStartEdit}
+              style={{
+                marginTop: '10px',
+                padding: '6px 10px',
+                fontSize: '11px',
+                background: 'none',
+                border: '1px solid #ddd',
+                cursor: 'pointer',
+                color: '#666',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+            >
+              Edit location
+            </button>
+          )}
+        </div>
+      </Popup>
+    </Marker>
+  )
+}
+
+// Restaurant marker component
 function RestaurantMarker({
   restaurant,
   isHighlighted,
@@ -284,8 +422,26 @@ function RestaurantMarker({
 export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.Element {
   const { highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingOffice, setEditingOffice] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [office, setOffice] = useState<OfficeLocation>(DEFAULT_OFFICE)
+
+  // Fetch office location on mount
+  useEffect(() => {
+    const fetchOffice = async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'office_location')
+        .single()
+
+      if (data && !error) {
+        setOffice(data.value as OfficeLocation)
+      }
+    }
+    fetchOffice()
+  }, [])
 
   const validRestaurants = useMemo(() =>
     restaurants.filter(r => r.latitude !== null && r.longitude !== null),
@@ -294,11 +450,19 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
 
   const handleStartEdit = (id: string) => {
     setEditingId(id)
+    setEditingOffice(false)
+    setSaveError(null)
+  }
+
+  const handleStartEditOffice = () => {
+    setEditingOffice(true)
+    setEditingId(null)
     setSaveError(null)
   }
 
   const handleCancelEdit = () => {
     setEditingId(null)
+    setEditingOffice(false)
     setSaveError(null)
   }
 
@@ -331,10 +495,41 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
     }
   }
 
+  const handleSaveOfficeLocation = async (lat: number, lng: number) => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const newOffice = { ...office, lat, lng }
+      const { error } = await supabase
+        .from('settings')
+        .update({ value: newOffice, updated_at: new Date().toISOString() })
+        .eq('key', 'office_location')
+
+      if (error) {
+        if (error.message.includes('JWT') || error.code === 'PGRST301') {
+          throw new Error('Please sign in to edit locations')
+        }
+        throw error
+      }
+
+      setOffice(newOffice)
+      setEditingOffice(false)
+      if (onLocationUpdated) {
+        onLocationUpdated()
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save location'
+      setSaveError(message)
+      console.error('Failed to update office location:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="map-container">
       <MapContainer
-        center={[OFFICE_LAT, OFFICE_LNG]}
+        center={[office.lat, office.lng]}
         zoom={15}
         scrollWheelZoom={true}
         style={{ height: '100%', width: '100%' }}
@@ -347,14 +542,15 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
         <MapController highlightedId={highlightedRestaurantId} restaurants={restaurants} />
 
         {/* Office marker */}
-        <Marker position={[OFFICE_LAT, OFFICE_LNG]} icon={officeIcon}>
-          <Popup>
-            <div style={{ fontFamily: 'Inter, sans-serif', padding: '4px 0' }}>
-              <strong style={{ fontSize: '14px' }}>Runway East</strong>
-              <p style={{ margin: '4px 0 0', color: '#666', fontSize: '12px' }}>London Bridge — HQ</p>
-            </div>
-          </Popup>
-        </Marker>
+        <OfficeMarker
+          office={office}
+          isEditing={editingOffice}
+          onStartEdit={handleStartEditOffice}
+          onCancelEdit={handleCancelEdit}
+          onSave={handleSaveOfficeLocation}
+          saveError={editingOffice ? saveError : null}
+          saving={saving}
+        />
 
         {/* Restaurant markers */}
         {validRestaurants.map(restaurant => (
