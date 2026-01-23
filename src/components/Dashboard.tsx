@@ -252,7 +252,7 @@ export function Dashboard(): JSX.Element {
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <a href="/" style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Lunch Reviews
+              Lunch 1201
             </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
               {user ? (
@@ -278,15 +278,14 @@ export function Dashboard(): JSX.Element {
       <section className="hero" style={{ paddingTop: '120px' }}>
         <div className="container">
           <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Runway East · London Bridge
+            StackOne · Runway East · London Bridge
           </p>
           <h1>
-            Where we<br />
-            <em>actually</em> eat.
+            settle the<br />
+            lunch debate.
           </h1>
           <p style={{ maxWidth: '400px', color: 'var(--text-secondary)', marginTop: '24px', fontSize: '17px', lineHeight: 1.7 }}>
-            Honest reviews from the team. No sponsored posts,
-            no influencer deals — just opinionated takes on lunch.
+            very opinionated takes on lunch. all takes encouraged but not necessarily welcome.
           </p>
         </div>
       </section>
