@@ -536,6 +536,7 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
         center={[office.lat, office.lng]}
         zoom={15}
         scrollWheelZoom={true}
+        wheelPxPerZoomLevel={150}
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
