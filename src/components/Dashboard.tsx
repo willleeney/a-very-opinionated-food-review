@@ -447,16 +447,22 @@ export function Dashboard(): JSX.Element {
                         )}
                         {restaurant.reviews.length > 0 ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {restaurant.reviews.map((review) => (
-                              <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <span className={`mono ${review.rating && review.rating >= 8 ? 'rating-great' : review.rating && review.rating >= 6 ? 'rating-good' : 'rating-poor'}`} style={{ fontSize: '14px' }}>
-                                  {review.rating}/10
-                                </span>
-                                {review.comment && (
-                                  <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
-                                )}
-                              </div>
-                            ))}
+                            {restaurant.reviews.map((review) => {
+                              const reviewer = users.find(u => u.id === review.user_id)
+                              return (
+                                <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                  <span className={`mono ${review.rating && review.rating >= 8 ? 'rating-great' : review.rating && review.rating >= 6 ? 'rating-good' : 'rating-poor'}`} style={{ fontSize: '14px' }}>
+                                    {review.rating}/10
+                                  </span>
+                                  <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '60px' }}>
+                                    {reviewer?.email || 'Anonymous'}
+                                  </span>
+                                  {review.comment && (
+                                    <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
                           <p style={{ color: 'var(--text-muted)' }}>No reviews yet</p>
