@@ -389,6 +389,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   }
 
   const handleRowClick = (restaurant: RestaurantWithReviews) => {
+    if (!user) return
     setExpandedId(expandedId === restaurant.id ? null : restaurant.id)
   }
 
@@ -581,7 +582,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                     key={restaurant.id}
                     onClick={() => handleRowClick(restaurant)}
                     style={{
-                      cursor: 'pointer',
+                      cursor: user ? 'pointer' : 'default',
                       background: expandedId === restaurant.id ? 'var(--bg-warm)' : undefined
                     }}
                   >
