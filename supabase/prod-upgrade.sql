@@ -103,14 +103,28 @@ CREATE POLICY "Admins can update their organisations" ON organisations FOR UPDAT
 CREATE POLICY "Members can view organisation members" ON organisation_members FOR SELECT TO authenticated
   USING (user_id = auth.uid() OR organisation_id IN (SELECT user_org_ids(auth.uid())));
 
-CREATE POLICY "Admins can add members" ON organisation_members FOR INSERT TO authenticated
+CREATE POLICY "Can add members" ON organisation_members FOR INSERT TO authenticated
   WITH CHECK (
+    -- Admin of the org can add anyone
     EXISTS (
-      SELECT 1 FROM organisation_members
-      WHERE organisation_id = organisation_members.organisation_id AND user_id = auth.uid() AND role = 'admin'
+      SELECT 1 FROM organisation_members AS existing
+      WHERE existing.organisation_id = organisation_id
+      AND existing.user_id = auth.uid()
+      AND existing.role = 'admin'
     )
+    -- First member of a new org
     OR NOT EXISTS (
-      SELECT 1 FROM organisation_members WHERE organisation_id = organisation_members.organisation_id
+      SELECT 1 FROM organisation_members AS existing
+      WHERE existing.organisation_id = organisation_id
+    )
+    -- User accepting their own invite (adding themselves)
+    OR (
+      user_id = auth.uid()
+      AND EXISTS (
+        SELECT 1 FROM organisation_invites
+        WHERE organisation_invites.organisation_id = organisation_id
+        AND organisation_invites.email = (SELECT email FROM profiles WHERE id = auth.uid())
+      )
     )
   );
 
