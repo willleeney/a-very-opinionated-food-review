@@ -11,6 +11,8 @@ interface MapViewProps {
   onLocationUpdated?: () => void
   officeLocation?: { lat: number; lng: number } | null
   showOfficeMarker?: boolean
+  orgName?: string | null
+  isSignedIn?: boolean
 }
 
 interface OfficeLocationDisplay {
@@ -249,7 +251,8 @@ function RestaurantMarker({
   onSaveLocation,
   onClick,
   saveError,
-  saving
+  saving,
+  isSignedIn
 }: {
   restaurant: RestaurantWithReviews
   isHighlighted: boolean
@@ -260,6 +263,7 @@ function RestaurantMarker({
   onClick: (id: string) => void
   saveError: string | null
   saving: boolean
+  isSignedIn: boolean
 }) {
   const isEditing = editingId === restaurant.id
   const markerRef = useRef<L.Marker>(null)
@@ -308,7 +312,7 @@ function RestaurantMarker({
             {restaurant.name}
           </strong>
           <p style={{ margin: '0 0 10px', color: '#666', fontSize: '13px' }}>
-            {restaurant.type} · {formatDistance(restaurant.distance)}
+            {restaurant.type}{restaurant.distance !== null && ` · ${formatDistance(restaurant.distance)}`}
           </p>
 
           {isEditing ? (
@@ -380,17 +384,20 @@ function RestaurantMarker({
                   <p style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                     Reviews ({restaurant.reviews.length})
                   </p>
-                  {restaurant.reviews.slice(0, 3).map(review => (
-                    <div key={review.id} style={{ fontSize: '12px', marginBottom: '4px' }}>
-                      <span style={{
-                        fontFamily: 'JetBrains Mono, monospace',
-                        color: review.rating && review.rating >= 8 ? '#2d7a4f' : review.rating && review.rating >= 6 ? '#b8860b' : '#a64d4d'
-                      }}>
-                        {review.rating}/10
-                      </span>
-                      {review.comment && <span style={{ color: '#666', marginLeft: '8px' }}>{review.comment}</span>}
-                    </div>
-                  ))}
+                  {restaurant.reviews.slice(0, 3).map(review => {
+                    const canSeeComment = isSignedIn && (review as { isOrgMember?: boolean }).isOrgMember
+                    return (
+                      <div key={review.id} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                        <span style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          color: review.rating && review.rating >= 8 ? '#2d7a4f' : review.rating && review.rating >= 6 ? '#b8860b' : '#a64d4d'
+                        }}>
+                          {review.rating}/10
+                        </span>
+                        {canSeeComment && review.comment && <span style={{ color: '#666', marginLeft: '8px' }}>{review.comment}</span>}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
               <button
@@ -420,7 +427,7 @@ function RestaurantMarker({
   )
 }
 
-export function MapView({ restaurants, onLocationUpdated, officeLocation, showOfficeMarker = false }: MapViewProps): JSX.Element {
+export function MapView({ restaurants, onLocationUpdated, officeLocation, showOfficeMarker = false, orgName, isSignedIn = false }: MapViewProps): JSX.Element {
   const { highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingOffice, setEditingOffice] = useState(false)
@@ -429,8 +436,8 @@ export function MapView({ restaurants, onLocationUpdated, officeLocation, showOf
 
   // Build office display object from props
   const office: OfficeLocationDisplay = officeLocation
-    ? { ...officeLocation, name: 'Office', address: '' }
-    : { ...DEFAULT_CENTER, name: 'Office', address: '' }
+    ? { ...officeLocation, name: orgName || 'Office', address: '' }
+    : { ...DEFAULT_CENTER, name: orgName || 'Office', address: '' }
 
   const mapCenter = officeLocation || DEFAULT_CENTER
 
@@ -559,6 +566,7 @@ export function MapView({ restaurants, onLocationUpdated, officeLocation, showOf
             onClick={setHighlightedRestaurantId}
             saveError={editingId === restaurant.id ? saveError : null}
             saving={saving}
+            isSignedIn={isSignedIn}
           />
         ))}
       </MapContainer>

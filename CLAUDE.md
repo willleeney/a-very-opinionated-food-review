@@ -142,6 +142,71 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 - Office default: 51.5047, -0.0886 (Runway East, London Bridge)
 - Display with 6 decimal places when shown
 
+## Review Visibility Logic
+
+Visibility is derived from organisation membership. No explicit visibility table - simpler and automatic.
+
+### Core Rules
+
+```
+IF not signed in:
+  - Ratings: VISIBLE (always public)
+  - Reviewer name: HIDDEN
+  - Comment: HIDDEN
+
+IF signed in:
+  IF viewing org page (/org/[slug]):
+    - Get all members of current org
+    - FOR each review:
+      - IF reviewer is member of current org:
+        - Rating: VISIBLE
+        - Reviewer name: VISIBLE
+        - Comment: VISIBLE
+      - ELSE:
+        - Rating: VISIBLE
+        - Reviewer name: HIDDEN
+        - Comment: HIDDEN
+
+  IF viewing global page (/):
+    - Get all orgs viewer is member of
+    - Get all members of those orgs (union)
+    - FOR each review:
+      - IF reviewer is in that union (shares any org with viewer):
+        - Rating: VISIBLE
+        - Reviewer name: VISIBLE
+        - Comment: VISIBLE
+      - ELSE:
+        - Rating: VISIBLE
+        - Reviewer name: HIDDEN
+        - Comment: HIDDEN
+```
+
+### Map Popup Visibility
+
+Same rules apply to map popups:
+- Ratings always shown
+- Comments only shown if signed in AND reviewer is in visible member set
+
+### When User Joins Org
+
+Reviews automatically become visible - no migration needed:
+- User joins StackOne
+- User's existing reviews now visible to all StackOne members
+- No explicit "share to org" action required
+
+### Stats Display
+
+- "X places" - total restaurant count
+- "X reviews" - total review count (not reviewed places)
+- "X avg rating" - average of all restaurant average ratings
+- "X top rated" - count of restaurants with avgRating >= 8
+
+### Distance Display
+
+- Only shown when viewing org page (has office location)
+- Global view: no distance column, no distance in map popup
+- Format: "X min" (walking time at 5 km/h)
+
 ## Database Notes
 
 ### Tables
@@ -152,14 +217,15 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 - `organisations` - multi-tenant orgs with name, slug, office_location, tagline
 - `organisation_members` - user membership with role (admin/member)
 - `organisation_invites` - pending invites with email, token, expiry
-- `review_visibility` - which orgs can see each review's comments
+- `organisation_requests` - pending join requests from users
 
 ### RLS Policies
-- Anyone can read restaurants and reviews (ratings only)
-- Review comments/reviewer names visible only to org members (via review_visibility)
+- Anyone can read restaurants and reviews (all fields - visibility enforced in app layer)
+- Review comment/reviewer visibility derived from org membership (see Visibility Logic above)
 - Authenticated users can insert restaurants
 - Users can only modify their own reviews
-- Org admins can manage members and invites
+- Org members can view other members of their orgs
+- Org admins can manage members, invites, and requests
 - Settings readable by all, writable by authenticated
 
 ### Recreating the Database Schema
@@ -259,29 +325,37 @@ CREATE POLICY "Admins can delete invites" ON organisation_invites FOR DELETE TO 
   USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin')
     OR email = (SELECT email FROM auth.users WHERE id = auth.uid()));
 
--- 3. Review visibility (which orgs can see review comments)
-CREATE TABLE review_visibility (
+-- 3. Organisation requests (users requesting to join)
+CREATE TABLE organisation_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  review_id UUID NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
   organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(review_id, organisation_id)
+  UNIQUE(organisation_id, user_id)
 );
 
-ALTER TABLE review_visibility ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anyone can view review visibility" ON review_visibility FOR SELECT USING (true);
-CREATE POLICY "Users can insert review visibility for own reviews" ON review_visibility FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM reviews WHERE id = review_id AND user_id = auth.uid()));
-CREATE POLICY "Users can delete review visibility for own reviews" ON review_visibility FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM reviews WHERE id = review_id AND user_id = auth.uid()));
+ALTER TABLE organisation_requests ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own requests" ON organisation_requests FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "Admins can view org requests" ON organisation_requests FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_requests.organisation_id AND user_id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Users can request to join" ON organisation_requests FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid() AND NOT EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_requests.organisation_id AND user_id = auth.uid()));
+CREATE POLICY "Users can cancel own requests" ON organisation_requests FOR DELETE TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "Admins can delete requests" ON organisation_requests FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_requests.organisation_id AND user_id = auth.uid() AND role = 'admin'));
+
+-- NOTE: review_visibility table is DEPRECATED
+-- Visibility is now derived from org membership (see Review Visibility Logic section above)
 
 -- Indexes
 CREATE INDEX idx_organisation_members_org ON organisation_members(organisation_id);
 CREATE INDEX idx_organisation_members_user ON organisation_members(user_id);
 CREATE INDEX idx_organisation_invites_org ON organisation_invites(organisation_id);
 CREATE INDEX idx_organisation_invites_token ON organisation_invites(token);
-CREATE INDEX idx_review_visibility_review ON review_visibility(review_id);
-CREATE INDEX idx_review_visibility_org ON review_visibility(organisation_id);
+CREATE INDEX idx_organisation_requests_org ON organisation_requests(organisation_id);
+CREATE INDEX idx_organisation_requests_user ON organisation_requests(user_id);
 ```
 
 ### Local Development with Supabase

@@ -186,9 +186,13 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const fetchData = useCallback(async () => {
     // Fetch current organisation if slug is provided
     let office: OfficeLocation | null = null
-    let orgMemberIds = new Set<string>()
+    let visibleReviewerIds = new Set<string>()
+
+    // Get current user's session for RLS and visibility
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
 
     if (organisationSlug) {
+      // Org view: show reviews from members of this specific org
       const { data: orgData } = await supabase
         .from('organisations')
         .select('*')
@@ -201,24 +205,43 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         setOfficeLocation(office)
 
         // Fetch members of this org - their reviews will be visible
-        const { data: members, error: membersError } = await supabase
+        const { data: members } = await supabase
           .from('organisation_members')
           .select('user_id')
           .eq('organisation_id', orgData.id)
 
-        console.log('Org members query:', { orgId: orgData.id, members, membersError })
-
         if (members) {
-          orgMemberIds = new Set(members.map(m => m.user_id))
-          console.log('orgMemberIds:', Array.from(orgMemberIds))
+          visibleReviewerIds = new Set(members.map(m => m.user_id))
         }
       }
     } else {
-      // Global view - no office location, no visible comments
+      // Global view - show reviews from all orgs the user is a member of
       setCurrentOrg(null)
       setOfficeLocation(null)
+
+      if (currentUser) {
+        // Get all orgs the user is in
+        const { data: userMemberships } = await supabase
+          .from('organisation_members')
+          .select('organisation_id')
+          .eq('user_id', currentUser.id)
+
+        if (userMemberships && userMemberships.length > 0) {
+          const userOrgIdsList = userMemberships.map(m => m.organisation_id)
+
+          // Get all members of those orgs
+          const { data: allOrgMembers } = await supabase
+            .from('organisation_members')
+            .select('user_id')
+            .in('organisation_id', userOrgIdsList)
+
+          if (allOrgMembers) {
+            visibleReviewerIds = new Set(allOrgMembers.map(m => m.user_id))
+          }
+        }
+      }
     }
-    setCurrentOrgMemberIds(orgMemberIds)
+    setCurrentOrgMemberIds(visibleReviewerIds)
 
     // Fetch all restaurants (global)
     const { data: restaurantsData } = await supabase
@@ -281,7 +304,6 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      console.log('Auth getUser result:', data.user?.email)
       setUser(data.user)
       if (data.user) {
         fetchUserOrgs(data.user.id)
@@ -319,9 +341,10 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   })
 
   const restaurantsWithRatings = restaurants.filter(r => r.avgRating !== null)
+  const totalReviews = restaurants.reduce((sum, r) => sum + r.reviews.length, 0)
   const stats = {
     total: restaurants.length,
-    reviewed: restaurantsWithRatings.length,
+    reviews: totalReviews,
     avgRating: restaurantsWithRatings.length > 0
       ? restaurantsWithRatings.reduce((sum, r) => sum + (r.avgRating || 0), 0) / restaurantsWithRatings.length
       : 0,
@@ -340,11 +363,13 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   }
 
   // Check if a review's comment should be visible
-  // Visibility is derived from org membership - if reviewer is member of current org, their comments are visible
+  // Visibility is derived from org membership:
+  // - Org view: reviewer must be a member of the current org
+  // - Global view: reviewer must be in any org the viewer is also in
   const isCommentVisible = (isOrgMember: boolean): boolean => {
-    // In org view, show comments from org members
-    // The isOrgMember flag is computed during data fetch using the local orgMemberIds
-    return currentOrg !== null && isOrgMember
+    // The isOrgMember flag is computed during data fetch
+    // It's true if the reviewer is in the visible set (current org or any shared org)
+    return isOrgMember
   }
 
   if (loading) {
@@ -421,7 +446,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       <div className="container" style={{ paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid var(--border)' }}>
         <div className="stats-row" style={{ display: 'flex', gap: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>
           <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.total}</strong> places</span>
-          <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.reviewed}</strong> reviewed</span>
+          <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.reviews}</strong> reviews</span>
           <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '—'}</strong> avg rating</span>
           <span><strong style={{ color: 'var(--great)', fontWeight: 500 }}>{stats.topRated}</strong> top rated</span>
         </div>
@@ -441,6 +466,8 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
             onLocationUpdated={fetchData}
             officeLocation={officeLocation}
             showOfficeMarker={!!currentOrg}
+            orgName={currentOrg?.name}
+            isSignedIn={!!user}
           />
         </div>
       </section>

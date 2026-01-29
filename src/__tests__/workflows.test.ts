@@ -371,15 +371,22 @@ describe('Office Location & Distance', () => {
   })
 })
 
+/**
+ * Review Visibility Workflows
+ *
+ * NEW MODEL: Visibility is derived from org membership
+ * - Org view: Show comments from reviewers who are members of the current org
+ * - Global view: Show comments from reviewers who share any org with the viewer
+ * - Not signed in: Only ratings visible, no comments or reviewer names
+ */
 describe('Review Visibility Workflows', () => {
   // Types for review visibility
   type Review = {
     id: string
     restaurant_id: string
-    user_id: string
+    user_id: string  // The reviewer
     rating: number
     comment: string | null
-    visibleToOrgs: string[] // Which orgs can see the comment
   }
 
   type ReviewVisibility = {
@@ -388,100 +395,118 @@ describe('Review Visibility Workflows', () => {
     comment: boolean
   }
 
-  // Mock reviews with different visibility settings
-  const mockReviews: Review[] = [
-    {
-      id: 'review-1',
-      restaurant_id: 'restaurant-1',
-      user_id: 'member-user',
-      rating: 8,
-      comment: 'Great food!',
-      visibleToOrgs: ['stackone-org'], // Only StackOne can see
-    },
-    {
-      id: 'review-2',
-      restaurant_id: 'restaurant-2',
-      user_id: 'other-user',
-      rating: 6,
-      comment: 'Decent place',
-      visibleToOrgs: ['acme-org'], // Only Acme can see
-    },
-    {
-      id: 'review-3',
-      restaurant_id: 'restaurant-3',
-      user_id: 'admin-user',
-      rating: 9,
-      comment: 'Amazing!',
-      visibleToOrgs: ['stackone-org', 'acme-org'], // Both orgs can see
-    },
-    {
-      id: 'review-4',
-      restaurant_id: 'restaurant-4',
-      user_id: 'member-user',
-      rating: 5,
-      comment: 'Private thoughts about this place',
-      visibleToOrgs: [], // No org can see - private review
-    },
-  ]
-
-  // Function to determine what parts of a review are visible to a user
-  function getReviewVisibility(
-    review: Review,
-    userOrgIds: string[]
-  ): ReviewVisibility {
-    // Rating is always visible to everyone
-    const ratingVisible = true
-
-    // Comment and reviewer name are only visible if the review is shared with an org the user belongs to
-    const hasOrgAccess = review.visibleToOrgs.some(orgId => userOrgIds.includes(orgId))
-
-    return {
-      rating: ratingVisible,
-      reviewerName: hasOrgAccess,
-      comment: hasOrgAccess && review.comment !== null,
-    }
-  }
-
-  // Helper to get user's org IDs
+  // Helper to get all org IDs a user belongs to
   function getUserOrgIds(userId: string, memberships: OrgMembership[]): string[] {
     return memberships
       .filter(m => m.user_id === userId)
       .map(m => m.organisation_id)
   }
 
-  describe('Review visibility for StackOne member', () => {
-    const stackOneUserOrgIds = getUserOrgIds('member-user', mockMemberships)
+  // Helper to get all member user IDs for a set of orgs
+  function getOrgMemberIds(orgIds: string[], memberships: OrgMembership[]): string[] {
+    return [...new Set(
+      memberships
+        .filter(m => orgIds.includes(m.organisation_id))
+        .map(m => m.user_id)
+    )]
+  }
 
-    it('can see full details of StackOne-visible review', () => {
-      const review = mockReviews.find(r => r.id === 'review-1')!
-      const visibility = getReviewVisibility(review, stackOneUserOrgIds)
+  // Function to determine what parts of a review are visible
+  // This matches the application logic:
+  // - Org view: visibleMemberIds = members of current org
+  // - Global view: visibleMemberIds = members of any org the viewer is in
+  function getReviewVisibility(
+    review: Review,
+    visibleMemberIds: string[],
+    isSignedIn: boolean
+  ): ReviewVisibility {
+    // Rating is always visible to everyone
+    const ratingVisible = true
+
+    // Comment and reviewer name only visible if:
+    // 1. User is signed in
+    // 2. The reviewer is in the visible members list
+    const canSeeDetails = isSignedIn && visibleMemberIds.includes(review.user_id)
+
+    return {
+      rating: ratingVisible,
+      reviewerName: canSeeDetails,
+      comment: canSeeDetails && review.comment !== null,
+    }
+  }
+
+  // Mock reviews from different users
+  const mockReviews: Review[] = [
+    {
+      id: 'review-1',
+      restaurant_id: 'restaurant-1',
+      user_id: 'member-user',  // StackOne member
+      rating: 8,
+      comment: 'Great food!',
+    },
+    {
+      id: 'review-2',
+      restaurant_id: 'restaurant-2',
+      user_id: 'other-user',  // Acme member
+      rating: 6,
+      comment: 'Decent place',
+    },
+    {
+      id: 'review-3',
+      restaurant_id: 'restaurant-3',
+      user_id: 'admin-user',  // Both StackOne admin
+      rating: 9,
+      comment: 'Amazing!',
+    },
+    {
+      id: 'review-4',
+      restaurant_id: 'restaurant-4',
+      user_id: 'unaffiliated-user',  // No org membership
+      rating: 5,
+      comment: 'Random thoughts',
+    },
+  ]
+
+  // Extended memberships including unaffiliated user (who has no memberships)
+  const extendedMemberships: OrgMembership[] = [
+    ...mockMemberships,
+    // unaffiliated-user has no membership entries
+  ]
+
+  describe('Org view: StackOne page', () => {
+    // When viewing /org/stackone, visible members are StackOne members
+    const stackOneMemberIds = getOrgMemberIds(['stackone-org'], mockMemberships)
+
+    it('shows comments from StackOne members', () => {
+      const review = mockReviews.find(r => r.user_id === 'member-user')!
+      const visibility = getReviewVisibility(review, stackOneMemberIds, true)
 
       expect(visibility.rating).toBe(true)
       expect(visibility.reviewerName).toBe(true)
       expect(visibility.comment).toBe(true)
     })
 
-    it('can only see rating of Acme-visible review', () => {
-      const review = mockReviews.find(r => r.id === 'review-2')!
-      const visibility = getReviewVisibility(review, stackOneUserOrgIds)
+    it('hides comments from Acme-only members', () => {
+      const review = mockReviews.find(r => r.user_id === 'other-user')!
+      const visibility = getReviewVisibility(review, stackOneMemberIds, true)
 
       expect(visibility.rating).toBe(true)
       expect(visibility.reviewerName).toBe(false)
       expect(visibility.comment).toBe(false)
     })
 
-    it('can see full details of multi-org visible review', () => {
-      const review = mockReviews.find(r => r.id === 'review-3')!
-      const visibility = getReviewVisibility(review, stackOneUserOrgIds)
+    it('shows comments from admin (who is StackOne member)', () => {
+      const review = mockReviews.find(r => r.user_id === 'admin-user')!
+      const visibility = getReviewVisibility(review, stackOneMemberIds, true)
 
       expect(visibility.rating).toBe(true)
       expect(visibility.reviewerName).toBe(true)
       expect(visibility.comment).toBe(true)
     })
 
-    it('can only see rating of private review (no orgs selected)', () => {
-      const review = mockReviews.find(r => r.id === 'review-4')!
-      const visibility = getReviewVisibility(review, stackOneUserOrgIds)
+    it('hides comments from unaffiliated users', () => {
+      const review = mockReviews.find(r => r.user_id === 'unaffiliated-user')!
+      const visibility = getReviewVisibility(review, stackOneMemberIds, true)
 
       expect(visibility.rating).toBe(true)
       expect(visibility.reviewerName).toBe(false)
@@ -489,52 +514,85 @@ describe('Review Visibility Workflows', () => {
     })
   })
 
-  describe('Review visibility for Acme member', () => {
-    const acmeUserOrgIds = getUserOrgIds('other-user', mockMemberships)
+  describe('Org view: Acme page', () => {
+    const acmeMemberIds = getOrgMemberIds(['acme-org'], mockMemberships)
 
-    it('can only see rating of StackOne-visible review', () => {
-      const review = mockReviews.find(r => r.id === 'review-1')!
-      const visibility = getReviewVisibility(review, acmeUserOrgIds)
+    it('shows comments from Acme members', () => {
+      const review = mockReviews.find(r => r.user_id === 'other-user')!
+      const visibility = getReviewVisibility(review, acmeMemberIds, true)
+
+      expect(visibility.rating).toBe(true)
+      expect(visibility.reviewerName).toBe(true)
+      expect(visibility.comment).toBe(true)
+    })
+
+    it('hides comments from StackOne-only members', () => {
+      const review = mockReviews.find(r => r.user_id === 'member-user')!
+      const visibility = getReviewVisibility(review, acmeMemberIds, true)
 
       expect(visibility.rating).toBe(true)
       expect(visibility.reviewerName).toBe(false)
       expect(visibility.comment).toBe(false)
-    })
-
-    it('can see full details of Acme-visible review', () => {
-      const review = mockReviews.find(r => r.id === 'review-2')!
-      const visibility = getReviewVisibility(review, acmeUserOrgIds)
-
-      expect(visibility.rating).toBe(true)
-      expect(visibility.reviewerName).toBe(true)
-      expect(visibility.comment).toBe(true)
-    })
-
-    it('can see full details of multi-org visible review', () => {
-      const review = mockReviews.find(r => r.id === 'review-3')!
-      const visibility = getReviewVisibility(review, acmeUserOrgIds)
-
-      expect(visibility.rating).toBe(true)
-      expect(visibility.reviewerName).toBe(true)
-      expect(visibility.comment).toBe(true)
     })
   })
 
-  describe('Review visibility for unaffiliated user', () => {
-    const unaffiliatedUserOrgIds: string[] = []
+  describe('Global view: Signed in StackOne member', () => {
+    // In global view, get members of all orgs the viewer belongs to
+    const viewerOrgIds = getUserOrgIds('member-user', mockMemberships) // ['stackone-org']
+    const visibleMemberIds = getOrgMemberIds(viewerOrgIds, mockMemberships)
 
-    it('can only see rating - no comment or name', () => {
-      const review = mockReviews.find(r => r.id === 'review-1')!
-      const visibility = getReviewVisibility(review, unaffiliatedUserOrgIds)
+    it('shows comments from fellow StackOne members', () => {
+      const review = mockReviews.find(r => r.user_id === 'member-user')!
+      const visibility = getReviewVisibility(review, visibleMemberIds, true)
+
+      expect(visibility.rating).toBe(true)
+      expect(visibility.reviewerName).toBe(true)
+      expect(visibility.comment).toBe(true)
+    })
+
+    it('hides comments from users in other orgs only', () => {
+      const review = mockReviews.find(r => r.user_id === 'other-user')!
+      const visibility = getReviewVisibility(review, visibleMemberIds, true)
 
       expect(visibility.rating).toBe(true)
       expect(visibility.reviewerName).toBe(false)
       expect(visibility.comment).toBe(false)
     })
+  })
 
-    it('cannot see any comments regardless of review', () => {
+  describe('Global view: Multi-org user', () => {
+    // User who is member of both StackOne and Acme
+    const multiOrgMemberships: OrgMembership[] = [
+      ...mockMemberships,
+      { organisation_id: 'acme-org', user_id: 'multi-user', role: 'member' },
+      { organisation_id: 'stackone-org', user_id: 'multi-user', role: 'member' },
+    ]
+    const viewerOrgIds = getUserOrgIds('multi-user', multiOrgMemberships)
+    const visibleMemberIds = getOrgMemberIds(viewerOrgIds, multiOrgMemberships)
+
+    it('can see comments from both StackOne and Acme members', () => {
+      const stackOneReview = mockReviews.find(r => r.user_id === 'member-user')!
+      const acmeReview = mockReviews.find(r => r.user_id === 'other-user')!
+
+      expect(getReviewVisibility(stackOneReview, visibleMemberIds, true).comment).toBe(true)
+      expect(getReviewVisibility(acmeReview, visibleMemberIds, true).comment).toBe(true)
+    })
+
+    it('still cannot see comments from unaffiliated users', () => {
+      const review = mockReviews.find(r => r.user_id === 'unaffiliated-user')!
+      const visibility = getReviewVisibility(review, visibleMemberIds, true)
+
+      expect(visibility.rating).toBe(true)
+      expect(visibility.comment).toBe(false)
+    })
+  })
+
+  describe('Not signed in', () => {
+    it('can only see ratings, no comments or reviewer names', () => {
+      const anyMemberIds = getOrgMemberIds(['stackone-org', 'acme-org'], mockMemberships)
+
       for (const review of mockReviews) {
-        const visibility = getReviewVisibility(review, unaffiliatedUserOrgIds)
+        const visibility = getReviewVisibility(review, anyMemberIds, false)
         expect(visibility.rating).toBe(true)
         expect(visibility.reviewerName).toBe(false)
         expect(visibility.comment).toBe(false)
@@ -542,102 +600,51 @@ describe('Review Visibility Workflows', () => {
     })
   })
 
-  describe('Review visibility for multi-org user', () => {
-    // User who is member of both orgs
-    const multiOrgMemberships: OrgMembership[] = [
-      { organisation_id: 'stackone-org', user_id: 'multi-user', role: 'member' },
-      { organisation_id: 'acme-org', user_id: 'multi-user', role: 'member' },
-    ]
-    const multiOrgUserOrgIds = getUserOrgIds('multi-user', multiOrgMemberships)
+  describe('Map popup visibility', () => {
+    it('hides review comments in map popup when not signed in', () => {
+      const memberIds = getOrgMemberIds(['stackone-org'], mockMemberships)
+      const review = mockReviews.find(r => r.user_id === 'member-user')!
 
-    it('can see all reviews shared with either org', () => {
-      for (const review of mockReviews.filter(r => r.visibleToOrgs.length > 0)) {
-        const visibility = getReviewVisibility(review, multiOrgUserOrgIds)
-        expect(visibility.rating).toBe(true)
-        expect(visibility.reviewerName).toBe(true)
-        expect(visibility.comment).toBe(true)
-      }
+      const visibility = getReviewVisibility(review, memberIds, false)
+      expect(visibility.rating).toBe(true)
+      expect(visibility.comment).toBe(false)
     })
 
-    it('still cannot see private reviews', () => {
-      const privateReview = mockReviews.find(r => r.id === 'review-4')!
-      const visibility = getReviewVisibility(privateReview, multiOrgUserOrgIds)
+    it('shows review comments in map popup when signed in and reviewer is org member', () => {
+      const memberIds = getOrgMemberIds(['stackone-org'], mockMemberships)
+      const review = mockReviews.find(r => r.user_id === 'member-user')!
 
+      const visibility = getReviewVisibility(review, memberIds, true)
       expect(visibility.rating).toBe(true)
-      expect(visibility.reviewerName).toBe(false)
-      expect(visibility.comment).toBe(false)
+      expect(visibility.comment).toBe(true)
     })
   })
 
-  describe('User story: Adding a review with visibility options', () => {
-    it('user can create review visible to their org', () => {
-      const userId = 'member-user'
-      const userOrgIds = getUserOrgIds(userId, mockMemberships)
+  describe('User joins org - reviews become visible', () => {
+    it('reviews become visible to org after user joins', () => {
+      // Before: user is not in any org
+      const beforeMemberships: OrgMembership[] = [...mockMemberships]
+      const visibleBefore = getOrgMemberIds(['stackone-org'], beforeMemberships)
 
-      // User creates review, selects StackOne as visible org
-      const newReview: Review = {
-        id: 'new-review',
+      // New user's review (not yet a member)
+      const newUserReview: Review = {
+        id: 'new-user-review',
         restaurant_id: 'restaurant-5',
-        user_id: userId,
+        user_id: 'new-user',
         rating: 7,
-        comment: 'Nice lunch spot',
-        visibleToOrgs: ['stackone-org'],
+        comment: 'Nice spot!',
       }
 
-      // StackOne member can see it
-      const stackOneVisibility = getReviewVisibility(newReview, userOrgIds)
-      expect(stackOneVisibility.comment).toBe(true)
+      expect(getReviewVisibility(newUserReview, visibleBefore, true).comment).toBe(false)
 
-      // Acme member cannot see comment
-      const acmeUserOrgIds = getUserOrgIds('other-user', mockMemberships)
-      const acmeVisibility = getReviewVisibility(newReview, acmeUserOrgIds)
-      expect(acmeVisibility.rating).toBe(true)
-      expect(acmeVisibility.comment).toBe(false)
-    })
-
-    it('user can create private review (visible to no orgs)', () => {
-      const userId = 'member-user'
-
-      // User creates review with no orgs selected
-      const privateReview: Review = {
-        id: 'private-review',
-        restaurant_id: 'restaurant-5',
-        user_id: userId,
-        rating: 3,
-        comment: 'Terrible experience but dont want to share publicly',
-        visibleToOrgs: [],
-      }
-
-      // Even the user's own org cannot see the comment
-      const stackOneUserOrgIds = getUserOrgIds('member-user', mockMemberships)
-      const visibility = getReviewVisibility(privateReview, stackOneUserOrgIds)
-
-      expect(visibility.rating).toBe(true)
-      expect(visibility.comment).toBe(false)
-    })
-
-    it('multi-org user can share review with multiple orgs', () => {
-      const multiOrgMemberships: OrgMembership[] = [
-        { organisation_id: 'stackone-org', user_id: 'multi-user', role: 'member' },
-        { organisation_id: 'acme-org', user_id: 'multi-user', role: 'member' },
+      // After: user joins StackOne
+      const afterMemberships: OrgMembership[] = [
+        ...mockMemberships,
+        { organisation_id: 'stackone-org', user_id: 'new-user', role: 'member' },
       ]
+      const visibleAfter = getOrgMemberIds(['stackone-org'], afterMemberships)
 
-      // User shares review with both their orgs
-      const sharedReview: Review = {
-        id: 'shared-review',
-        restaurant_id: 'restaurant-5',
-        user_id: 'multi-user',
-        rating: 8,
-        comment: 'Great for team lunches!',
-        visibleToOrgs: ['stackone-org', 'acme-org'],
-      }
-
-      // Both StackOne and Acme members can see it
-      const stackOneUserOrgIds = getUserOrgIds('member-user', mockMemberships)
-      const acmeUserOrgIds = getUserOrgIds('other-user', mockMemberships)
-
-      expect(getReviewVisibility(sharedReview, stackOneUserOrgIds).comment).toBe(true)
-      expect(getReviewVisibility(sharedReview, acmeUserOrgIds).comment).toBe(true)
+      expect(getReviewVisibility(newUserReview, visibleAfter, true).comment).toBe(true)
     })
   })
 })
