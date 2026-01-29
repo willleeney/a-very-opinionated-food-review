@@ -110,6 +110,22 @@ export function AcceptInvite({ token }: AcceptInviteProps): JSX.Element {
       .delete()
       .eq('id', invite.id)
 
+    // Make user's existing reviews visible to this org
+    const { data: userReviews } = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('user_id', user.id)
+
+    if (userReviews && userReviews.length > 0) {
+      const visibilityEntries = userReviews.map(review => ({
+        review_id: review.id,
+        organisation_id: invite.organisation_id,
+      }))
+      await supabase
+        .from('review_visibility')
+        .upsert(visibilityEntries, { onConflict: 'review_id,organisation_id' })
+    }
+
     setSuccess(true)
     setProcessing(false)
 

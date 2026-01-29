@@ -106,6 +106,35 @@ export type Database = {
           },
         ]
       }
+      organisation_requests: {
+        Row: {
+          id: string
+          organisation_id: string
+          user_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          organisation_id: string
+          user_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          organisation_id?: string
+          user_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_requests_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string | null
@@ -242,6 +271,7 @@ export type Review = Database['public']['Tables']['reviews']['Row']
 export type Organisation = Database['public']['Tables']['organisations']['Row']
 export type OrganisationMember = Database['public']['Tables']['organisation_members']['Row']
 export type OrganisationInvite = Database['public']['Tables']['organisation_invites']['Row']
+export type OrganisationRequest = Database['public']['Tables']['organisation_requests']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 
 export type RestaurantWithReviews = Restaurant & {

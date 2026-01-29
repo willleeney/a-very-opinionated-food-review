@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Organisation, OrganisationInvite, Profile } from '../lib/database.types'
+import type { Organisation, OrganisationInvite, OrganisationRequest, Profile } from '../lib/database.types'
 import type { User } from '@supabase/supabase-js'
 
 interface OrgWithRole extends Organisation {
@@ -13,15 +13,25 @@ interface InviteWithOrg extends OrganisationInvite {
   inviter?: Profile | null
 }
 
+interface RequestWithOrg extends OrganisationRequest {
+  organisation?: Organisation | null
+}
+
 export function PersonalSettings(): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [orgs, setOrgs] = useState<OrgWithRole[]>([])
   const [invites, setInvites] = useState<InviteWithOrg[]>([])
+  const [pendingRequests, setPendingRequests] = useState<RequestWithOrg[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Organisation[]>([])
+  const [searching, setSearching] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!user) return
@@ -72,6 +82,20 @@ export function PersonalSettings(): JSX.Element {
         inviter: profiles?.find(p => p.id === i.invited_by) || null,
       }))
       setInvites(invitesWithOrgs)
+    }
+
+    // Fetch pending join requests
+    const { data: requestsData } = await supabase
+      .from('organisation_requests')
+      .select('*, organisations(*)')
+      .eq('user_id', user.id)
+
+    if (requestsData) {
+      const requestsWithOrgs: RequestWithOrg[] = requestsData.map((r) => ({
+        ...r,
+        organisation: r.organisations as Organisation | null,
+      }))
+      setPendingRequests(requestsWithOrgs)
     }
 
     setLoading(false)
@@ -161,6 +185,22 @@ export function PersonalSettings(): JSX.Element {
       .delete()
       .eq('id', invite.id)
 
+    // Make user's existing reviews visible to this org
+    const { data: userReviews } = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('user_id', user.id)
+
+    if (userReviews && userReviews.length > 0) {
+      const visibilityEntries = userReviews.map(review => ({
+        review_id: review.id,
+        organisation_id: invite.organisation_id,
+      }))
+      await supabase
+        .from('review_visibility')
+        .upsert(visibilityEntries, { onConflict: 'review_id,organisation_id' })
+    }
+
     setSuccess(`Joined ${invite.organisation?.name}`)
     fetchData()
   }
@@ -178,6 +218,73 @@ export function PersonalSettings(): JSX.Element {
       setError(error.message)
     } else {
       setSuccess('Invite declined')
+      fetchData()
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setSearching(true)
+    setError(null)
+
+    const { data, error: searchError } = await supabase
+      .from('organisations')
+      .select('*')
+      .ilike('name', `%${searchQuery}%`)
+      .limit(10)
+
+    if (searchError) {
+      setError(searchError.message)
+    } else if (data) {
+      // Filter out orgs user is already a member of or has pending request for
+      const orgIds = new Set(orgs.map(o => o.id))
+      const requestOrgIds = new Set(pendingRequests.map(r => r.organisation_id))
+      const filtered = data.filter(o => !orgIds.has(o.id) && !requestOrgIds.has(o.id))
+      setSearchResults(filtered)
+    }
+
+    setSearching(false)
+  }
+
+  const handleRequestJoin = async (org: Organisation) => {
+    if (!user) return
+
+    setError(null)
+    setSuccess(null)
+
+    const { error } = await supabase
+      .from('organisation_requests')
+      .insert({
+        organisation_id: org.id,
+        user_id: user.id,
+      })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess(`Requested to join ${org.name}`)
+      setSearchResults(searchResults.filter(o => o.id !== org.id))
+      fetchData()
+    }
+  }
+
+  const handleCancelRequest = async (requestId: string, orgName: string) => {
+    setError(null)
+    setSuccess(null)
+
+    const { error } = await supabase
+      .from('organisation_requests')
+      .delete()
+      .eq('id', requestId)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess(`Cancelled request to join ${orgName}`)
       fetchData()
     }
   }
@@ -312,14 +419,14 @@ export function PersonalSettings(): JSX.Element {
         )}
 
         {/* Organisations */}
-        <section>
+        <section style={{ marginBottom: '32px' }}>
           <h2 style={{ marginBottom: '16px' }}>Your Organisations ({orgs.length})</h2>
           {orgs.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
               You're not a member of any organisations yet.
             </p>
           ) : (
-            <table style={{ maxWidth: '500px' }}>
+            <table style={{ maxWidth: '500px', marginBottom: '24px' }}>
               <thead>
                 <tr>
                   <th style={{ width: '60%' }}>Organisation</th>
@@ -358,6 +465,93 @@ export function PersonalSettings(): JSX.Element {
               </tbody>
             </table>
           )}
+
+          {/* Pending requests */}
+          {pendingRequests.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--text-secondary)' }}>Pending Requests</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pendingRequests.map((request) => (
+                  <div key={request.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-warm)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontWeight: 500 }}>{request.organisation?.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                        pending
+                      </span>
+                      <button
+                        onClick={() => handleCancelRequest(request.id, request.organisation?.name || '')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--poor)' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search for organisations */}
+          <div style={{ maxWidth: '500px' }}>
+            <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--text-secondary)' }}>Find an Organisation</h3>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Search by name..."
+                style={{ flex: 1 }}
+              />
+              <button
+                onClick={handleSearch}
+                disabled={searching || !searchQuery.trim()}
+                className="btn"
+                style={{ padding: '10px 20px' }}
+              >
+                {searching ? '...' : 'Search'}
+              </button>
+            </div>
+
+            {searchResults.length > 0 && (
+              <div style={{ border: '1px solid var(--border)' }}>
+                {searchResults.map((org, i) => (
+                  <div
+                    key={org.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderBottom: i < searchResults.length - 1 ? '1px solid var(--border)' : 'none'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontWeight: 500 }}>{org.name}</span>
+                      {org.tagline && (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '13px', marginLeft: '12px' }}>
+                          {org.tagline}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRequestJoin(org)}
+                      className="btn btn-accent"
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Request to Join
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {searchQuery && searchResults.length === 0 && !searching && (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                No organisations found matching "{searchQuery}"
+              </p>
+            )}
+          </div>
         </section>
       </div>
     </div>

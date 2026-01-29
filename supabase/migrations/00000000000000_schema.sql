@@ -56,6 +56,15 @@ CREATE TABLE organisation_invites (
   UNIQUE(organisation_id, email)
 );
 
+-- Organisation join requests
+CREATE TABLE organisation_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(organisation_id, user_id)
+);
+
 -- Reviews
 CREATE TABLE reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -92,6 +101,8 @@ CREATE INDEX idx_organisation_members_user ON organisation_members(user_id);
 CREATE INDEX idx_organisation_invites_org ON organisation_invites(organisation_id);
 CREATE INDEX idx_organisation_invites_token ON organisation_invites(token);
 CREATE INDEX idx_organisation_invites_email ON organisation_invites(email);
+CREATE INDEX idx_organisation_requests_org ON organisation_requests(organisation_id);
+CREATE INDEX idx_organisation_requests_user ON organisation_requests(user_id);
 CREATE INDEX idx_reviews_organisation ON reviews(organisation_id);
 CREATE INDEX idx_review_visibility_review ON review_visibility(review_id);
 CREATE INDEX idx_review_visibility_org ON review_visibility(organisation_id);
@@ -160,6 +171,21 @@ AS $$
     )
 $$;
 
+-- Helper function to check if user is admin of an org (avoids recursion)
+CREATE OR REPLACE FUNCTION is_org_admin(org_id UUID, check_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM organisation_members
+    WHERE organisation_id = org_id
+    AND user_id = check_user_id
+    AND role = 'admin'
+  )
+$$;
+
 ------------------------------------------------------------
 -- TRIGGERS
 ------------------------------------------------------------
@@ -177,6 +203,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organisations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organisation_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organisation_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organisation_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE review_visibility ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
@@ -240,6 +267,34 @@ CREATE POLICY "Admins can delete invites" ON organisation_invites FOR DELETE TO 
     EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin')
     OR email = (SELECT email FROM profiles WHERE id = auth.uid())
   );
+
+-- Organisation requests: users can request, admins can manage
+CREATE POLICY "Users can view own requests" ON organisation_requests
+  FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Admins can view org requests" ON organisation_requests
+  FOR SELECT TO authenticated
+  USING (is_org_admin(organisation_id, auth.uid()));
+
+CREATE POLICY "Users can request to join" ON organisation_requests
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    user_id = auth.uid()
+    AND NOT EXISTS (
+      SELECT 1 FROM organisation_members
+      WHERE organisation_id = organisation_requests.organisation_id
+      AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can cancel own requests" ON organisation_requests
+  FOR DELETE TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Admins can manage org requests" ON organisation_requests
+  FOR DELETE TO authenticated
+  USING (is_org_admin(organisation_id, auth.uid()));
 
 -- Reviews: public read, own write
 CREATE POLICY "Anyone can view reviews" ON reviews FOR SELECT USING (true);

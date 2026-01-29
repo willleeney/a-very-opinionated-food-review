@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Organisation, OrganisationMember, OrganisationInvite, Profile } from '../lib/database.types'
+import type { Organisation, OrganisationMember, OrganisationInvite, OrganisationRequest, Profile } from '../lib/database.types'
 import type { User } from '@supabase/supabase-js'
 
 interface OrganisationAdminProps {
@@ -15,11 +15,16 @@ interface InviteWithInviter extends OrganisationInvite {
   inviter?: Profile | null
 }
 
+interface RequestWithProfile extends OrganisationRequest {
+  profile?: Profile | null
+}
+
 export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [org, setOrg] = useState<Organisation | null>(null)
   const [members, setMembers] = useState<MemberWithProfile[]>([])
   const [invites, setInvites] = useState<InviteWithInviter[]>([])
+  const [requests, setRequests] = useState<RequestWithProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -98,6 +103,27 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
         inviter: profiles?.find(p => p.id === i.invited_by) || null
       }))
       setInvites(invitesWithInviters)
+    }
+
+    // Fetch join requests
+    const { data: requestsData } = await supabase
+      .from('organisation_requests')
+      .select('*')
+      .eq('organisation_id', orgData.id)
+
+    if (requestsData) {
+      // Fetch profiles for requesters
+      const requesterIds = requestsData.map(r => r.user_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', requesterIds)
+
+      const requestsWithProfiles = requestsData.map(r => ({
+        ...r,
+        profile: profiles?.find(p => p.id === r.user_id) || null
+      }))
+      setRequests(requestsWithProfiles)
     }
 
     setLoading(false)
@@ -180,6 +206,69 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
       .from('organisation_invites')
       .delete()
       .eq('id', inviteId)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      fetchData()
+    }
+  }
+
+  const handleAcceptRequest = async (request: RequestWithProfile) => {
+    if (!org) return
+
+    setError(null)
+    setSuccess(null)
+
+    // Add user as member
+    const { error: memberError } = await supabase
+      .from('organisation_members')
+      .insert({
+        organisation_id: org.id,
+        user_id: request.user_id,
+        role: 'member',
+      })
+
+    if (memberError) {
+      setError(memberError.message)
+      return
+    }
+
+    // Delete the request
+    await supabase
+      .from('organisation_requests')
+      .delete()
+      .eq('id', request.id)
+
+    // Make the user's existing reviews visible to this org
+    const { data: userReviews } = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('user_id', request.user_id)
+
+    if (userReviews && userReviews.length > 0) {
+      const visibilityEntries = userReviews.map(review => ({
+        review_id: review.id,
+        organisation_id: org.id,
+      }))
+      // Insert visibility entries, ignore conflicts (review might already be visible)
+      await supabase
+        .from('review_visibility')
+        .upsert(visibilityEntries, { onConflict: 'review_id,organisation_id' })
+    }
+
+    setSuccess(`${request.profile?.display_name || 'User'} has been added as a member`)
+    fetchData()
+  }
+
+  const handleRejectRequest = async (requestId: string) => {
+    setError(null)
+    setSuccess(null)
+
+    const { error } = await supabase
+      .from('organisation_requests')
+      .delete()
+      .eq('id', requestId)
 
     if (error) {
       setError(error.message)
@@ -425,7 +514,11 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
 
         {/* Members */}
         <section>
-          <h2 style={{ marginBottom: '16px' }}>Members ({members.length}{invites.length > 0 ? ` + ${invites.length} pending` : ''})</h2>
+          <h2 style={{ marginBottom: '16px' }}>
+            Members ({members.length}
+            {invites.length > 0 ? ` + ${invites.length} invited` : ''}
+            {requests.length > 0 ? ` + ${requests.length} requested` : ''})
+          </h2>
           <table>
             <thead>
               <tr>
@@ -481,7 +574,7 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
                       letterSpacing: '0.08em',
                       color: 'var(--text-muted)'
                     }}>
-                      pending
+                      invited
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
@@ -491,6 +584,42 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
                     >
                       Cancel
                     </button>
+                  </td>
+                </tr>
+              ))}
+              {requests.map((request) => (
+                <tr key={`request-${request.id}`} style={{ background: 'var(--bg-warm)' }}>
+                  <td style={{ fontWeight: 500 }}>
+                    {request.profile?.display_name || 'Unknown'}
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)' }}>
+                    {request.profile?.email || '—'}
+                  </td>
+                  <td>
+                    <span style={{
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'var(--accent)'
+                    }}>
+                      requested
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => handleAcceptRequest(request)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--great)' }}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(request.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--poor)' }}
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
