@@ -511,55 +511,57 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         </div>
       </section>
 
-      {/* Filters - only show on org pages */}
-      {currentOrg && (
-        <div className="container">
-          <div className="filters">
-            <div className="filter-group">
-              <span className="filter-label">Reviewer</span>
-              <select
-                value={selectedUserId || ''}
-                onChange={(e) => setSelectedUserId(e.target.value || null)}
-                style={{ minWidth: '120px' }}
-              >
-                <option value="">All</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {/* Filters and Add Place */}
+      <div className="container">
+        <div className="filters">
+          {currentOrg && (
+            <>
+              <div className="filter-group">
+                <span className="filter-label">Reviewer</span>
+                <select
+                  value={selectedUserId || ''}
+                  onChange={(e) => setSelectedUserId(e.target.value || null)}
+                  style={{ minWidth: '120px' }}
+                >
+                  <option value="">All</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {selectedUserId && (
-              <button
-                onClick={clearFilters}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: 'var(--accent)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}
-              >
-                Clear
-              </button>
-            )}
+              {selectedUserId && (
+                <button
+                  onClick={clearFilters}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: 'var(--accent)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </>
+          )}
 
-            <div style={{ marginLeft: 'auto' }}>
-            {user && currentOrg && (
+          <div style={{ marginLeft: 'auto' }}>
+            {user && (
               <AddReview
                 userId={user.id}
-                organisationId={currentOrg.id}
+                organisationId={currentOrg?.id}
                 onAdded={fetchData}
               />
             )}
           </div>
-          </div>
         </div>
-      )}
+      </div>
 
       {/* Restaurant List */}
       <section style={{ padding: '40px 0 80px' }}>

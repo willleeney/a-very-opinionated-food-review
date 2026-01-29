@@ -202,7 +202,7 @@ CREATE POLICY "Admins can update member roles" ON organisation_members FOR UPDAT
 CREATE POLICY "Members can view their organisation's invites" ON organisation_invites FOR SELECT TO authenticated
   USING (
     EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid())
-    OR email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR email = (SELECT email FROM profiles WHERE id = auth.uid())
   );
 
 CREATE POLICY "Admins can create invites" ON organisation_invites FOR INSERT TO authenticated
@@ -214,7 +214,7 @@ CREATE POLICY "Admins can create invites" ON organisation_invites FOR INSERT TO 
 CREATE POLICY "Admins can delete invites" ON organisation_invites FOR DELETE TO authenticated
   USING (
     EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin')
-    OR email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR email = (SELECT email FROM profiles WHERE id = auth.uid())
   );
 
 -- Reviews: public read, own write

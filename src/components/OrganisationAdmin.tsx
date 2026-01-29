@@ -80,17 +80,12 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     }
 
     // Fetch invites
-    const { data: invitesData, error: invitesError } = await supabase
+    const { data: invitesData } = await supabase
       .from('organisation_invites')
       .select('*')
       .eq('organisation_id', orgData.id)
 
-    if (invitesError) {
-      console.error('Failed to fetch invites:', invitesError)
-    }
-
     if (invitesData) {
-      console.log('Fetched invites:', invitesData.length, invitesData)
       // Fetch profiles for inviters
       const inviterIds = invitesData.map(i => i.invited_by)
       const { data: profiles } = await supabase
