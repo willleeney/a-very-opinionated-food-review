@@ -148,12 +148,162 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 - `restaurants` - name, type, notes, latitude, longitude
 - `reviews` - rating (1-10), comment, links to restaurant + user
 - `settings` - key/value store (office_location as JSONB)
+- `profiles` - user profiles with display_name, synced from auth.users
+- `organisations` - multi-tenant orgs with name, slug, office_location, tagline
+- `organisation_members` - user membership with role (admin/member)
+- `organisation_invites` - pending invites with email, token, expiry
+- `review_visibility` - which orgs can see each review's comments
 
 ### RLS Policies
-- Anyone can read restaurants and reviews
+- Anyone can read restaurants and reviews (ratings only)
+- Review comments/reviewer names visible only to org members (via review_visibility)
 - Authenticated users can insert restaurants
 - Users can only modify their own reviews
+- Org admins can manage members and invites
 - Settings readable by all, writable by authenticated
+
+### Recreating the Database Schema
+
+To set up the database from scratch, run these SQL commands in Supabase SQL Editor:
+
+```sql
+-- 1. Base schema (profiles trigger)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email)
+  VALUES (new.id, new.email);
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT,
+  display_name TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 2. Organisations
+CREATE TABLE organisations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  office_location JSONB DEFAULT NULL,
+  tagline TEXT DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE organisation_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(organisation_id, user_id)
+);
+
+CREATE TABLE organisation_invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
+  invited_by UUID NOT NULL REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  expires_at TIMESTAMPTZ DEFAULT (now() + interval '7 days'),
+  UNIQUE(organisation_id, email)
+);
+
+ALTER TABLE organisations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organisation_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organisation_invites ENABLE ROW LEVEL SECURITY;
+
+-- Organisation policies
+CREATE POLICY "Anyone can view organisations" ON organisations FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can create organisations" ON organisations FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Admins can update their organisations" ON organisations FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisations.id AND user_id = auth.uid() AND role = 'admin'));
+
+-- Helper function to avoid RLS recursion
+CREATE OR REPLACE FUNCTION user_org_ids(user_uuid UUID) RETURNS SETOF UUID LANGUAGE SQL SECURITY DEFINER STABLE AS $$
+  SELECT organisation_id FROM organisation_members WHERE user_id = user_uuid
+$$;
+
+-- Member policies
+CREATE POLICY "Members can view organisation members" ON organisation_members FOR SELECT TO authenticated
+  USING (user_id = auth.uid() OR organisation_id IN (SELECT user_org_ids(auth.uid())));
+CREATE POLICY "Admins can add members" ON organisation_members FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_members.organisation_id AND user_id = auth.uid() AND role = 'admin')
+    OR NOT EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_members.organisation_id));
+CREATE POLICY "Admins can remove members" ON organisation_members FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members om WHERE om.organisation_id = organisation_members.organisation_id AND om.user_id = auth.uid() AND om.role = 'admin') OR user_id = auth.uid());
+CREATE POLICY "Admins can update member roles" ON organisation_members FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members om WHERE om.organisation_id = organisation_members.organisation_id AND om.user_id = auth.uid() AND om.role = 'admin'));
+
+-- Invite policies
+CREATE POLICY "Members can view their organisation's invites" ON organisation_invites FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid())
+    OR email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+CREATE POLICY "Admins can create invites" ON organisation_invites FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins can delete invites" ON organisation_invites FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin')
+    OR email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+
+-- 3. Review visibility (which orgs can see review comments)
+CREATE TABLE review_visibility (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(review_id, organisation_id)
+);
+
+ALTER TABLE review_visibility ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view review visibility" ON review_visibility FOR SELECT USING (true);
+CREATE POLICY "Users can insert review visibility for own reviews" ON review_visibility FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM reviews WHERE id = review_id AND user_id = auth.uid()));
+CREATE POLICY "Users can delete review visibility for own reviews" ON review_visibility FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM reviews WHERE id = review_id AND user_id = auth.uid()));
+
+-- Indexes
+CREATE INDEX idx_organisation_members_org ON organisation_members(organisation_id);
+CREATE INDEX idx_organisation_members_user ON organisation_members(user_id);
+CREATE INDEX idx_organisation_invites_org ON organisation_invites(organisation_id);
+CREATE INDEX idx_organisation_invites_token ON organisation_invites(token);
+CREATE INDEX idx_review_visibility_review ON review_visibility(review_id);
+CREATE INDEX idx_review_visibility_org ON review_visibility(organisation_id);
+```
+
+### Local Development with Supabase
+
+```bash
+# Install Supabase CLI
+brew install supabase/tap/supabase
+
+# Start local Supabase (requires Docker)
+supabase init
+supabase start
+
+# Create .env.local with local credentials (shown after supabase start)
+# PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+# PUBLIC_SUPABASE_ANON_KEY=<anon_key>
+
+# Reset local DB (applies migrations + seed)
+supabase db reset
+
+# Stop local Supabase
+supabase stop
+```
 
 ## Development
 

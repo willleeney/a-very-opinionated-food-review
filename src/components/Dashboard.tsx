@@ -1,12 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { RestaurantWithReviews } from '../lib/database.types'
+import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation } from '../lib/database.types'
 import { distanceFrom, formatDistance } from '../lib/distance'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
+import { BurgerMenu } from './BurgerMenu'
+import { OrganisationSelector } from './OrganisationSelector'
 import { useFilterStore } from '../lib/store'
 import type { User } from '@supabase/supabase-js'
+
+interface DashboardProps {
+  organisationSlug?: string | null
+}
 
 interface ReviewUser {
   id: string
@@ -27,25 +33,35 @@ function getRatingLabel(rating: number): string {
   return labels[Math.round(rating)] || ''
 }
 
-// Default office location (fallback if not set in database)
-const DEFAULT_OFFICE = { lat: 51.5047, lng: -0.0886 }
-
 // Inline review form component
 function InlineReviewForm({
   restaurantId,
   userId,
+  userOrgs,
   existingReview,
   onSaved
 }: {
   restaurantId: string
   userId: string
-  existingReview?: { id: string; rating: number | null; comment: string | null }
+  userOrgs: OrganisationWithMembership[]
+  existingReview?: { id: string; rating: number | null; comment: string | null; visibleToOrgs?: string[] }
   onSaved: () => void
 }) {
   const [rating, setRating] = useState(existingReview?.rating?.toString() || '')
   const [comment, setComment] = useState(existingReview?.comment || '')
+  const [selectedOrgs, setSelectedOrgs] = useState<Set<string>>(new Set(existingReview?.visibleToOrgs || (userOrgs.length > 0 ? [userOrgs[0].id] : [])))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const toggleOrg = (orgId: string) => {
+    const newSet = new Set(selectedOrgs)
+    if (newSet.has(orgId)) {
+      newSet.delete(orgId)
+    } else {
+      newSet.add(orgId)
+    }
+    setSelectedOrgs(newSet)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +71,8 @@ function InlineReviewForm({
     setError(null)
 
     try {
+      let reviewId: string
+
       if (existingReview) {
         // Update existing review
         const { error } = await supabase
@@ -62,9 +80,16 @@ function InlineReviewForm({
           .update({ rating: parseInt(rating), comment: comment || null })
           .eq('id', existingReview.id)
         if (error) throw error
+        reviewId = existingReview.id
+
+        // Delete existing visibility entries
+        await supabase
+          .from('review_visibility')
+          .delete()
+          .eq('review_id', reviewId)
       } else {
         // Insert new review
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('reviews')
           .insert({
             restaurant_id: restaurantId,
@@ -72,8 +97,24 @@ function InlineReviewForm({
             rating: parseInt(rating),
             comment: comment || null,
           })
+          .select('id')
+          .single()
         if (error) throw error
+        reviewId = data.id
       }
+
+      // Insert visibility entries for selected orgs
+      if (selectedOrgs.size > 0) {
+        const visibilityEntries = Array.from(selectedOrgs).map(orgId => ({
+          review_id: reviewId,
+          organisation_id: orgId,
+        }))
+        const { error: visError } = await supabase
+          .from('review_visibility')
+          .insert(visibilityEntries)
+        if (visError) throw visError
+      }
+
       onSaved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save review')
@@ -83,76 +124,179 @@ function InlineReviewForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-      <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        {existingReview ? 'Your review' : 'Add review'}
-      </span>
-      <select
-        value={rating}
-        onChange={(e) => setRating(e.target.value)}
-        required
-        style={{ width: '80px' }}
-      >
-        <option value="">—</option>
-        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-          <option key={r} value={r}>{r}/10</option>
-        ))}
-      </select>
-      <input
-        type="text"
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder="Comment (optional)"
-        style={{ flex: 1, maxWidth: '300px' }}
-      />
-      <button type="submit" disabled={saving || !rating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
-        {saving ? '...' : existingReview ? 'Update' : 'Save'}
-      </button>
-      {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
+    <form onSubmit={handleSubmit} style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {existingReview ? 'Your review' : 'Add review'}
+        </span>
+        <select
+          value={rating}
+          onChange={(e) => setRating(e.target.value)}
+          required
+          style={{ width: '80px' }}
+        >
+          <option value="">—</option>
+          {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+            <option key={r} value={r}>{r}/10</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Comment (optional)"
+          style={{ flex: 1, maxWidth: '300px' }}
+        />
+        <button type="submit" disabled={saving || !rating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
+          {saving ? '...' : existingReview ? 'Update' : 'Save'}
+        </button>
+        {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
+      </div>
+      {userOrgs.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Visible to
+          </span>
+          {userOrgs.map((org) => (
+            <label key={org.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+              <input
+                type="checkbox"
+                checked={selectedOrgs.has(org.id)}
+                onChange={() => toggleOrg(org.id)}
+                style={{ cursor: 'pointer' }}
+              />
+              {org.name}
+            </label>
+          ))}
+        </div>
+      )}
     </form>
   )
 }
 
-export function Dashboard(): JSX.Element {
+export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
   const [users, setUsers] = useState<ReviewUser[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [officeLocation, setOfficeLocation] = useState(DEFAULT_OFFICE)
+
+  // Organisation state
+  const [currentOrg, setCurrentOrg] = useState<Organisation | null>(null)
+  const [userOrgs, setUserOrgs] = useState<OrganisationWithMembership[]>([])
+  const [userOrgIds, setUserOrgIds] = useState<Set<string>>(new Set())
+  const [_isAdmin, setIsAdmin] = useState(false)
+  const [officeLocation, setOfficeLocation] = useState<OfficeLocation | null>(null)
 
   const {
     selectedUserId,
     setSelectedUserId,
-    highlightedRestaurantId,
+    highlightedRestaurantId: _highlightedRestaurantId,
     setHighlightedRestaurantId,
     clearFilters
   } = useFilterStore()
 
-  const fetchData = useCallback(async () => {
-    // Fetch office location from settings
-    const { data: settingsData } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'office_location')
-      .single()
+  // Fetch user's organisations
+  const fetchUserOrgs = useCallback(async (userId: string) => {
+    // First get memberships
+    const { data: memberships, error: memberError } = await supabase
+      .from('organisation_members')
+      .select('organisation_id, role')
+      .eq('user_id', userId)
 
-    const office = settingsData?.value as { lat: number; lng: number } | null
-    if (office) {
-      setOfficeLocation(office)
+    if (memberError || !memberships || memberships.length === 0) {
+      setUserOrgs([])
+      setUserOrgIds(new Set())
+      setIsAdmin(false)
+      return
     }
 
+    // Then fetch the organisations
+    const orgIds = memberships.map(m => m.organisation_id)
+    const { data: orgsData } = await supabase
+      .from('organisations')
+      .select('*')
+      .in('id', orgIds)
+
+    if (orgsData) {
+      const orgs: OrganisationWithMembership[] = orgsData.map((org) => {
+        const membership = memberships.find(m => m.organisation_id === org.id)
+        return {
+          ...org,
+          role: (membership?.role || 'member') as 'admin' | 'member',
+        }
+      })
+      setUserOrgs(orgs)
+      setUserOrgIds(new Set(orgs.map(o => o.id)))
+
+      // Check if user is admin of current org
+      if (organisationSlug) {
+        const currentOrgMembership = orgs.find(o => o.slug === organisationSlug)
+        setIsAdmin(currentOrgMembership?.role === 'admin')
+      }
+    }
+  }, [organisationSlug])
+
+  const fetchData = useCallback(async () => {
+    // Fetch current organisation if slug is provided
+    let office: OfficeLocation | null = null
+
+    if (organisationSlug) {
+      const { data: orgData } = await supabase
+        .from('organisations')
+        .select('*')
+        .eq('slug', organisationSlug)
+        .single()
+
+      if (orgData) {
+        setCurrentOrg(orgData)
+        office = orgData.office_location as OfficeLocation | null
+        setOfficeLocation(office)
+      }
+    } else {
+      // Global view - no office location
+      setCurrentOrg(null)
+      setOfficeLocation(null)
+    }
+
+    // Fetch all restaurants (global)
     const { data: restaurantsData } = await supabase
       .from('restaurants')
       .select('*, reviews(*)')
       .order('name')
 
     if (restaurantsData) {
-      const officeLat = office?.lat ?? DEFAULT_OFFICE.lat
-      const officeLng = office?.lng ?? DEFAULT_OFFICE.lng
+      // Collect all review IDs to fetch visibility data
+      const reviewIds: string[] = []
+      for (const r of restaurantsData) {
+        for (const rev of r.reviews || []) {
+          reviewIds.push(rev.id)
+        }
+      }
+
+      // Fetch visibility data for all reviews
+      let visibilityMap: Record<string, string[]> = {}
+      if (reviewIds.length > 0) {
+        const { data: visibilityData } = await supabase
+          .from('review_visibility')
+          .select('review_id, organisation_id')
+          .in('review_id', reviewIds)
+
+        if (visibilityData) {
+          for (const v of visibilityData) {
+            if (!visibilityMap[v.review_id]) {
+              visibilityMap[v.review_id] = []
+            }
+            visibilityMap[v.review_id].push(v.organisation_id)
+          }
+        }
+      }
 
       const withCalculations = restaurantsData.map((r) => {
-        const reviews = r.reviews || []
+        const reviews = (r.reviews || []).map(rev => ({
+          ...rev,
+          visibleToOrgs: visibilityMap[rev.id] || []
+        }))
         const ratings = reviews
           .filter((rev) => rev.rating !== null)
           .map((rev) => rev.rating as number)
@@ -160,10 +304,16 @@ export function Dashboard(): JSX.Element {
           ? ratings.reduce((a, b) => a + b, 0) / ratings.length
           : null
 
+        // Only calculate distance if we have an office location
+        const distance = office
+          ? distanceFrom(office.lat, office.lng, r.latitude, r.longitude)
+          : null
+
         return {
           ...r,
+          reviews,
           avgRating,
-          distance: distanceFrom(officeLat, officeLng, r.latitude, r.longitude),
+          distance,
         }
       })
       setRestaurants(withCalculations)
@@ -191,33 +341,36 @@ export function Dashboard(): JSX.Element {
     }
 
     setLoading(false)
-  }, [])
+  }, [organisationSlug])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
+      if (data.user) {
+        fetchUserOrgs(data.user.id)
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        fetchUserOrgs(session.user.id)
+      } else {
+        setUserOrgs([])
+        setUserOrgIds(new Set())
+        setIsAdmin(false)
+      }
     })
 
     fetchData()
 
     return () => subscription.unsubscribe()
-  }, [fetchData])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-  }
+  }, [fetchData, fetchUserOrgs])
 
   // Filter restaurants
   const filteredRestaurants = restaurants.filter(r => {
-    if (selectedUserId && !r.reviews.some(rev => rev.user_id === selectedUserId)) {
-      return false
-    }
-    return true
+    if (!selectedUserId) return true
+    return r.reviews.some(rev => rev.user_id === selectedUserId)
   }).sort((a, b) => {
     if (a.avgRating === null && b.avgRating === null) return 0
     if (a.avgRating === null) return 1
@@ -225,26 +378,31 @@ export function Dashboard(): JSX.Element {
     return b.avgRating - a.avgRating
   })
 
+  const restaurantsWithRatings = restaurants.filter(r => r.avgRating !== null)
   const stats = {
     total: restaurants.length,
-    reviewed: restaurants.filter(r => r.avgRating !== null).length,
-    avgRating: restaurants.filter(r => r.avgRating).length > 0
-      ? (restaurants.filter(r => r.avgRating).reduce((sum, r) => sum + (r.avgRating || 0), 0) / restaurants.filter(r => r.avgRating).length)
+    reviewed: restaurantsWithRatings.length,
+    avgRating: restaurantsWithRatings.length > 0
+      ? restaurantsWithRatings.reduce((sum, r) => sum + (r.avgRating || 0), 0) / restaurantsWithRatings.length
       : 0,
-    topRated: restaurants.filter(r => r.avgRating && r.avgRating >= 8).length,
+    topRated: restaurantsWithRatings.filter(r => r.avgRating! >= 8).length,
   }
 
   const handleRowClick = (restaurant: RestaurantWithReviews) => {
-    // Toggle expand
     setExpandedId(expandedId === restaurant.id ? null : restaurant.id)
   }
 
   const handleMapClick = (e: React.MouseEvent, restaurant: RestaurantWithReviews) => {
     e.stopPropagation()
-    // Pan to location and open popup
     setHighlightedRestaurantId(restaurant.id)
-    // Scroll to map
     document.querySelector('.map-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  // Check if a review's comment should be visible
+  const isCommentVisible = (visibleToOrgs: string[] | undefined): boolean => {
+    // Comments are only visible if the review is shared with an org the user is a member of
+    if (!visibleToOrgs || visibleToOrgs.length === 0) return false
+    return visibleToOrgs.some(orgId => userOrgIds.has(orgId))
   }
 
   if (loading) {
@@ -255,24 +413,40 @@ export function Dashboard(): JSX.Element {
     )
   }
 
+  // Determine hero text based on view mode
+  const heroSubtitle = currentOrg
+    ? `${currentOrg.name} · ${(currentOrg.tagline || '').replace(/, /g, ' · ')}`
+    : null
+
+  const heroDescription = 'opinionated takes. taste encouraged but not necessarily welcome.'
+
   return (
     <div>
       {/* Navigation */}
       <nav>
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <a href="/" style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Lunch 1201
+            <div style={{ flex: 1 }}>
+              {userOrgs.length > 0 ? (
+                <OrganisationSelector currentOrgSlug={organisationSlug} userOrgs={userOrgs} />
+              ) : (
+                <div style={{ width: '80px' }} />
+              )}
+            </div>
+            <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 500, letterSpacing: '0.02em' }}>
+              Tastefull
             </a>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px' }}>
               {user ? (
                 <>
-                  <span className="mono" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                  <span className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                     {user.email}
                   </span>
-                  <button onClick={handleSignOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Sign out
-                  </button>
+                  <BurgerMenu
+                    user={user}
+                    currentOrgSlug={organisationSlug}
+                    userOrgs={userOrgs}
+                  />
                 </>
               ) : (
                 <a href="/login" className="btn" style={{ padding: '8px 16px' }}>
@@ -287,15 +461,16 @@ export function Dashboard(): JSX.Element {
       {/* Hero */}
       <section className="hero" style={{ paddingTop: '120px' }}>
         <div className="container">
-          <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            StackOne · Runway East · London Bridge
-          </p>
+          {heroSubtitle && (
+            <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              {heroSubtitle}
+            </p>
+          )}
           <h1>
-            settle the<br />
-            lunch debate.
+            Curate<br />Taste.
           </h1>
           <p style={{ maxWidth: '400px', color: 'var(--text-secondary)', marginTop: '24px', fontSize: '17px', lineHeight: 1.7 }}>
-            very opinionated takes on lunch. all takes encouraged but not necessarily welcome.
+            {heroDescription}
           </p>
         </div>
       </section>
@@ -319,7 +494,12 @@ export function Dashboard(): JSX.Element {
               Click a marker for details, or find a place in the list below
             </p>
           </div>
-          <MapView restaurants={filteredRestaurants} onLocationUpdated={fetchData} />
+          <MapView
+            restaurants={filteredRestaurants}
+            onLocationUpdated={fetchData}
+            officeLocation={officeLocation}
+            showOfficeMarker={!!currentOrg}
+          />
         </div>
       </section>
 
@@ -330,47 +510,55 @@ export function Dashboard(): JSX.Element {
         </div>
       </section>
 
-      {/* Filters */}
-      <div className="container">
-        <div className="filters">
-          <div className="filter-group">
-            <span className="filter-label">Reviewer</span>
-            <select
-              value={selectedUserId || ''}
-              onChange={(e) => setSelectedUserId(e.target.value || null)}
-              style={{ minWidth: '120px' }}
-            >
-              <option value="">All</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.email}
-                </option>
-              ))}
-            </select>
+      {/* Filters - only show on org pages */}
+      {currentOrg && (
+        <div className="container">
+          <div className="filters">
+            <div className="filter-group">
+              <span className="filter-label">Reviewer</span>
+              <select
+                value={selectedUserId || ''}
+                onChange={(e) => setSelectedUserId(e.target.value || null)}
+                style={{ minWidth: '120px' }}
+              >
+                <option value="">All</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedUserId && (
+              <button
+                onClick={clearFilters}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: 'var(--accent)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Clear
+              </button>
+            )}
+
+            <div style={{ marginLeft: 'auto' }}>
+            {user && currentOrg && (
+              <AddReview
+                userId={user.id}
+                organisationId={currentOrg.id}
+                onAdded={fetchData}
+              />
+            )}
           </div>
-
-          {selectedUserId && (
-            <button
-              onClick={clearFilters}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: 'var(--accent)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
-            >
-              Clear
-            </button>
-          )}
-
-          <div style={{ marginLeft: 'auto' }}>
-            {user && <AddReview userId={user.id} onAdded={fetchData} />}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Restaurant List */}
       <section style={{ padding: '40px 0 80px' }}>
@@ -380,7 +568,7 @@ export function Dashboard(): JSX.Element {
               <tr>
                 <th>Name</th>
                 <th className="hide-mobile">Type</th>
-                <th className="hide-mobile">Distance</th>
+                {officeLocation && <th className="hide-mobile">Distance</th>}
                 <th>Rating</th>
                 <th></th>
                 <th className="hide-mobile"></th>
@@ -403,9 +591,11 @@ export function Dashboard(): JSX.Element {
                     <td className="hide-mobile" style={{ color: 'var(--text-secondary)' }}>
                       {restaurant.type}
                     </td>
-                    <td className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                      {formatDistance(restaurant.distance)}
-                    </td>
+                    {officeLocation && (
+                      <td className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                        {formatDistance(restaurant.distance)}
+                      </td>
+                    )}
                     <td>
                       {restaurant.avgRating !== null ? (
                         <span className={`rating-badge ${getRatingClass(restaurant.avgRating)}`}>
@@ -439,7 +629,7 @@ export function Dashboard(): JSX.Element {
                   </tr>
                   {expandedId === restaurant.id && (
                     <tr key={`${restaurant.id}-expanded`}>
-                      <td colSpan={6} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
+                      <td colSpan={officeLocation ? 6 : 5} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
                         {restaurant.notes && (
                           <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '16px' }}>
                             "{restaurant.notes}"
@@ -449,16 +639,21 @@ export function Dashboard(): JSX.Element {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {restaurant.reviews.map((review) => {
                               const reviewer = users.find(u => u.id === review.user_id)
+                              const showComment = isCommentVisible(review.visibleToOrgs)
                               return (
                                 <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                  <span className={`mono ${review.rating && review.rating >= 8 ? 'rating-great' : review.rating && review.rating >= 6 ? 'rating-good' : 'rating-poor'}`} style={{ fontSize: '14px' }}>
+                                  <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px' }}>
                                     {review.rating}/10
                                   </span>
-                                  <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '60px' }}>
-                                    {reviewer?.email || 'Anonymous'}
-                                  </span>
-                                  {review.comment && (
-                                    <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
+                                  {showComment && (
+                                    <>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '60px' }}>
+                                        {reviewer?.email || 'Anonymous'}
+                                      </span>
+                                      {review.comment && (
+                                        <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               )
@@ -471,7 +666,8 @@ export function Dashboard(): JSX.Element {
                           <InlineReviewForm
                             restaurantId={restaurant.id}
                             userId={user.id}
-                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null } | undefined}
+                            userOrgs={userOrgs}
+                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; visibleToOrgs?: string[] } | undefined}
                             onSaved={fetchData}
                           />
                         )}

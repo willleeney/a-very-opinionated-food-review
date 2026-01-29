@@ -415,6 +415,110 @@ nav.scrolled {
   }
 }
 
+/* Burger Menu */
+.burger-menu {
+  position: relative;
+}
+
+.burger-button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.burger-button:hover {
+  border-color: var(--text);
+}
+
+.burger-button.active {
+  border-color: var(--text);
+  background: var(--bg-warm);
+}
+
+.burger-line {
+  display: block;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 2px;
+  background: var(--text);
+  transition: transform 0.2s, opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.burger-button.active .burger-line:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.burger-button.active .burger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.burger-button.active .burger-line:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.burger-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: white;
+  border: 1px solid var(--border);
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.burger-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.burger-link {
+  display: block;
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s, color 0.2s;
+}
+
+.burger-link:hover {
+  background: var(--bg-warm);
+  color: var(--accent);
+}
+
+.burger-signout {
+  display: block;
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.burger-signout:hover {
+  background: var(--bg-warm);
+  color: var(--text);
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   /* Hide type and distance columns on mobile */

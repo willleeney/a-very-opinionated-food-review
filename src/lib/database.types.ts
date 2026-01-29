@@ -9,6 +9,103 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      organisations: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          office_location: Json | null
+          tagline: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          office_location?: Json | null
+          tagline?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          office_location?: Json | null
+          tagline?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      organisation_members: {
+        Row: {
+          id: string
+          organisation_id: string
+          user_id: string
+          role: 'admin' | 'member'
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          organisation_id: string
+          user_id: string
+          role?: 'admin' | 'member'
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          organisation_id?: string
+          user_id?: string
+          role?: 'admin' | 'member'
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_members_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organisation_invites: {
+        Row: {
+          id: string
+          organisation_id: string
+          email: string
+          token: string
+          invited_by: string
+          created_at: string | null
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          organisation_id: string
+          email: string
+          token?: string
+          invited_by: string
+          created_at?: string | null
+          expires_at?: string | null
+        }
+        Update: {
+          id?: string
+          organisation_id?: string
+          email?: string
+          token?: string
+          invited_by?: string
+          created_at?: string | null
+          expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_invites_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string | null
@@ -50,6 +147,7 @@ export type Database = {
           rating: number | null
           restaurant_id: string | null
           user_id: string | null
+          organisation_id: string | null
         }
         Insert: {
           comment?: string | null
@@ -58,6 +156,7 @@ export type Database = {
           rating?: number | null
           restaurant_id?: string | null
           user_id?: string | null
+          organisation_id?: string | null
         }
         Update: {
           comment?: string | null
@@ -66,6 +165,7 @@ export type Database = {
           rating?: number | null
           restaurant_id?: string | null
           user_id?: string | null
+          organisation_id?: string | null
         }
         Relationships: [
           {
@@ -75,7 +175,50 @@ export type Database = {
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reviews_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      profiles: {
+        Row: {
+          id: string
+          name: string | null
+          email: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id: string
+          name?: string | null
+          email?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string | null
+          email?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          key: string
+          value: Json | null
+        }
+        Insert: {
+          key: string
+          value?: Json | null
+        }
+        Update: {
+          key?: string
+          value?: Json | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -93,11 +236,25 @@ export type Database = {
   }
 }
 
+// Convenience types
 export type Restaurant = Database['public']['Tables']['restaurants']['Row']
 export type Review = Database['public']['Tables']['reviews']['Row']
+export type Organisation = Database['public']['Tables']['organisations']['Row']
+export type OrganisationMember = Database['public']['Tables']['organisation_members']['Row']
+export type OrganisationInvite = Database['public']['Tables']['organisation_invites']['Row']
+export type Profile = Database['public']['Tables']['profiles']['Row']
 
 export type RestaurantWithReviews = Restaurant & {
-  reviews: Review[]
+  reviews: (Review & { profile?: Profile | null; visibleToOrgs?: string[] })[]
   avgRating: number | null
   distance: number | null
+}
+
+export type OrganisationWithMembership = Organisation & {
+  role: 'admin' | 'member'
+}
+
+export type OfficeLocation = {
+  lat: number
+  lng: number
 }

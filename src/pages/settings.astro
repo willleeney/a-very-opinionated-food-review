@@ -1,0 +1,8 @@
+---
+import Layout from '../layouts/Layout.astro'
+import { PersonalSettings } from '../components/PersonalSettings'
+---
+
+<Layout title="Settings">
+  <PersonalSettings client:only="react" />
+</Layout>

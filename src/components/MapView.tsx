@@ -9,22 +9,19 @@ import { supabase } from '../lib/supabase'
 interface MapViewProps {
   restaurants: RestaurantWithReviews[]
   onLocationUpdated?: () => void
+  officeLocation?: { lat: number; lng: number } | null
+  showOfficeMarker?: boolean
 }
 
-interface OfficeLocation {
+interface OfficeLocationDisplay {
   lat: number
   lng: number
   name: string
   address: string
 }
 
-// Default office location
-const DEFAULT_OFFICE: OfficeLocation = {
-  lat: 51.5047,
-  lng: -0.0886,
-  name: 'Runway East',
-  address: '20 St Thomas St, SE1 9RS'
-}
+// Default center (London Bridge area) when no office location
+const DEFAULT_CENTER = { lat: 51.5047, lng: -0.0886 }
 
 // Custom marker icons
 const createIcon = (color: string, size: number = 10, editing: boolean = false) => {
@@ -423,29 +420,19 @@ function RestaurantMarker({
   )
 }
 
-export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.Element {
+export function MapView({ restaurants, onLocationUpdated, officeLocation, showOfficeMarker = false }: MapViewProps): JSX.Element {
   const { highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingOffice, setEditingOffice] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [office, setOffice] = useState<OfficeLocation>(DEFAULT_OFFICE)
 
-  // Fetch office location on mount
-  useEffect(() => {
-    const fetchOffice = async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'office_location')
-        .single()
+  // Build office display object from props
+  const office: OfficeLocationDisplay = officeLocation
+    ? { ...officeLocation, name: 'Office', address: '' }
+    : { ...DEFAULT_CENTER, name: 'Office', address: '' }
 
-      if (data && !error) {
-        setOffice(data.value as OfficeLocation)
-      }
-    }
-    fetchOffice()
-  }, [])
+  const mapCenter = officeLocation || DEFAULT_CENTER
 
   const validRestaurants = useMemo(() =>
     restaurants.filter(r => r.latitude !== null && r.longitude !== null),
@@ -533,7 +520,7 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
   return (
     <div className="map-container">
       <MapContainer
-        center={[office.lat, office.lng]}
+        center={[mapCenter.lat, mapCenter.lng]}
         zoom={15}
         scrollWheelZoom={true}
         wheelPxPerZoomLevel={150}
@@ -546,16 +533,18 @@ export function MapView({ restaurants, onLocationUpdated }: MapViewProps): JSX.E
 
         <MapController highlightedId={highlightedRestaurantId} restaurants={restaurants} />
 
-        {/* Office marker */}
-        <OfficeMarker
-          office={office}
-          isEditing={editingOffice}
-          onStartEdit={handleStartEditOffice}
-          onCancelEdit={handleCancelEdit}
-          onSave={handleSaveOfficeLocation}
-          saveError={editingOffice ? saveError : null}
-          saving={saving}
-        />
+        {/* Office marker - only show when in org context */}
+        {showOfficeMarker && officeLocation && (
+          <OfficeMarker
+            office={office}
+            isEditing={editingOffice}
+            onStartEdit={handleStartEditOffice}
+            onCancelEdit={handleCancelEdit}
+            onSave={handleSaveOfficeLocation}
+            saveError={editingOffice ? saveError : null}
+            saving={saving}
+          />
+        )}
 
         {/* Restaurant markers */}
         {validRestaurants.map(restaurant => (
