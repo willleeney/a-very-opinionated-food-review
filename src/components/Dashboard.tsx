@@ -278,20 +278,23 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (data.user) {
         fetchUserOrgs(data.user.id)
       }
+      // Fetch data after auth check completes (whether logged in or not)
+      fetchData()
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchUserOrgs(session.user.id)
+        // Refetch data when auth state changes to get proper RLS results
+        fetchData()
       } else {
         setUserOrgs([])
         setUserOrgIds(new Set())
         setIsAdmin(false)
+        fetchData()
       }
     })
-
-    fetchData()
 
     return () => subscription.unsubscribe()
   }, [fetchData, fetchUserOrgs])
