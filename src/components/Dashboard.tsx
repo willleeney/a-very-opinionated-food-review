@@ -225,7 +225,11 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
     if (restaurantsData) {
       const withCalculations = restaurantsData.map((r) => {
-        const reviews = r.reviews || []
+        // Mark each review with whether the reviewer is an org member (for visibility)
+        const reviews = (r.reviews || []).map(rev => ({
+          ...rev,
+          isOrgMember: rev.user_id ? orgMemberIds.has(rev.user_id) : false
+        }))
         const ratings = reviews
           .filter((rev) => rev.rating !== null)
           .map((rev) => rev.rating as number)
@@ -333,14 +337,10 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
   // Check if a review's comment should be visible
   // Visibility is derived from org membership - if reviewer is member of current org, their comments are visible
-  const isCommentVisible = (reviewerUserId: string | null): boolean => {
-    if (!reviewerUserId) return false
+  const isCommentVisible = (isOrgMember: boolean): boolean => {
     // In org view, show comments from org members
-    if (currentOrg) {
-      return currentOrgMemberIds.has(reviewerUserId)
-    }
-    // In global view, no comments visible
-    return false
+    // The isOrgMember flag is computed during data fetch using the local orgMemberIds
+    return currentOrg !== null && isOrgMember
   }
 
   if (loading) {
@@ -579,7 +579,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {restaurant.reviews.map((review) => {
                               const reviewer = users.find(u => u.id === review.user_id)
-                              const showComment = isCommentVisible(review.user_id)
+                              const showComment = isCommentVisible(review.isOrgMember ?? false)
                               return (
                                 <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                   <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px' }}>

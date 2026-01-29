@@ -275,7 +275,7 @@ export type OrganisationRequest = Database['public']['Tables']['organisation_req
 export type Profile = Database['public']['Tables']['profiles']['Row']
 
 export type RestaurantWithReviews = Restaurant & {
-  reviews: (Review & { profile?: Profile | null })[]
+  reviews: (Review & { profile?: Profile | null; isOrgMember?: boolean })[]
   avgRating: number | null
   distance: number | null
 }
