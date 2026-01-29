@@ -1,0 +1,12 @@
+---
+import Layout from '../../../layouts/Layout.astro'
+import { Dashboard } from '../../../components/Dashboard'
+
+export const prerender = false
+
+const { slug } = Astro.params
+---
+
+<Layout title="Food Reviews">
+  <Dashboard client:only="react" organisationSlug={slug} />
+</Layout>

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { supabase } from '../lib/supabase'
 
 interface AddReviewProps {
   userId: string
+  organisationId?: string
   onAdded: () => void
 }
 
@@ -52,7 +53,7 @@ function MapPanner({ lat, lng }: { lat: number | null, lng: number | null }) {
   return null
 }
 
-export function AddReview({ userId, onAdded }: AddReviewProps): JSX.Element {
+export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState('')
@@ -97,7 +98,7 @@ export function AddReview({ userId, onAdded }: AddReviewProps): JSX.Element {
       } else {
         setLookupResults(results)
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to lookup address. Try placing on map manually.')
       setShowMap(true)
     } finally {
@@ -143,6 +144,7 @@ export function AddReview({ userId, onAdded }: AddReviewProps): JSX.Element {
           user_id: userId,
           rating: parseInt(rating),
           comment: comment || null,
+          organisation_id: organisationId || null,
         })
 
         if (reviewError) throw reviewError

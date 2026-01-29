@@ -1,0 +1,12 @@
+---
+import Layout from '../../../layouts/Layout.astro'
+import { OrganisationAdmin } from '../../../components/OrganisationAdmin'
+
+export const prerender = false
+
+const { slug } = Astro.params
+---
+
+<Layout title="Organisation Admin">
+  <OrganisationAdmin client:only="react" organisationSlug={slug!} />
+</Layout>

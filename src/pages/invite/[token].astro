@@ -1,0 +1,12 @@
+---
+import Layout from '../../layouts/Layout.astro'
+import { AcceptInvite } from '../../components/AcceptInvite'
+
+export const prerender = false
+
+const { token } = Astro.params
+---
+
+<Layout title="Accept Invite">
+  <AcceptInvite client:only="react" token={token!} />
+</Layout>

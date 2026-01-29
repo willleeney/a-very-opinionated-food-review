@@ -10,7 +10,7 @@ export function Auth(): JSX.Element {
 
   // Check if user arrived via password reset link
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange((event, _session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setMode('reset')
       }

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Organisation, OrganisationWithMembership, OfficeLocation } from './database.types'
 
 export interface FilterState {
   selectedUserId: string | null
@@ -28,5 +29,37 @@ export const useFilterStore = create<FilterState>((set) => ({
     selectedRating: null,
     selectedBounds: null,
     highlightedRestaurantId: null,
+  }),
+}))
+
+// Organisation store for managing current org context
+export interface OrgState {
+  currentOrg: Organisation | null
+  currentOrgMembership: OrganisationWithMembership | null
+  userOrgs: OrganisationWithMembership[]
+  officeLocation: OfficeLocation | null
+
+  setCurrentOrg: (org: Organisation | null) => void
+  setCurrentOrgMembership: (membership: OrganisationWithMembership | null) => void
+  setUserOrgs: (orgs: OrganisationWithMembership[]) => void
+  setOfficeLocation: (location: OfficeLocation | null) => void
+  clearOrgState: () => void
+}
+
+export const useOrgStore = create<OrgState>((set) => ({
+  currentOrg: null,
+  currentOrgMembership: null,
+  userOrgs: [],
+  officeLocation: null,
+
+  setCurrentOrg: (org) => set({ currentOrg: org }),
+  setCurrentOrgMembership: (membership) => set({ currentOrgMembership: membership }),
+  setUserOrgs: (orgs) => set({ userOrgs: orgs }),
+  setOfficeLocation: (location) => set({ officeLocation: location }),
+  clearOrgState: () => set({
+    currentOrg: null,
+    currentOrgMembership: null,
+    userOrgs: [],
+    officeLocation: null,
   }),
 }))
