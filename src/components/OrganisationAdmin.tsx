@@ -240,22 +240,8 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
       .delete()
       .eq('id', request.id)
 
-    // Make the user's existing reviews visible to this org
-    const { data: userReviews } = await supabase
-      .from('reviews')
-      .select('id')
-      .eq('user_id', request.user_id)
-
-    if (userReviews && userReviews.length > 0) {
-      const visibilityEntries = userReviews.map(review => ({
-        review_id: review.id,
-        organisation_id: org.id,
-      }))
-      // Insert visibility entries, ignore conflicts (review might already be visible)
-      await supabase
-        .from('review_visibility')
-        .upsert(visibilityEntries, { onConflict: 'review_id,organisation_id' })
-    }
+    // Note: Review visibility is now derived from org membership,
+    // so user's reviews are automatically visible to this org
 
     setSuccess(`${request.profile?.display_name || 'User'} has been added as a member`)
     fetchData()

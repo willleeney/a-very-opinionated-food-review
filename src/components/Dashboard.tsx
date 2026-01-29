@@ -33,35 +33,22 @@ function getRatingLabel(rating: number): string {
   return labels[Math.round(rating)] || ''
 }
 
-// Inline review form component
+// Inline review form component - simplified, visibility is derived from org membership
 function InlineReviewForm({
   restaurantId,
   userId,
-  userOrgs,
   existingReview,
   onSaved
 }: {
   restaurantId: string
   userId: string
-  userOrgs: OrganisationWithMembership[]
-  existingReview?: { id: string; rating: number | null; comment: string | null; visibleToOrgs?: string[] }
+  existingReview?: { id: string; rating: number | null; comment: string | null }
   onSaved: () => void
 }) {
   const [rating, setRating] = useState(existingReview?.rating?.toString() || '')
   const [comment, setComment] = useState(existingReview?.comment || '')
-  const [selectedOrgs, setSelectedOrgs] = useState<Set<string>>(new Set(existingReview?.visibleToOrgs || (userOrgs.length > 0 ? [userOrgs[0].id] : [])))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const toggleOrg = (orgId: string) => {
-    const newSet = new Set(selectedOrgs)
-    if (newSet.has(orgId)) {
-      newSet.delete(orgId)
-    } else {
-      newSet.add(orgId)
-    }
-    setSelectedOrgs(newSet)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,8 +58,6 @@ function InlineReviewForm({
     setError(null)
 
     try {
-      let reviewId: string
-
       if (existingReview) {
         // Update existing review
         const { error } = await supabase
@@ -80,16 +65,9 @@ function InlineReviewForm({
           .update({ rating: parseInt(rating), comment: comment || null })
           .eq('id', existingReview.id)
         if (error) throw error
-        reviewId = existingReview.id
-
-        // Delete existing visibility entries
-        await supabase
-          .from('review_visibility')
-          .delete()
-          .eq('review_id', reviewId)
       } else {
         // Insert new review
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('reviews')
           .insert({
             restaurant_id: restaurantId,
@@ -97,22 +75,7 @@ function InlineReviewForm({
             rating: parseInt(rating),
             comment: comment || null,
           })
-          .select('id')
-          .single()
         if (error) throw error
-        reviewId = data.id
-      }
-
-      // Insert visibility entries for selected orgs
-      if (selectedOrgs.size > 0) {
-        const visibilityEntries = Array.from(selectedOrgs).map(orgId => ({
-          review_id: reviewId,
-          organisation_id: orgId,
-        }))
-        const { error: visError } = await supabase
-          .from('review_visibility')
-          .insert(visibilityEntries)
-        if (visError) throw visError
       }
 
       onSaved()
@@ -152,24 +115,6 @@ function InlineReviewForm({
         </button>
         {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
       </div>
-      {userOrgs.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Visible to
-          </span>
-          {userOrgs.map((org) => (
-            <label key={org.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
-              <input
-                type="checkbox"
-                checked={selectedOrgs.has(org.id)}
-                onChange={() => toggleOrg(org.id)}
-                style={{ cursor: 'pointer' }}
-              />
-              {org.name}
-            </label>
-          ))}
-        </div>
-      )}
     </form>
   )
 }
@@ -183,8 +128,9 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
   // Organisation state
   const [currentOrg, setCurrentOrg] = useState<Organisation | null>(null)
+  const [currentOrgMemberIds, setCurrentOrgMemberIds] = useState<Set<string>>(new Set())
   const [userOrgs, setUserOrgs] = useState<OrganisationWithMembership[]>([])
-  const [userOrgIds, setUserOrgIds] = useState<Set<string>>(new Set())
+  const [_userOrgIds, setUserOrgIds] = useState<Set<string>>(new Set())
   const [_isAdmin, setIsAdmin] = useState(false)
   const [officeLocation, setOfficeLocation] = useState<OfficeLocation | null>(null)
 
@@ -240,6 +186,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const fetchData = useCallback(async () => {
     // Fetch current organisation if slug is provided
     let office: OfficeLocation | null = null
+    let orgMemberIds = new Set<string>()
 
     if (organisationSlug) {
       const { data: orgData } = await supabase
@@ -252,12 +199,23 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         setCurrentOrg(orgData)
         office = orgData.office_location as OfficeLocation | null
         setOfficeLocation(office)
+
+        // Fetch members of this org - their reviews will be visible
+        const { data: members } = await supabase
+          .from('organisation_members')
+          .select('user_id')
+          .eq('organisation_id', orgData.id)
+
+        if (members) {
+          orgMemberIds = new Set(members.map(m => m.user_id))
+        }
       }
     } else {
-      // Global view - no office location
+      // Global view - no office location, no visible comments
       setCurrentOrg(null)
       setOfficeLocation(null)
     }
+    setCurrentOrgMemberIds(orgMemberIds)
 
     // Fetch all restaurants (global)
     const { data: restaurantsData } = await supabase
@@ -266,37 +224,8 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       .order('name')
 
     if (restaurantsData) {
-      // Collect all review IDs to fetch visibility data
-      const reviewIds: string[] = []
-      for (const r of restaurantsData) {
-        for (const rev of r.reviews || []) {
-          reviewIds.push(rev.id)
-        }
-      }
-
-      // Fetch visibility data for all reviews
-      let visibilityMap: Record<string, string[]> = {}
-      if (reviewIds.length > 0) {
-        const { data: visibilityData } = await supabase
-          .from('review_visibility')
-          .select('review_id, organisation_id')
-          .in('review_id', reviewIds)
-
-        if (visibilityData) {
-          for (const v of visibilityData) {
-            if (!visibilityMap[v.review_id]) {
-              visibilityMap[v.review_id] = []
-            }
-            visibilityMap[v.review_id].push(v.organisation_id)
-          }
-        }
-      }
-
       const withCalculations = restaurantsData.map((r) => {
-        const reviews = (r.reviews || []).map(rev => ({
-          ...rev,
-          visibleToOrgs: visibilityMap[rev.id] || []
-        }))
+        const reviews = r.reviews || []
         const ratings = reviews
           .filter((rev) => rev.rating !== null)
           .map((rev) => rev.rating as number)
@@ -400,10 +329,15 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   }
 
   // Check if a review's comment should be visible
-  const isCommentVisible = (visibleToOrgs: string[] | undefined): boolean => {
-    // Comments are only visible if the review is shared with an org the user is a member of
-    if (!visibleToOrgs || visibleToOrgs.length === 0) return false
-    return visibleToOrgs.some(orgId => userOrgIds.has(orgId))
+  // Visibility is derived from org membership - if reviewer is member of current org, their comments are visible
+  const isCommentVisible = (reviewerUserId: string | null): boolean => {
+    if (!reviewerUserId) return false
+    // In org view, show comments from org members
+    if (currentOrg) {
+      return currentOrgMemberIds.has(reviewerUserId)
+    }
+    // In global view, no comments visible
+    return false
   }
 
   if (loading) {
@@ -642,7 +576,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {restaurant.reviews.map((review) => {
                               const reviewer = users.find(u => u.id === review.user_id)
-                              const showComment = isCommentVisible(review.visibleToOrgs)
+                              const showComment = isCommentVisible(review.user_id)
                               return (
                                 <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                   <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px' }}>
@@ -669,8 +603,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           <InlineReviewForm
                             restaurantId={restaurant.id}
                             userId={user.id}
-                            userOrgs={userOrgs}
-                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; visibleToOrgs?: string[] } | undefined}
+                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null } | undefined}
                             onSaved={fetchData}
                           />
                         )}
