@@ -423,55 +423,15 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
           </form>
         </section>
 
-        {/* Pending invites */}
-        {invites.length > 0 && (
-          <section style={{ marginBottom: '32px' }}>
-            <h2 style={{ marginBottom: '16px' }}>Pending Invites ({invites.length})</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Invited by</th>
-                  <th>Expires</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {invites.map((invite) => (
-                  <tr key={invite.id}>
-                    <td style={{ fontWeight: 500 }}>
-                      {invite.email}
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>
-                      {invite.inviter?.display_name || 'Unknown'}
-                    </td>
-                    <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                      {invite.expires_at ? new Date(invite.expires_at).toLocaleDateString() : '—'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleCancelInvite(invite.id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--poor)' }}
-                      >
-                        Cancel
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-
         {/* Members */}
         <section>
-          <h2 style={{ marginBottom: '16px' }}>Members ({members.length})</h2>
+          <h2 style={{ marginBottom: '16px' }}>Members ({members.length}{invites.length > 0 ? ` + ${invites.length} pending` : ''})</h2>
           <table>
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Role</th>
+                <th>Status</th>
                 <th></th>
               </tr>
             </thead>
@@ -503,6 +463,34 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
                         Remove
                       </button>
                     )}
+                  </td>
+                </tr>
+              ))}
+              {invites.map((invite) => (
+                <tr key={`invite-${invite.id}`} style={{ opacity: 0.7 }}>
+                  <td style={{ fontWeight: 500, fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                    {invite.email.split('@')[0]}
+                  </td>
+                  <td style={{ color: 'var(--text-muted)' }}>
+                    {invite.email}
+                  </td>
+                  <td>
+                    <span style={{
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'var(--text-muted)'
+                    }}>
+                      pending
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      onClick={() => handleCancelInvite(invite.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--poor)' }}
+                    >
+                      Cancel
+                    </button>
                   </td>
                 </tr>
               ))}
