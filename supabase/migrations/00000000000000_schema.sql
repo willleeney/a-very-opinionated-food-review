@@ -128,6 +128,38 @@ AS $$
   SELECT organisation_id FROM organisation_members WHERE user_id = user_uuid
 $$;
 
+-- Helper function to check if user can add a member to an org (avoids RLS recursion)
+CREATE OR REPLACE FUNCTION can_add_org_member(org_id UUID, new_user_id UUID, requesting_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT
+    -- Requesting user is admin of this org
+    EXISTS (
+      SELECT 1 FROM organisation_members
+      WHERE organisation_id = org_id
+      AND user_id = requesting_user_id
+      AND role = 'admin'
+    )
+    -- Or this is the first member of the org
+    OR NOT EXISTS (
+      SELECT 1 FROM organisation_members
+      WHERE organisation_id = org_id
+    )
+    -- Or user is adding themselves and has a valid invite
+    OR (
+      new_user_id = requesting_user_id
+      AND EXISTS (
+        SELECT 1 FROM organisation_invites i
+        JOIN profiles p ON p.email = i.email
+        WHERE i.organisation_id = org_id
+        AND p.id = new_user_id
+      )
+    )
+$$;
+
 ------------------------------------------------------------
 -- TRIGGERS
 ------------------------------------------------------------
@@ -173,29 +205,7 @@ CREATE POLICY "Members can view organisation members" ON organisation_members FO
   USING (user_id = auth.uid() OR organisation_id IN (SELECT user_org_ids(auth.uid())));
 
 CREATE POLICY "Can add members" ON organisation_members FOR INSERT TO authenticated
-  WITH CHECK (
-    -- Admin of the org can add anyone
-    EXISTS (
-      SELECT 1 FROM organisation_members AS existing
-      WHERE existing.organisation_id = organisation_id
-      AND existing.user_id = auth.uid()
-      AND existing.role = 'admin'
-    )
-    -- First member of a new org
-    OR NOT EXISTS (
-      SELECT 1 FROM organisation_members AS existing
-      WHERE existing.organisation_id = organisation_id
-    )
-    -- User accepting their own invite (adding themselves)
-    OR (
-      user_id = auth.uid()
-      AND EXISTS (
-        SELECT 1 FROM organisation_invites
-        WHERE organisation_invites.organisation_id = organisation_id
-        AND organisation_invites.email = (SELECT email FROM profiles WHERE id = auth.uid())
-      )
-    )
-  );
+  WITH CHECK (can_add_org_member(organisation_id, user_id, auth.uid()));
 
 CREATE POLICY "Admins can remove members" ON organisation_members FOR DELETE TO authenticated
   USING (
