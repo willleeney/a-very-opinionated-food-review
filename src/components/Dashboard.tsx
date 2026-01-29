@@ -201,13 +201,16 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         setOfficeLocation(office)
 
         // Fetch members of this org - their reviews will be visible
-        const { data: members } = await supabase
+        const { data: members, error: membersError } = await supabase
           .from('organisation_members')
           .select('user_id')
           .eq('organisation_id', orgData.id)
 
+        console.log('Org members query:', { orgId: orgData.id, members, membersError })
+
         if (members) {
           orgMemberIds = new Set(members.map(m => m.user_id))
+          console.log('orgMemberIds:', Array.from(orgMemberIds))
         }
       }
     } else {
@@ -278,6 +281,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
+      console.log('Auth getUser result:', data.user?.email)
       setUser(data.user)
       if (data.user) {
         fetchUserOrgs(data.user.id)
