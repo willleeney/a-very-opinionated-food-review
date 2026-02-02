@@ -183,13 +183,10 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     }
   }, [organisationSlug])
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (currentUserId?: string | null) => {
     // Fetch current organisation if slug is provided
     let office: OfficeLocation | null = null
     let visibleReviewerIds = new Set<string>()
-
-    // Get current user's session for RLS and visibility
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
 
     if (organisationSlug) {
       // Org view: show reviews from members of this specific org
@@ -219,12 +216,12 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       setCurrentOrg(null)
       setOfficeLocation(null)
 
-      if (currentUser) {
+      if (currentUserId) {
         // Get all orgs the user is in
         const { data: userMemberships } = await supabase
           .from('organisation_members')
           .select('organisation_id')
-          .eq('user_id', currentUser.id)
+          .eq('user_id', currentUserId)
 
         if (userMemberships && userMemberships.length > 0) {
           const userOrgIdsList = userMemberships.map(m => m.organisation_id)
@@ -303,30 +300,39 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   }, [organisationSlug])
 
   useEffect(() => {
+    let isMounted = true
+
     supabase.auth.getUser().then(({ data }) => {
+      if (!isMounted) return
       setUser(data.user)
       if (data.user) {
         fetchUserOrgs(data.user.id)
       }
       // Fetch data after auth check completes (whether logged in or not)
-      fetchData()
+      fetchData(data.user?.id)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchUserOrgs(session.user.id)
-        // Refetch data when auth state changes to get proper RLS results
-        fetchData()
-      } else {
-        setUserOrgs([])
-        setUserOrgIds(new Set())
-        setIsAdmin(false)
-        fetchData()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return
+      // Only handle sign in/out events, not initial session
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchUserOrgs(session.user.id)
+          fetchData(session.user.id)
+        } else {
+          setUserOrgs([])
+          setUserOrgIds(new Set())
+          setIsAdmin(false)
+          fetchData(null)
+        }
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [fetchData, fetchUserOrgs])
 
   // Filter restaurants
