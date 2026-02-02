@@ -251,7 +251,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         // Mark each review with whether the reviewer is an org member (for visibility)
         const reviews = (r.reviews || []).map(rev => ({
           ...rev,
-          isOrgMember: rev.user_id ? orgMemberIds.has(rev.user_id) : false
+          isOrgMember: rev.user_id ? visibleReviewerIds.has(rev.user_id) : false
         }))
         const ratings = reviews
           .filter((rev) => rev.rating !== null)
