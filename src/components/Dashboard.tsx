@@ -169,7 +169,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
   // Organisation state
   const [currentOrg, setCurrentOrg] = useState<Organisation | null>(null)
-  const [currentOrgMemberIds, setCurrentOrgMemberIds] = useState<Set<string>>(new Set())
+  const [_currentOrgMemberIds, setCurrentOrgMemberIds] = useState<Set<string>>(new Set())
   const [userOrgs, setUserOrgs] = useState<OrganisationWithMembership[]>([])
   const [_userOrgIds, setUserOrgIds] = useState<Set<string>>(new Set())
   const [_isAdmin, setIsAdmin] = useState(false)
