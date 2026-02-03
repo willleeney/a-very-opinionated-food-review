@@ -190,6 +190,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
   const [followingUsers, setFollowingUsers] = useState<{ id: string; name: string }[]>([])
   const [orgMembers, setOrgMembers] = useState<{ id: string; name: string }[]>([])
+  const [orgMembersByOrgId, setOrgMembersByOrgId] = useState<Map<string, Set<string>>>(new Map())
 
   // Fetch user's following list with names
   const fetchFollowing = useCallback(async (userId: string) => {
@@ -259,15 +260,25 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         setIsAdmin(currentOrgMembership?.role === 'admin')
       }
 
-      // Fetch all members of user's orgs with their names
+      // Fetch all members of user's orgs with their names and org mapping
       const { data: allMembers } = await supabase
         .from('organisation_members')
-        .select('user_id')
+        .select('user_id, organisation_id')
         .in('organisation_id', orgIds)
-        .neq('user_id', userId) // Exclude self
 
       if (allMembers && allMembers.length > 0) {
-        const memberIds = [...new Set(allMembers.map(m => m.user_id))]
+        // Build org -> members map
+        const membersByOrg = new Map<string, Set<string>>()
+        for (const m of allMembers) {
+          if (!membersByOrg.has(m.organisation_id)) {
+            membersByOrg.set(m.organisation_id, new Set())
+          }
+          membersByOrg.get(m.organisation_id)!.add(m.user_id)
+        }
+        setOrgMembersByOrgId(membersByOrg)
+
+        // Get unique member IDs (excluding self) for the search dropdown
+        const memberIds = [...new Set(allMembers.filter(m => m.user_id !== userId).map(m => m.user_id))]
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, display_name')
@@ -500,7 +511,12 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         const org = userOrgs.find(o => o.slug === socialFilter)
         if (org) {
           // Only show restaurants reviewed by members of this org
-          if (!r.reviews.some(rev => rev.organisation_id === org.id)) return false
+          const orgMemberIds = orgMembersByOrgId.get(org.id)
+          if (orgMemberIds) {
+            if (!r.reviews.some(rev => rev.user_id && orgMemberIds.has(rev.user_id))) return false
+          } else {
+            return false // No members found for this org
+          }
         }
       }
     }
