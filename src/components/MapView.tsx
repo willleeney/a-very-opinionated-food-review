@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap, AttributionControl } from 'react-leaflet'
 import L from 'leaflet'
 import type { RestaurantWithReviews } from '../lib/database.types'
 import { useFilterStore } from '../lib/store'
@@ -532,9 +532,11 @@ export function MapView({ restaurants, onLocationUpdated, officeLocation, showOf
         scrollWheelZoom={true}
         wheelPxPerZoomLevel={150}
         style={{ height: '100%', width: '100%' }}
+        attributionControl={false}
       >
+        <AttributionControl position="bottomright" prefix={false} />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          attribution='© OpenStreetMap'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 

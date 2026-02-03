@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { supabase } from '../lib/supabase'
+import type { RestaurantCategory } from '../lib/database.types'
+
+const ALL_CATEGORIES: { value: RestaurantCategory; label: string }[] = [
+  { value: 'lunch', label: 'Lunch' },
+  { value: 'dinner', label: 'Dinner' },
+  { value: 'coffee', label: 'Coffee' },
+  { value: 'brunch', label: 'Brunch' },
+  { value: 'pub', label: 'Pub' },
+]
 
 interface AddReviewProps {
   userId: string
@@ -56,18 +65,28 @@ function MapPanner({ lat, lng }: { lat: number | null, lng: number | null }) {
 export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
-  const [type, setType] = useState('')
-  const [notes, setNotes] = useState('')
+  const [cuisine, setCuisine] = useState('')
+  const [categories, setCategories] = useState<RestaurantCategory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
-  const [rating, setRating] = useState('')
+  const [overallRating, setOverallRating] = useState('')
+  const [valueRating, setValueRating] = useState('')
+  const [tasteRating, setTasteRating] = useState('')
   const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(false)
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupResults, setLookupResults] = useState<GeoResult[]>([])
   const [showMap, setShowMap] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const toggleCategory = (cat: RestaurantCategory) => {
+    setCategories(prev =>
+      prev.includes(cat)
+        ? prev.filter(c => c !== cat)
+        : [...prev, cat]
+    )
+  }
 
   const handleLookup = async () => {
     if (!searchQuery.trim()) return
@@ -128,8 +147,8 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
         .from('restaurants')
         .insert({
           name,
-          type,
-          notes: notes || null,
+          cuisine,
+          categories,
           latitude: latitude,
           longitude: longitude,
         })
@@ -138,11 +157,14 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
 
       if (restaurantError) throw restaurantError
 
-      if (rating) {
+      // Only add review if overall rating is provided (required)
+      if (overallRating) {
         const { error: reviewError } = await supabase.from('reviews').insert({
           restaurant_id: restaurant.id,
           user_id: userId,
-          rating: parseInt(rating),
+          rating: parseInt(overallRating),
+          value_rating: valueRating ? parseInt(valueRating) : null,
+          taste_rating: tasteRating ? parseInt(tasteRating) : null,
           comment: comment || null,
           organisation_id: organisationId || null,
         })
@@ -152,12 +174,14 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
 
       // Reset form
       setName('')
-      setType('')
-      setNotes('')
+      setCuisine('')
+      setCategories([])
       setSearchQuery('')
       setLatitude(null)
       setLongitude(null)
-      setRating('')
+      setOverallRating('')
+      setValueRating('')
+      setTasteRating('')
       setComment('')
       setLookupResults([])
       setShowMap(false)
@@ -218,12 +242,12 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Type *
+                      Cuisine *
                     </label>
                     <input
                       type="text"
-                      value={type}
-                      onChange={(e) => setType(e.target.value)}
+                      value={cuisine}
+                      onChange={(e) => setCuisine(e.target.value)}
                       required
                       placeholder="Thai, Sandwich, etc."
                       style={{ width: '100%' }}
@@ -231,17 +255,24 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                   </div>
                 </div>
 
+                {/* Categories */}
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Notes
+                    Categories
                   </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={2}
-                    placeholder="Any notes about this place..."
-                    style={{ width: '100%', resize: 'none' }}
-                  />
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {ALL_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => toggleCategory(cat.value)}
+                        className={`default-chip accent ${categories.includes(cat.value) ? 'active' : ''}`}
+                        style={{ fontSize: '12px', padding: '4px 12px' }}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Location section */}
@@ -357,14 +388,14 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                     Your Review (optional)
                   </p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Rating
+                        Overall *
                       </label>
                       <select
-                        value={rating}
-                        onChange={(e) => setRating(e.target.value)}
+                        value={overallRating}
+                        onChange={(e) => setOverallRating(e.target.value)}
                         style={{ width: '100%' }}
                       >
                         <option value="">—</option>
@@ -377,16 +408,50 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Comment
+                        Value
                       </label>
-                      <input
-                        type="text"
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Brief comment..."
+                      <select
+                        value={valueRating}
+                        onChange={(e) => setValueRating(e.target.value)}
                         style={{ width: '100%' }}
-                      />
+                      >
+                        <option value="">—</option>
+                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                          <option key={r} value={r}>
+                            {r}/10
+                          </option>
+                        ))}
+                      </select>
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                        Taste
+                      </label>
+                      <select
+                        value={tasteRating}
+                        onChange={(e) => setTasteRating(e.target.value)}
+                        style={{ width: '100%' }}
+                      >
+                        <option value="">—</option>
+                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                          <option key={r} value={r}>
+                            {r}/10
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      Comment
+                    </label>
+                    <input
+                      type="text"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Brief comment..."
+                      style={{ width: '100%' }}
+                    />
                   </div>
                 </div>
 

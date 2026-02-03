@@ -144,7 +144,8 @@ export type Database = {
           longitude: number | null
           name: string
           notes: string | null
-          type: string
+          cuisine: string
+          categories: string[]
         }
         Insert: {
           address?: string | null
@@ -154,7 +155,8 @@ export type Database = {
           longitude?: number | null
           name: string
           notes?: string | null
-          type: string
+          cuisine: string
+          categories?: string[]
         }
         Update: {
           address?: string | null
@@ -164,7 +166,8 @@ export type Database = {
           longitude?: number | null
           name?: string
           notes?: string | null
-          type?: string
+          cuisine?: string
+          categories?: string[]
         }
         Relationships: []
       }
@@ -174,6 +177,8 @@ export type Database = {
           created_at: string | null
           id: string
           rating: number | null
+          value_rating: number
+          taste_rating: number
           restaurant_id: string | null
           user_id: string | null
           organisation_id: string | null
@@ -183,6 +188,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           rating?: number | null
+          value_rating: number
+          taste_rating: number
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null
@@ -192,6 +199,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           rating?: number | null
+          value_rating?: number
+          taste_rating?: number
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null
@@ -249,6 +258,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_follows: {
+        Row: {
+          id: string
+          follower_id: string
+          following_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          follower_id: string
+          following_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          follower_id?: string
+          following_id?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -273,10 +303,16 @@ export type OrganisationMember = Database['public']['Tables']['organisation_memb
 export type OrganisationInvite = Database['public']['Tables']['organisation_invites']['Row']
 export type OrganisationRequest = Database['public']['Tables']['organisation_requests']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
+export type UserFollow = Database['public']['Tables']['user_follows']['Row']
+
+// Category type
+export type RestaurantCategory = 'lunch' | 'dinner' | 'coffee' | 'brunch' | 'pub'
 
 export type RestaurantWithReviews = Restaurant & {
   reviews: (Review & { profile?: Profile | null; isOrgMember?: boolean })[]
   avgRating: number | null
+  avgValueRating: number | null
+  avgTasteRating: number | null
   distance: number | null
 }
 
@@ -288,3 +324,6 @@ export type OfficeLocation = {
   lat: number
   lng: number
 }
+
+// Social filter type
+export type SocialFilter = 'everyone' | 'following' | 'just_me' | string // string for org slugs

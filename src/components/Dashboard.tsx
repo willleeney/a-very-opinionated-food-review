@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation } from '../lib/database.types'
+import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory } from '../lib/database.types'
 import { distanceFrom, formatDistance } from '../lib/distance'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
 import { BurgerMenu } from './BurgerMenu'
-import { OrganisationSelector } from './OrganisationSelector'
+import { FilterBar } from './FilterBar'
 import { useFilterStore } from '../lib/store'
 import type { User } from '@supabase/supabase-js'
 
@@ -42,27 +42,36 @@ function InlineReviewForm({
 }: {
   restaurantId: string
   userId: string
-  existingReview?: { id: string; rating: number | null; comment: string | null }
+  existingReview?: { id: string; rating: number | null; value_rating: number | null; taste_rating: number | null; comment: string | null }
   onSaved: () => void
 }) {
-  const [rating, setRating] = useState(existingReview?.rating?.toString() || '')
+  const [overallRating, setOverallRating] = useState(existingReview?.rating?.toString() || '')
+  const [valueRating, setValueRating] = useState(existingReview?.value_rating?.toString() || '')
+  const [tasteRating, setTasteRating] = useState(existingReview?.taste_rating?.toString() || '')
   const [comment, setComment] = useState(existingReview?.comment || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!rating) return
+    if (!overallRating) return
 
     setSaving(true)
     setError(null)
 
     try {
+      const reviewData = {
+        rating: parseInt(overallRating),
+        value_rating: valueRating ? parseInt(valueRating) : null,
+        taste_rating: tasteRating ? parseInt(tasteRating) : null,
+        comment: comment || null,
+      }
+
       if (existingReview) {
         // Update existing review
         const { error } = await supabase
           .from('reviews')
-          .update({ rating: parseInt(rating), comment: comment || null })
+          .update(reviewData)
           .eq('id', existingReview.id)
         if (error) throw error
       } else {
@@ -72,15 +81,18 @@ function InlineReviewForm({
           .insert({
             restaurant_id: restaurantId,
             user_id: userId,
-            rating: parseInt(rating),
-            comment: comment || null,
+            ...reviewData,
           })
         if (error) throw error
       }
 
       onSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save review')
+      console.error('Review save error:', err)
+      const message = err && typeof err === 'object' && 'message' in err
+        ? (err as { message: string }).message
+        : 'Failed to save review'
+      setError(message)
     } finally {
       setSaving(false)
     }
@@ -92,17 +104,46 @@ function InlineReviewForm({
         <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           {existingReview ? 'Your review' : 'Add review'}
         </span>
-        <select
-          value={rating}
-          onChange={(e) => setRating(e.target.value)}
-          required
-          style={{ width: '80px' }}
-        >
-          <option value="">—</option>
-          {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-            <option key={r} value={r}>{r}/10</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Overall*</span>
+          <select
+            value={overallRating}
+            onChange={(e) => setOverallRating(e.target.value)}
+            required
+            style={{ width: '70px' }}
+          >
+            <option value="">—</option>
+            {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Value</span>
+          <select
+            value={valueRating}
+            onChange={(e) => setValueRating(e.target.value)}
+            style={{ width: '70px' }}
+          >
+            <option value="">—</option>
+            {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Taste</span>
+          <select
+            value={tasteRating}
+            onChange={(e) => setTasteRating(e.target.value)}
+            style={{ width: '70px' }}
+          >
+            <option value="">—</option>
+            {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
         <input
           type="text"
           value={comment}
@@ -110,7 +151,7 @@ function InlineReviewForm({
           placeholder="Comment (optional)"
           style={{ flex: 1, maxWidth: '300px' }}
         />
-        <button type="submit" disabled={saving || !rating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
+        <button type="submit" disabled={saving || !overallRating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
           {saving ? '...' : existingReview ? 'Update' : 'Save'}
         </button>
         {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
@@ -135,12 +176,48 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const [officeLocation, setOfficeLocation] = useState<OfficeLocation | null>(null)
 
   const {
+    selectedCategories,
+    minOverallRating,
+    minValueRating,
+    minTasteRating,
+    socialFilter,
     selectedUserId,
-    setSelectedUserId,
     highlightedRestaurantId: _highlightedRestaurantId,
     setHighlightedRestaurantId,
-    clearFilters
   } = useFilterStore()
+
+  // Following state
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [followingUsers, setFollowingUsers] = useState<{ id: string; name: string }[]>([])
+  const [orgMembers, setOrgMembers] = useState<{ id: string; name: string }[]>([])
+
+  // Fetch user's following list with names
+  const fetchFollowing = useCallback(async (userId: string) => {
+    const { data: follows } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', userId)
+
+    if (follows && follows.length > 0) {
+      setFollowingIds(new Set(follows.map(f => f.following_id)))
+
+      // Fetch profile names for followed users
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', follows.map(f => f.following_id))
+
+      if (profiles) {
+        setFollowingUsers(profiles.map(p => ({
+          id: p.id,
+          name: p.display_name || p.id.slice(0, 8)
+        })))
+      }
+    } else {
+      setFollowingIds(new Set())
+      setFollowingUsers([])
+    }
+  }, [])
 
   // Fetch user's organisations
   const fetchUserOrgs = useCallback(async (userId: string) => {
@@ -154,6 +231,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       setUserOrgs([])
       setUserOrgIds(new Set())
       setIsAdmin(false)
+      setOrgMembers([])
       return
     }
 
@@ -179,6 +257,30 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (organisationSlug) {
         const currentOrgMembership = orgs.find(o => o.slug === organisationSlug)
         setIsAdmin(currentOrgMembership?.role === 'admin')
+      }
+
+      // Fetch all members of user's orgs with their names
+      const { data: allMembers } = await supabase
+        .from('organisation_members')
+        .select('user_id')
+        .in('organisation_id', orgIds)
+        .neq('user_id', userId) // Exclude self
+
+      if (allMembers && allMembers.length > 0) {
+        const memberIds = [...new Set(allMembers.map(m => m.user_id))]
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', memberIds)
+
+        if (profiles) {
+          setOrgMembers(profiles.map(p => ({
+            id: p.id,
+            name: p.display_name || p.id.slice(0, 8)
+          })))
+        }
+      } else {
+        setOrgMembers([])
       }
     }
   }, [organisationSlug])
@@ -253,11 +355,28 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           ...rev,
           isOrgMember: rev.user_id ? visibleReviewerIds.has(rev.user_id) : false
         }))
+
+        // Calculate legacy average rating
         const ratings = reviews
           .filter((rev) => rev.rating !== null)
           .map((rev) => rev.rating as number)
         const avgRating = ratings.length > 0
           ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+          : null
+
+        // Calculate dual ratings
+        const valueRatings = reviews
+          .filter((rev) => rev.value_rating !== null && rev.value_rating !== undefined)
+          .map((rev) => rev.value_rating as number)
+        const avgValueRating = valueRatings.length > 0
+          ? valueRatings.reduce((a, b) => a + b, 0) / valueRatings.length
+          : null
+
+        const tasteRatings = reviews
+          .filter((rev) => rev.taste_rating !== null && rev.taste_rating !== undefined)
+          .map((rev) => rev.taste_rating as number)
+        const avgTasteRating = tasteRatings.length > 0
+          ? tasteRatings.reduce((a, b) => a + b, 0) / tasteRatings.length
           : null
 
         // Only calculate distance if we have an office location
@@ -269,6 +388,8 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           ...r,
           reviews,
           avgRating,
+          avgValueRating,
+          avgTasteRating,
           distance,
         }
       })
@@ -307,6 +428,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       setUser(data.user)
       if (data.user) {
         fetchUserOrgs(data.user.id)
+        fetchFollowing(data.user.id)
       }
       // Fetch data after auth check completes (whether logged in or not)
       fetchData(data.user?.id)
@@ -319,11 +441,13 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         setUser(session?.user ?? null)
         if (session?.user) {
           fetchUserOrgs(session.user.id)
+          fetchFollowing(session.user.id)
           fetchData(session.user.id)
         } else {
           setUserOrgs([])
           setUserOrgIds(new Set())
           setIsAdmin(false)
+          setFollowingIds(new Set())
           fetchData(null)
         }
       }
@@ -333,18 +457,74 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [fetchData, fetchUserOrgs])
+  }, [fetchData, fetchUserOrgs, fetchFollowing])
 
   // Filter restaurants
   const filteredRestaurants = restaurants.filter(r => {
-    if (!selectedUserId) return true
-    return r.reviews.some(rev => rev.user_id === selectedUserId)
+    // Category filter
+    if (selectedCategories.length > 0) {
+      const restaurantCategories = (r.categories || []) as RestaurantCategory[]
+      const hasMatchingCategory = selectedCategories.some(cat => restaurantCategories.includes(cat))
+      if (!hasMatchingCategory) return false
+    }
+
+    // Overall rating filter
+    if (minOverallRating !== null && r.avgRating !== null) {
+      if (r.avgRating < minOverallRating) return false
+    }
+
+    // Value rating filter
+    if (minValueRating !== null && r.avgValueRating !== null) {
+      if (r.avgValueRating < minValueRating) return false
+    }
+
+    // Taste rating filter
+    if (minTasteRating !== null && r.avgTasteRating !== null) {
+      if (r.avgTasteRating < minTasteRating) return false
+    }
+
+    // Specific user filter (from search)
+    if (selectedUserId) {
+      if (!r.reviews.some(rev => rev.user_id === selectedUserId)) return false
+    }
+    // Social filter (only apply if no specific user selected)
+    else if (socialFilter !== 'everyone' && user) {
+      if (socialFilter === 'just_me') {
+        // Only show restaurants I've reviewed
+        if (!r.reviews.some(rev => rev.user_id === user.id)) return false
+      } else if (socialFilter === 'following') {
+        // Only show restaurants reviewed by people I follow
+        if (!r.reviews.some(rev => rev.user_id && followingIds.has(rev.user_id))) return false
+      } else {
+        // Filter by organisation slug
+        const org = userOrgs.find(o => o.slug === socialFilter)
+        if (org) {
+          // Only show restaurants reviewed by members of this org
+          if (!r.reviews.some(rev => rev.organisation_id === org.id)) return false
+        }
+      }
+    }
+
+    return true
   }).sort((a, b) => {
-    if (a.avgRating === null && b.avgRating === null) return 0
-    if (a.avgRating === null) return 1
-    if (b.avgRating === null) return -1
-    return b.avgRating - a.avgRating
+    // Sort by average taste rating (primary) then value rating
+    const aRating = a.avgTasteRating ?? a.avgRating ?? 0
+    const bRating = b.avgTasteRating ?? b.avgRating ?? 0
+    if (aRating === 0 && bRating === 0) return 0
+    if (aRating === 0) return 1
+    if (bRating === 0) return -1
+    return bRating - aRating
   })
+
+  // Determine active office location (from current org OR from social filter org)
+  const activeOrg = socialFilter !== 'everyone' && socialFilter !== 'following' && socialFilter !== 'just_me'
+    ? userOrgs.find(o => o.slug === socialFilter)
+    : null
+  const activeOfficeLocation = currentOrg?.office_location as OfficeLocation | null
+    || (activeOrg?.office_location as OfficeLocation | null)
+    || officeLocation
+  const activeOrgName = currentOrg?.name || activeOrg?.name || null
+  const showOffice = !!currentOrg || !!activeOrg
 
   const restaurantsWithRatings = restaurants.filter(r => r.avgRating !== null)
   const totalReviews = restaurants.reduce((sum, r) => sum + r.reviews.length, 0)
@@ -399,13 +579,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       <nav>
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ flex: 1 }}>
-              {userOrgs.length > 0 ? (
-                <OrganisationSelector currentOrgSlug={organisationSlug} userOrgs={userOrgs} />
-              ) : (
-                <div style={{ width: '80px' }} />
-              )}
-            </div>
+            <div style={{ flex: 1 }} />
             <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 500, letterSpacing: '0.02em' }}>
               Tastefull
             </a>
@@ -470,72 +644,41 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           <MapView
             restaurants={filteredRestaurants}
             onLocationUpdated={fetchData}
-            officeLocation={officeLocation}
-            showOfficeMarker={!!currentOrg}
-            orgName={currentOrg?.name}
+            officeLocation={activeOfficeLocation}
+            showOfficeMarker={showOffice}
+            orgName={activeOrgName}
             isSignedIn={!!user}
           />
         </div>
       </section>
 
-      {/* Histogram - below map */}
-      <section style={{ paddingBottom: '40px' }}>
-        <div className="container">
-          <RatingHistogram restaurants={filteredRestaurants} />
-        </div>
-      </section>
-
       {/* Filters and Add Place */}
       <div className="container">
-        <div className="filters">
-          {currentOrg && (
-            <>
-              <div className="filter-group">
-                <span className="filter-label">Reviewer</span>
-                <select
-                  value={selectedUserId || ''}
-                  onChange={(e) => setSelectedUserId(e.target.value || null)}
-                  style={{ minWidth: '120px' }}
-                >
-                  <option value="">All</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedUserId && (
-                <button
-                  onClick={clearFilters}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    color: 'var(--accent)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}
-                >
-                  Clear
-                </button>
-              )}
-            </>
-          )}
-
-          <div style={{ marginLeft: 'auto' }}>
-            {user && (
+        <FilterBar
+          userOrgs={userOrgs}
+          isSignedIn={!!user}
+          searchableUsers={[
+            ...followingUsers.map(u => ({ id: u.id, name: u.name, source: 'following' as const })),
+            ...orgMembers.filter(m => !followingUsers.some(f => f.id === m.id)).map(u => ({ id: u.id, name: u.name, source: 'org_member' as const }))
+          ]}
+          rightActions={
+            user && (
               <AddReview
                 userId={user.id}
                 organisationId={currentOrg?.id}
                 onAdded={fetchData}
               />
-            )}
-          </div>
-        </div>
+            )
+          }
+        />
       </div>
+
+      {/* Histogram - below filters */}
+      <section style={{ paddingBottom: '40px' }}>
+        <div className="container">
+          <RatingHistogram restaurants={filteredRestaurants} />
+        </div>
+      </section>
 
       {/* Restaurant List */}
       <section style={{ padding: '40px 0 80px' }}>
@@ -566,7 +709,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                       <strong style={{ fontWeight: 500 }}>{restaurant.name}</strong>
                     </td>
                     <td className="hide-mobile" style={{ color: 'var(--text-secondary)' }}>
-                      {restaurant.type}
+                      {restaurant.cuisine}
                     </td>
                     {officeLocation && (
                       <td className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -593,13 +736,17 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            fontSize: '12px',
                             color: 'var(--accent)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em'
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center'
                           }}
+                          title="View on map"
                         >
-                          View on map
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                          </svg>
                         </button>
                       )}
                     </td>
@@ -607,24 +754,26 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                   {expandedId === restaurant.id && (
                     <tr key={`${restaurant.id}-expanded`}>
                       <td colSpan={officeLocation ? 6 : 5} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
-                        {restaurant.notes && (
-                          <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '16px' }}>
-                            "{restaurant.notes}"
-                          </p>
-                        )}
                         {restaurant.reviews.length > 0 ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {restaurant.reviews.map((review) => {
                               const reviewer = users.find(u => u.id === review.user_id)
                               const showComment = isCommentVisible(review.isOrgMember ?? false)
                               return (
-                                <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                  <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px' }}>
+                                <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                  <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
                                     {review.rating}/10
                                   </span>
+                                  {(review.value_rating || review.taste_rating) && (
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                      {review.value_rating && `Value: ${review.value_rating}/10`}
+                                      {review.value_rating && review.taste_rating && ' · '}
+                                      {review.taste_rating && `Taste: ${review.taste_rating}/10`}
+                                    </span>
+                                  )}
                                   {showComment && (
                                     <>
-                                      <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '60px' }}>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
                                         {reviewer?.email || 'Anonymous'}
                                       </span>
                                       {review.comment && (
@@ -643,7 +792,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           <InlineReviewForm
                             restaurantId={restaurant.id}
                             userId={user.id}
-                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null } | undefined}
+                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; value_rating: number | null; taste_rating: number | null; comment: string | null } | undefined}
                             onSaved={fetchData}
                           />
                         )}
