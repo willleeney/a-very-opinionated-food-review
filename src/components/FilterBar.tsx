@@ -158,7 +158,6 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
                   {openDropdown === 'user' && (
                     <div
                       className="category-dropdown"
-                      onMouseLeave={() => handleUserDropdownToggle(false)}
                     >
                       <div className="dropdown-header">
                         <span className="dropdown-title">Search people</span>

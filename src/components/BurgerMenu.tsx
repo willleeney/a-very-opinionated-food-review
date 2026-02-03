@@ -35,6 +35,7 @@ export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userO
     <div ref={menuRef} className="burger-menu">
       <button
         onClick={() => setIsOpen(!isOpen)}
+        onMouseEnter={() => setIsOpen(true)}
         aria-label="Menu"
         aria-expanded={isOpen}
         className={`burger-button ${isOpen ? 'active' : ''}`}
@@ -45,24 +46,35 @@ export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userO
       </button>
 
       {isOpen && (
-        <div className="burger-dropdown">
-          {adminOrgs.map((org) => (
-            <a
-              key={org.id}
-              href={`/org/${org.slug}/admin`}
-              className="burger-link"
-            >
-              {org.name} Settings
+        <div
+          className="category-dropdown burger-dropdown-position"
+          onMouseLeave={() => setIsOpen(false)}
+        >
+          <div className="dropdown-header">
+            <span className="dropdown-title">Menu</span>
+          </div>
+          <div className="dropdown-list">
+            {adminOrgs.map((org) => (
+              <a
+                key={org.id}
+                href={`/org/${org.slug}/admin`}
+                className="dropdown-item"
+              >
+                <span className="item-check"></span>
+                <span className="item-label">{org.name} Settings</span>
+              </a>
+            ))}
+
+            <a href="/settings" className="dropdown-item">
+              <span className="item-check"></span>
+              <span className="item-label">My Settings</span>
             </a>
-          ))}
 
-          <a href="/settings" className="burger-link">
-            My Settings
-          </a>
-
-          <button onClick={handleSignOut} className="burger-signout">
-            Sign out
-          </button>
+            <button onClick={handleSignOut} className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
+              <span className="item-check"></span>
+              <span className="item-label" style={{ color: 'var(--text-muted)' }}>Sign out</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
