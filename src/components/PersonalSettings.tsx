@@ -322,11 +322,8 @@ export function PersonalSettings(): JSX.Element {
         </div>
       </nav>
 
-      <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px' }}>
-        <h1 style={{ marginBottom: '8px' }}>Settings</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '48px' }}>
-          Manage your account and organisations
-        </p>
+      <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px', maxWidth: '900px' }}>
+        <h1 style={{ marginBottom: '48px' }}>Settings</h1>
 
         {error && (
           <div style={{ padding: '16px', background: '#fdf2f2', border: '1px solid var(--poor)', marginBottom: '24px', color: 'var(--poor)' }}>
@@ -341,167 +338,201 @@ export function PersonalSettings(): JSX.Element {
         )}
 
         {/* Account info */}
-        <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ marginBottom: '16px' }}>Account</h2>
-          <form onSubmit={handleUpdateName} style={{ maxWidth: '400px' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Name
-              </label>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your name"
-                  style={{ flex: 1 }}
-                />
-                <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '10px 20px' }}>
-                  {saving ? '...' : 'Save'}
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Account</h2>
+          </div>
+          <div className="settings-content">
+            <form onSubmit={handleUpdateName}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Your name"
+                    style={{ width: '280px' }}
+                  />
+                </div>
+                <button type="submit" disabled={saving} className="btn" style={{ padding: '10px 20px', width: '120px' }}>
+                  {saving ? '...' : 'Update'}
                 </button>
               </div>
+            </form>
+            <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Email
+              </label>
+              <span className="mono" style={{ fontSize: '14px' }}>{user.email}</span>
             </div>
-          </form>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px' }}>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Email</span>
-            <span className="mono" style={{ fontSize: '14px' }}>{user.email}</span>
           </div>
-        </section>
+        </div>
 
         {/* Pending invites */}
         {invites.length > 0 && (
-          <section style={{ marginBottom: '32px' }}>
-            <h2 style={{ marginBottom: '16px' }}>Pending Invites</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {invites.map((invite) => (
-                <div key={invite.id} style={{ padding: '20px', background: 'white', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h3 style={{ marginBottom: '8px' }}>{invite.organisation?.name}</h3>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                        Invited by {invite.inviter?.name || 'someone'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button
-                        onClick={() => handleAcceptInvite(invite)}
-                        className="btn btn-accent"
-                        style={{ padding: '8px 16px' }}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleDeclineInvite(invite.id)}
-                        className="btn"
-                        style={{ padding: '8px 16px' }}
-                      >
-                        Decline
-                      </button>
-                    </div>
+          <div className="settings-row">
+            <div className="settings-label">
+              <h2>Invites</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                {invites.length} pending
+              </p>
+            </div>
+            <div className="settings-content">
+              {invites.map((invite, i) => (
+                <div key={invite.id} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingTop: i > 0 ? '16px' : 0,
+                  marginTop: i > 0 ? '16px' : 0,
+                  borderTop: i > 0 ? '1px solid var(--border)' : 'none'
+                }}>
+                  <div>
+                    <span style={{ fontWeight: 500 }}>{invite.organisation?.name}</span>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
+                      Invited by {invite.inviter?.display_name || 'someone'}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleAcceptInvite(invite)}
+                      className="btn btn-accent"
+                      style={{ padding: '10px 20px', width: '120px' }}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleDeclineInvite(invite.id)}
+                      className="btn"
+                      style={{ padding: '10px 20px', width: '120px' }}
+                    >
+                      Decline
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          </section>
+          </div>
         )}
 
         {/* Organisations */}
-        <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ marginBottom: '16px' }}>Your Organisations ({orgs.length})</h2>
-          {orgs.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
-              You're not a member of any organisations yet.
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Organisations</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {orgs.length} joined
+              {pendingRequests.length > 0 ? `, ${pendingRequests.length} pending` : ''}
             </p>
-          ) : (
-            <table style={{ maxWidth: '500px', marginBottom: '24px' }}>
-              <thead>
-                <tr>
-                  <th style={{ width: '60%' }}>Organisation</th>
-                  <th style={{ width: '25%' }}>Role</th>
-                  <th style={{ width: '15%' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {orgs.map((org) => (
-                  <tr key={org.id}>
-                    <td>
+          </div>
+          <div className="settings-content">
+            {orgs.length === 0 && pendingRequests.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>
+                You're not a member of any organisations yet.
+              </p>
+            ) : (
+              <>
+                {orgs.map((org, i) => (
+                  <div key={org.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: i > 0 ? '16px' : 0,
+                    marginTop: i > 0 ? '16px' : 0,
+                    borderTop: i > 0 ? '1px solid var(--border)' : 'none'
+                  }}>
+                    <div>
                       <a href={`/org/${org.slug}`} style={{ fontWeight: 500 }}>
                         {org.name}
                       </a>
-                    </td>
-                    <td>
                       <span style={{
                         fontSize: '11px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
-                        color: org.role === 'admin' ? 'var(--accent)' : 'var(--text-muted)'
+                        color: org.role === 'admin' ? 'var(--accent)' : 'var(--text-muted)',
+                        marginLeft: '12px'
                       }}>
                         {org.role}
                       </span>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleLeaveOrg(org.membershipId, org.name)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--poor)' }}
-                      >
-                        Leave
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* Pending requests */}
-          {pendingRequests.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--text-secondary)' }}>Pending Requests</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {pendingRequests.map((request) => (
-                  <div key={request.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-warm)', border: '1px solid var(--border)' }}>
-                    <span style={{ fontWeight: 500 }}>{request.organisation?.name}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
-                        pending
-                      </span>
-                      <button
-                        onClick={() => handleCancelRequest(request.id, request.organisation?.name || '')}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--poor)' }}
-                      >
-                        Cancel
-                      </button>
                     </div>
+                    <button
+                      onClick={() => handleLeaveOrg(org.membershipId, org.name)}
+                      className="btn"
+                      style={{ padding: '10px 20px', width: '120px' }}
+                    >
+                      Leave
+                    </button>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
+                {pendingRequests.map((request, i) => (
+                  <div key={request.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: '16px',
+                    marginTop: '16px',
+                    borderTop: '1px solid var(--border)',
+                    background: 'var(--bg-warm)',
+                    margin: (orgs.length > 0 || i > 0) ? '16px -24px 0' : '0 -24px',
+                    padding: '16px 24px'
+                  }}>
+                    <div>
+                      <span style={{ fontWeight: 500 }}>{request.organisation?.name}</span>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginLeft: '12px' }}>
+                        pending
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleCancelRequest(request.id, request.organisation?.name || '')}
+                      className="btn"
+                      style={{ padding: '10px 20px', width: '120px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
 
-          {/* Search for organisations */}
-          <div style={{ maxWidth: '500px' }}>
-            <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--text-secondary)' }}>Find an Organisation</h3>
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search by name..."
-                style={{ flex: 1 }}
-              />
+        {/* Search for organisations */}
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Join</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Find an organisation
+            </p>
+          </div>
+          <div className="settings-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  Search by name
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Organisation name..."
+                  style={{ width: '280px' }}
+                />
+              </div>
               <button
                 onClick={handleSearch}
                 disabled={searching || !searchQuery.trim()}
                 className="btn"
-                style={{ padding: '10px 20px' }}
+                style={{ padding: '10px 20px', width: '120px' }}
               >
                 {searching ? '...' : 'Search'}
               </button>
             </div>
 
             {searchResults.length > 0 && (
-              <div style={{ border: '1px solid var(--border)' }}>
+              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
                 {searchResults.map((org, i) => (
                   <div
                     key={org.id}
@@ -509,24 +540,18 @@ export function PersonalSettings(): JSX.Element {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '12px 16px',
-                      borderBottom: i < searchResults.length - 1 ? '1px solid var(--border)' : 'none'
+                      paddingTop: i > 0 ? '12px' : 0,
+                      marginTop: i > 0 ? '12px' : 0,
+                      borderTop: i > 0 ? '1px solid var(--border)' : 'none'
                     }}
                   >
-                    <div>
-                      <span style={{ fontWeight: 500 }}>{org.name}</span>
-                      {org.tagline && (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '13px', marginLeft: '12px' }}>
-                          {org.tagline}
-                        </span>
-                      )}
-                    </div>
+                    <span style={{ fontWeight: 500 }}>{org.name}</span>
                     <button
                       onClick={() => handleRequestJoin(org)}
                       className="btn btn-accent"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      style={{ padding: '10px 20px', width: '120px' }}
                     >
-                      Request to Join
+                      Request
                     </button>
                   </div>
                 ))}
@@ -534,12 +559,12 @@ export function PersonalSettings(): JSX.Element {
             )}
 
             {searchQuery && searchResults.length === 0 && !searching && (
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '16px' }}>
                 No organisations found matching "{searchQuery}"
               </p>
             )}
           </div>
-        </section>
+        </div>
       </div>
     </div>
   )

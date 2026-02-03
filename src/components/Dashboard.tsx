@@ -181,7 +181,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     minValueRating,
     minTasteRating,
     socialFilter,
-    selectedUserId,
+    selectedUserIds,
     highlightedRestaurantId: _highlightedRestaurantId,
     setHighlightedRestaurantId,
   } = useFilterStore()
@@ -470,8 +470,65 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     }
   }, [fetchData, fetchUserOrgs, fetchFollowing])
 
-  // Filter restaurants
-  const filteredRestaurants = restaurants.filter(r => {
+  // Determine which reviews are "relevant" based on social filter
+  const getRelevantReviews = (reviews: typeof restaurants[0]['reviews']) => {
+    if (selectedUserIds.length > 0) {
+      return reviews.filter(rev => rev.user_id && selectedUserIds.includes(rev.user_id))
+    }
+    if (socialFilter === 'everyone' || !user) {
+      return reviews
+    }
+    if (socialFilter === 'just_me') {
+      return reviews.filter(rev => rev.user_id === user.id)
+    }
+    if (socialFilter === 'following') {
+      return reviews.filter(rev => rev.user_id && followingIds.has(rev.user_id))
+    }
+    // Organisation filter
+    const org = userOrgs.find(o => o.slug === socialFilter)
+    if (org) {
+      const orgMemberIds = orgMembersByOrgId.get(org.id)
+      if (orgMemberIds) {
+        return reviews.filter(rev => rev.user_id && orgMemberIds.has(rev.user_id))
+      }
+    }
+    return reviews
+  }
+
+  // Filter restaurants and recalculate averages based on social filter
+  const filteredRestaurants = restaurants.map(r => {
+    const relevantReviews = getRelevantReviews(r.reviews)
+
+    // Recalculate averages from relevant reviews only
+    const ratings = relevantReviews
+      .filter(rev => rev.rating !== null)
+      .map(rev => rev.rating as number)
+    const filteredAvgRating = ratings.length > 0
+      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+      : null
+
+    const valueRatings = relevantReviews
+      .filter(rev => rev.value_rating !== null && rev.value_rating !== undefined)
+      .map(rev => rev.value_rating as number)
+    const filteredAvgValueRating = valueRatings.length > 0
+      ? valueRatings.reduce((a, b) => a + b, 0) / valueRatings.length
+      : null
+
+    const tasteRatings = relevantReviews
+      .filter(rev => rev.taste_rating !== null && rev.taste_rating !== undefined)
+      .map(rev => rev.taste_rating as number)
+    const filteredAvgTasteRating = tasteRatings.length > 0
+      ? tasteRatings.reduce((a, b) => a + b, 0) / tasteRatings.length
+      : null
+
+    return {
+      ...r,
+      filteredAvgRating,
+      filteredAvgValueRating,
+      filteredAvgTasteRating,
+      relevantReviewCount: relevantReviews.length,
+    }
+  }).filter(r => {
     // Category filter
     if (selectedCategories.length > 0) {
       const restaurantCategories = (r.categories || []) as RestaurantCategory[]
@@ -479,53 +536,31 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (!hasMatchingCategory) return false
     }
 
-    // Overall rating filter
-    if (minOverallRating !== null && r.avgRating !== null) {
-      if (r.avgRating < minOverallRating) return false
+    // Must have relevant reviews when social filter is active
+    if (selectedUserIds.length > 0 || (socialFilter !== 'everyone' && user)) {
+      if (r.relevantReviewCount === 0) return false
+    }
+
+    // Overall rating filter (use filtered average)
+    if (minOverallRating !== null && r.filteredAvgRating !== null) {
+      if (r.filteredAvgRating < minOverallRating) return false
     }
 
     // Value rating filter
-    if (minValueRating !== null && r.avgValueRating !== null) {
-      if (r.avgValueRating < minValueRating) return false
+    if (minValueRating !== null && r.filteredAvgValueRating !== null) {
+      if (r.filteredAvgValueRating < minValueRating) return false
     }
 
     // Taste rating filter
-    if (minTasteRating !== null && r.avgTasteRating !== null) {
-      if (r.avgTasteRating < minTasteRating) return false
-    }
-
-    // Specific user filter (from search)
-    if (selectedUserId) {
-      if (!r.reviews.some(rev => rev.user_id === selectedUserId)) return false
-    }
-    // Social filter (only apply if no specific user selected)
-    else if (socialFilter !== 'everyone' && user) {
-      if (socialFilter === 'just_me') {
-        // Only show restaurants I've reviewed
-        if (!r.reviews.some(rev => rev.user_id === user.id)) return false
-      } else if (socialFilter === 'following') {
-        // Only show restaurants reviewed by people I follow
-        if (!r.reviews.some(rev => rev.user_id && followingIds.has(rev.user_id))) return false
-      } else {
-        // Filter by organisation slug
-        const org = userOrgs.find(o => o.slug === socialFilter)
-        if (org) {
-          // Only show restaurants reviewed by members of this org
-          const orgMemberIds = orgMembersByOrgId.get(org.id)
-          if (orgMemberIds) {
-            if (!r.reviews.some(rev => rev.user_id && orgMemberIds.has(rev.user_id))) return false
-          } else {
-            return false // No members found for this org
-          }
-        }
-      }
+    if (minTasteRating !== null && r.filteredAvgTasteRating !== null) {
+      if (r.filteredAvgTasteRating < minTasteRating) return false
     }
 
     return true
   }).sort((a, b) => {
-    // Sort by average taste rating (primary) then value rating
-    const aRating = a.avgTasteRating ?? a.avgRating ?? 0
-    const bRating = b.avgTasteRating ?? b.avgRating ?? 0
+    // Sort by filtered average taste rating (primary) then overall rating
+    const aRating = a.filteredAvgTasteRating ?? a.filteredAvgRating ?? 0
+    const bRating = b.filteredAvgTasteRating ?? b.filteredAvgRating ?? 0
     if (aRating === 0 && bRating === 0) return 0
     if (aRating === 0) return 1
     if (bRating === 0) return -1
@@ -582,11 +617,6 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     )
   }
 
-  // Determine hero text based on view mode
-  const heroSubtitle = currentOrg
-    ? `${currentOrg.name} · ${(currentOrg.tagline || '').replace(/, /g, ' · ')}`
-    : null
-
   const heroDescription = 'opinionated takes. taste encouraged but not necessarily welcome.'
 
   return (
@@ -624,11 +654,6 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       {/* Hero */}
       <section className="hero" style={{ paddingTop: '120px' }}>
         <div className="container">
-          {heroSubtitle && (
-            <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', marginBottom: '16px' }}>
-              {heroSubtitle}
-            </p>
-          )}
           <h1>
             Curate<br />Taste.
           </h1>
@@ -733,16 +758,16 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                       </td>
                     )}
                     <td>
-                      {restaurant.avgRating !== null ? (
-                        <span className={`rating-badge ${getRatingClass(restaurant.avgRating)}`}>
-                          {restaurant.avgRating.toFixed(1)} — {getRatingLabel(restaurant.avgRating)}
+                      {restaurant.filteredAvgRating !== null ? (
+                        <span className={`rating-badge ${getRatingClass(restaurant.filteredAvgRating)}`}>
+                          {restaurant.filteredAvgRating.toFixed(1)} — {getRatingLabel(restaurant.filteredAvgRating)}
                         </span>
                       ) : (
                         <span style={{ color: 'var(--text-muted)' }}>—</span>
                       )}
                     </td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                      {restaurant.reviews.length} review{restaurant.reviews.length !== 1 ? 's' : ''}
+                      {restaurant.relevantReviewCount} review{restaurant.relevantReviewCount !== 1 ? 's' : ''}
                     </td>
                     <td className="hide-mobile" style={{ textAlign: 'right' }}>
                       {restaurant.latitude && restaurant.longitude && (
@@ -811,6 +836,31 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                             existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; value_rating: number | null; taste_rating: number | null; comment: string | null } | undefined}
                             onSaved={fetchData}
                           />
+                        )}
+                        {/* Mobile map button */}
+                        {restaurant.latitude && restaurant.longitude && (
+                          <div className="show-mobile" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                            <button
+                              onClick={(e) => handleMapClick(e, restaurant)}
+                              style={{
+                                background: 'none',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                color: 'var(--accent)',
+                                padding: '8px 12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '12px',
+                              }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                              </svg>
+                              View on map
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

@@ -60,13 +60,13 @@ const ratingBorderColors = [
 ]
 
 export function RatingChart({ restaurants }: RatingChartProps): JSX.Element {
-  const { selectedUserId, selectedBounds, selectedRating, setSelectedRating } = useFilterStore()
+  const { selectedUserIds, selectedBounds, selectedRating, setSelectedRating } = useFilterStore()
 
   const chartData = useMemo(() => {
     const counts = new Array(10).fill(0)
 
     restaurants.forEach((r) => {
-      if (selectedUserId && !r.reviews.some((rev) => rev.user_id === selectedUserId)) {
+      if (selectedUserIds.length > 0 && !r.reviews.some((rev) => rev.user_id && selectedUserIds.includes(rev.user_id))) {
         return
       }
       if (selectedBounds) {
@@ -105,7 +105,7 @@ export function RatingChart({ restaurants }: RatingChartProps): JSX.Element {
         },
       ],
     }
-  }, [restaurants, selectedUserId, selectedBounds, selectedRating])
+  }, [restaurants, selectedUserIds, selectedBounds, selectedRating])
 
   const options = {
     indexAxis: 'y' as const,

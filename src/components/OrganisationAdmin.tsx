@@ -30,8 +30,6 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
 
   // Form states
   const [orgName, setOrgName] = useState('')
-  const [officeName, setOfficeName] = useState('')
-  const [officeLocation, setOfficeLocation] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [transferTo, setTransferTo] = useState('')
   const [saving, setSaving] = useState(false)
@@ -54,10 +52,6 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
 
     setOrg(orgData)
     setOrgName(orgData.name)
-    // Parse tagline into office name and location (separated by comma)
-    const taglineParts = (orgData.tagline || '').split(', ')
-    setOfficeName(taglineParts[0] || '')
-    setOfficeLocation(taglineParts[1] || '')
 
     // Fetch members with profiles
     const { data: membersData } = await supabase
@@ -155,12 +149,9 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     setError(null)
     setSuccess(null)
 
-    // Combine office name and location into tagline
-    const tagline = [officeName, officeLocation].filter(Boolean).join(', ') || null
-
     const { error } = await supabase
       .from('organisations')
-      .update({ name: orgName, tagline })
+      .update({ name: orgName })
       .eq('id', org.id)
 
     if (error) {
@@ -377,11 +368,8 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
         </div>
       </nav>
 
-      <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px' }}>
-        <h1 style={{ marginBottom: '8px' }}>Organisation Settings</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '48px' }}>
-          Manage {org.name}
-        </p>
+      <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px', maxWidth: '900px' }}>
+        <h1 style={{ marginBottom: '48px' }}>{org.name}</h1>
 
         {error && (
           <div style={{ padding: '16px', background: '#fdf2f2', border: '1px solid var(--poor)', marginBottom: '24px', color: 'var(--poor)' }}>
@@ -396,116 +384,108 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
         )}
 
         {/* Organisation details */}
-        <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ marginBottom: '16px' }}>Organisation Details</h2>
-          <form onSubmit={handleUpdateDetails} style={{ maxWidth: '400px' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Name
-              </label>
-              <input
-                type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                required
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Office
-              </label>
-              <input
-                type="text"
-                value={officeName}
-                onChange={(e) => setOfficeName(e.target.value)}
-                placeholder="e.g. Runway East"
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Location
-              </label>
-              <input
-                type="text"
-                value={officeLocation}
-                onChange={(e) => setOfficeLocation(e.target.value)}
-                placeholder="e.g. London Bridge"
-                style={{ width: '100%' }}
-              />
-            </div>
-            <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '12px 24px' }}>
-              {saving ? '...' : 'Update'}
-            </button>
-          </form>
-
-          {/* Transfer admin */}
-          {members.filter(m => m.user_id !== user?.id).length > 0 && (
-            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)', maxWidth: '400px' }}>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Transfer Admin Rights
-              </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <select
-                  value={transferTo}
-                  onChange={(e) => setTransferTo(e.target.value)}
-                  style={{ flex: 1 }}
-                >
-                  <option value="">Select member...</option>
-                  {members
-                    .filter(m => m.user_id !== user?.id)
-                    .map((m) => (
-                      <option key={m.id} value={m.user_id}>
-                        {m.profile?.display_name || m.profile?.email || 'Unknown'}
-                      </option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleTransferAdmin}
-                  disabled={!transferTo || saving}
-                  className="btn"
-                  style={{ padding: '10px 20px' }}
-                >
-                  Transfer
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Organisation</h2>
+          </div>
+          <div className="settings-content">
+            <form onSubmit={handleUpdateDetails}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    required
+                    style={{ width: '280px' }}
+                  />
+                </div>
+                <button type="submit" disabled={saving} className="btn" style={{ padding: '10px 20px', width: '120px' }}>
+                  {saving ? '...' : 'Update'}
                 </button>
               </div>
-            </div>
-          )}
-        </section>
+            </form>
+
+            {/* Transfer admin */}
+            {members.filter(m => m.user_id !== user?.id).length > 0 && (
+              <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      Transfer Admin Rights
+                    </label>
+                    <select
+                      value={transferTo}
+                      onChange={(e) => setTransferTo(e.target.value)}
+                      style={{ width: '280px' }}
+                    >
+                      <option value="">Select member...</option>
+                      {members
+                        .filter(m => m.user_id !== user?.id)
+                        .map((m) => (
+                          <option key={m.id} value={m.user_id}>
+                            {m.profile?.display_name || m.profile?.email || 'Unknown'}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTransferAdmin}
+                    disabled={!transferTo || saving}
+                    className="btn"
+                    style={{ padding: '10px 20px', width: '120px' }}
+                  >
+                    Transfer
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Invite member */}
-        <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ marginBottom: '16px' }}>Invite Member</h2>
-          <form onSubmit={handleInvite} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', maxWidth: '400px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Email address
-              </label>
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-                placeholder="colleague@example.com"
-                style={{ width: '100%' }}
-              />
-            </div>
-            <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '12px 24px' }}>
-              {saving ? '...' : 'Send Invite'}
-            </button>
-          </form>
-        </section>
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Invite</h2>
+          </div>
+          <div className="settings-content">
+            <form onSubmit={handleInvite} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                  placeholder="colleague@example.com"
+                  style={{ width: '280px' }}
+                />
+              </div>
+              <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '10px 20px', width: '120px' }}>
+                {saving ? '...' : 'Invite'}
+              </button>
+            </form>
+          </div>
+        </div>
 
         {/* Members */}
-        <section>
-          <h2 style={{ marginBottom: '16px' }}>
-            Members ({members.length}
-            {invites.length > 0 ? ` + ${invites.length} invited` : ''}
-            {requests.length > 0 ? ` + ${requests.length} requested` : ''})
-          </h2>
-          <table>
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Team</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {members.length} member{members.length !== 1 ? 's' : ''}
+              {invites.length > 0 ? `, ${invites.length} invited` : ''}
+              {requests.length > 0 ? `, ${requests.length} pending` : ''}
+            </p>
+          </div>
+          <div className="settings-content">
+            <table>
             <thead>
               <tr>
                 <th>Name</th>
@@ -611,7 +591,8 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
               ))}
             </tbody>
           </table>
-        </section>
+          </div>
+        </div>
       </div>
     </div>
   )

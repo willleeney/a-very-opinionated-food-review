@@ -35,11 +35,11 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const { selectedUserId, selectedRating, selectedBounds, highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
+  const { selectedUserIds, selectedRating, selectedBounds, highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
 
   const filteredAndSorted = useMemo(() => {
     let filtered = restaurants.filter((r) => {
-      if (selectedUserId && !r.reviews.some((rev) => rev.user_id === selectedUserId)) {
+      if (selectedUserIds.length > 0 && !r.reviews.some((rev) => rev.user_id && selectedUserIds.includes(rev.user_id))) {
         return false
       }
       if (selectedRating !== null) {
@@ -91,7 +91,7 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [restaurants, selectedUserId, selectedRating, selectedBounds, sortKey, sortDir])
+  }, [restaurants, selectedUserIds, selectedRating, selectedBounds, sortKey, sortDir])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {

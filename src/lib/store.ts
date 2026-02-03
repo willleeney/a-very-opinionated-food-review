@@ -3,7 +3,7 @@ import type { Organisation, OrganisationWithMembership, OfficeLocation, Restaura
 
 export interface FilterState {
   // Existing filters
-  selectedUserId: string | null
+  selectedUserIds: string[]
   selectedRating: number | null
   selectedBounds: [number, number, number, number] | null // [west, south, east, north]
   highlightedRestaurantId: string | null
@@ -16,7 +16,8 @@ export interface FilterState {
   socialFilter: SocialFilter
 
   // Existing actions
-  setSelectedUserId: (userId: string | null) => void
+  setSelectedUserIds: (userIds: string[]) => void
+  toggleSelectedUserId: (userId: string) => void
   setSelectedRating: (rating: number | null) => void
   setSelectedBounds: (bounds: [number, number, number, number] | null) => void
   setHighlightedRestaurantId: (id: string | null) => void
@@ -35,7 +36,7 @@ export interface FilterState {
 
 export const useFilterStore = create<FilterState>((set, get) => ({
   // Initial state
-  selectedUserId: null,
+  selectedUserIds: [],
   selectedRating: null,
   selectedBounds: null,
   highlightedRestaurantId: null,
@@ -46,7 +47,12 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   socialFilter: 'everyone',
 
   // Existing actions
-  setSelectedUserId: (userId) => set({ selectedUserId: userId }),
+  setSelectedUserIds: (userIds) => set({ selectedUserIds: userIds }),
+  toggleSelectedUserId: (userId) => set((state) => ({
+    selectedUserIds: state.selectedUserIds.includes(userId)
+      ? state.selectedUserIds.filter(id => id !== userId)
+      : [...state.selectedUserIds, userId]
+  })),
   setSelectedRating: (rating) => set({ selectedRating: rating }),
   setSelectedBounds: (bounds) => set({ selectedBounds: bounds }),
   setHighlightedRestaurantId: (id) => set({ highlightedRestaurantId: id }),
@@ -64,7 +70,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   setSocialFilter: (filter) => set({ socialFilter: filter }),
 
   clearFilters: () => set({
-    selectedUserId: null,
+    selectedUserIds: [],
     selectedRating: null,
     selectedBounds: null,
     highlightedRestaurantId: null,
@@ -83,7 +89,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
       state.minValueRating !== null ||
       state.minTasteRating !== null ||
       state.socialFilter !== 'everyone' ||
-      state.selectedUserId !== null
+      state.selectedUserIds.length > 0
     )
   },
 }))

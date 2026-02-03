@@ -61,13 +61,13 @@ export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userO
                 className="dropdown-item"
               >
                 <span className="item-check"></span>
-                <span className="item-label">{org.name} Settings</span>
+                <span className="item-label">{org.name}</span>
               </a>
             ))}
 
             <a href="/settings" className="dropdown-item">
               <span className="item-check"></span>
-              <span className="item-label">My Settings</span>
+              <span className="item-label">Settings</span>
             </a>
 
             <button onClick={handleSignOut} className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>

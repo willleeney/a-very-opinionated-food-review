@@ -36,13 +36,14 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
     setMinTasteRating,
     socialFilter,
     setSocialFilter,
-    selectedUserId,
-    setSelectedUserId,
+    selectedUserIds,
+    toggleSelectedUserId,
+    setSelectedUserIds,
     clearFilters,
     hasActiveFilters,
   } = useFilterStore()
 
-  const [openDropdown, setOpenDropdown] = useState<'category' | 'user' | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<'user' | null>(null)
   const [userSearchQuery, setUserSearchQuery] = useState('')
   const userDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -58,10 +59,6 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [openDropdown])
-
-  const handleCategoryDropdownToggle = (open: boolean) => {
-    setOpenDropdown(open ? 'category' : null)
-  }
 
   const handleUserDropdownToggle = (open: boolean) => {
     setOpenDropdown(open ? 'user' : null)
@@ -83,18 +80,20 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
     u.name.toLowerCase().includes(userSearchQuery.toLowerCase())
   )
 
-  // Get selected user name if any
-  const selectedUser = selectedUserId ? searchableUsers.find(u => u.id === selectedUserId) : null
+  // Get selected users
+  const selectedUsers = searchableUsers.filter(u => selectedUserIds.includes(u.id))
 
   const handleSelectUser = (userId: string) => {
-    setSelectedUserId(userId)
+    toggleSelectedUserId(userId)
     setSocialFilter('everyone') // Clear social filter when selecting specific user
-    setOpenDropdown(null)
-    setUserSearchQuery('')
   }
 
-  const handleClearUserFilter = () => {
-    setSelectedUserId(null)
+  const handleRemoveUser = (userId: string) => {
+    toggleSelectedUserId(userId)
+  }
+
+  const handleClearAllUsers = () => {
+    setSelectedUserIds([])
   }
 
   return (
@@ -106,8 +105,6 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
           <CategoryChips
             selected={selectedCategories}
             onChange={setSelectedCategories}
-            isDropdownOpen={openDropdown === 'category'}
-            onDropdownToggle={handleCategoryDropdownToggle}
           />
         </div>
         <div className="filter-row-actions">
@@ -119,30 +116,31 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
       {isSignedIn && (
         <div className="filter-row filter-row-header">
           <div className="filter-row-left">
-            <span className="filter-row-label">Show</span>
+            <span className="filter-row-label">View</span>
             <div className="social-tabs">
               {socialOptions.map((option) => (
                 <button
                   key={option.value}
-                  className={`social-tab ${socialFilter === option.value && !selectedUserId ? 'active' : ''}`}
+                  className={`social-tab ${socialFilter === option.value && selectedUserIds.length === 0 ? 'active' : ''}`}
                   onClick={() => {
                     setSocialFilter(option.value)
-                    setSelectedUserId(null)
+                    setSelectedUserIds([])
                   }}
                 >
                   {option.label}
                 </button>
               ))}
-              {/* Selected user chip */}
-              {selectedUser && (
+              {/* Selected user chips */}
+              {selectedUsers.map((user) => (
                 <button
+                  key={user.id}
                   className="social-tab active"
-                  onClick={handleClearUserFilter}
+                  onClick={() => handleRemoveUser(user.id)}
                   title="Click to remove"
                 >
-                  {selectedUser.name} ×
+                  {user.name} ×
                 </button>
-              )}
+              ))}
               {/* Search dropdown */}
               {searchableUsers.length > 0 && (
                 <div className="category-dropdown-wrapper" ref={userDropdownRef}>
@@ -157,7 +155,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
 
                   {openDropdown === 'user' && (
                     <div
-                      className="category-dropdown"
+                      className="category-dropdown wide"
                     >
                       <div className="dropdown-header">
                         <span className="dropdown-title">Search people</span>
@@ -186,20 +184,23 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
                             No results
                           </div>
                         ) : (
-                          filteredUsers.slice(0, 10).map((user) => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              className="dropdown-item"
-                              onClick={() => handleSelectUser(user.id)}
-                            >
-                              <span className="item-check"></span>
-                              <span className="item-label">{user.name}</span>
-                              <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                                {user.source === 'following' ? 'Following' : 'Org'}
-                              </span>
-                            </button>
-                          ))
+                          filteredUsers.slice(0, 10).map((user) => {
+                            const isSelected = selectedUserIds.includes(user.id)
+                            return (
+                              <button
+                                key={user.id}
+                                type="button"
+                                className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                                onClick={() => handleSelectUser(user.id)}
+                              >
+                                <span className="item-check">{isSelected ? '✓' : ''}</span>
+                                <span className="item-label">{user.name}</span>
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                                  {user.source === 'following' ? 'Following' : 'Org'}
+                                </span>
+                              </button>
+                            )
+                          })
                         )}
                       </div>
                     </div>

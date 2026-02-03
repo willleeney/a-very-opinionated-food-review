@@ -477,11 +477,11 @@ nav.scrolled {
   transform: translateY(-7px) rotate(-45deg);
 }
 
-.burger-dropdown-position {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+.category-dropdown.burger-dropdown-position {
+  left: auto !important;
+  right: 0 !important;
   min-width: 200px;
+  z-index: 10000;
 }
 
 .burger-label {
@@ -683,6 +683,10 @@ nav.scrolled {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   z-index: 100;
   overflow: hidden;
+}
+
+.category-dropdown.wide {
+  min-width: 240px;
 }
 
 .dropdown-header {
@@ -919,11 +923,64 @@ nav.scrolled {
   font-weight: 500;
 }
 
+/* Settings page layout */
+.settings-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 40px;
+  padding: 32px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-row:first-of-type {
+  padding-top: 0;
+}
+
+.settings-row:last-of-type {
+  border-bottom: none;
+}
+
+.settings-label h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.settings-content {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.settings-content table {
+  margin: 0;
+}
+
+/* Mobile visibility helpers */
+.show-mobile {
+  display: none;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
+  /* Settings page stacks on mobile */
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .settings-content {
+    padding: 16px;
+  }
+
   /* Hide type and distance columns on mobile */
   .hide-mobile {
     display: none !important;
+  }
+
+  .show-mobile {
+    display: flex !important;
   }
 
   /* Tighter table padding */
