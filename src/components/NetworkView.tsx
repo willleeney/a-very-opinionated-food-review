@@ -792,7 +792,7 @@ export function NetworkView(): JSX.Element {
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right', paddingRight: '16px' }}>
                     {activeTab === 'following' ? (
                       <button
                         onClick={() => handleUnfollow(person.id)}
