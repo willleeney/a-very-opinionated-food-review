@@ -5,7 +5,7 @@ import { distanceFrom, formatDistance } from '../lib/distance'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
-import { BurgerMenu } from './BurgerMenu'
+import { TopNav } from './TopNav'
 import { FilterBar } from './FilterBar'
 import { useFilterStore } from '../lib/store'
 import type { User } from '@supabase/supabase-js'
@@ -664,34 +664,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   return (
     <div>
       {/* Navigation */}
-      <nav>
-        <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ flex: 1 }} />
-            <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 500, letterSpacing: '0.02em' }}>
-              Tastefull
-            </a>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px' }}>
-              {user ? (
-                <>
-                  <span className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                    {user.email}
-                  </span>
-                  <BurgerMenu
-                    user={user}
-                    currentOrgSlug={organisationSlug}
-                    userOrgs={userOrgs}
-                  />
-                </>
-              ) : (
-                <a href="/login" className="btn" style={{ padding: '8px 16px' }}>
-                  Sign in
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <TopNav user={user} currentOrgSlug={organisationSlug} userOrgs={userOrgs} />
 
       {/* Hero */}
       <section className="hero" style={{ paddingTop: '120px' }}>

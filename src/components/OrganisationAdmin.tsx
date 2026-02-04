@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Organisation, OrganisationMember, OrganisationInvite, OrganisationRequest, Profile } from '../lib/database.types'
+import type { Organisation, OrganisationMember, OrganisationInvite, OrganisationRequest, Profile, OrganisationWithMembership } from '../lib/database.types'
 import type { User } from '@supabase/supabase-js'
+import { TopNav } from './TopNav'
 
 interface OrganisationAdminProps {
   organisationSlug: string
@@ -19,12 +20,20 @@ interface RequestWithProfile extends OrganisationRequest {
   profile?: Profile | null
 }
 
+interface UserOrg {
+  id: string
+  name: string
+  slug: string
+  role: 'admin' | 'member'
+}
+
 export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [org, setOrg] = useState<Organisation | null>(null)
   const [members, setMembers] = useState<MemberWithProfile[]>([])
   const [invites, setInvites] = useState<InviteWithInviter[]>([])
   const [requests, setRequests] = useState<RequestWithProfile[]>([])
+  const [userOrgs, setUserOrgs] = useState<UserOrg[]>([])
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -123,6 +132,23 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     setLoading(false)
   }, [organisationSlug, user?.id])
 
+  const fetchUserOrgs = useCallback(async (userId: string) => {
+    const { data: memberships } = await supabase
+      .from('organisation_members')
+      .select('role, organisations(*)')
+      .eq('user_id', userId)
+
+    if (memberships) {
+      const orgs: UserOrg[] = memberships.map((m) => ({
+        id: (m.organisations as Organisation).id,
+        name: (m.organisations as Organisation).name,
+        slug: (m.organisations as Organisation).slug,
+        role: m.role as 'admin' | 'member',
+      }))
+      setUserOrgs(orgs)
+    }
+  }, [])
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
@@ -138,8 +164,9 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
   useEffect(() => {
     if (user) {
       fetchData()
+      fetchUserOrgs(user.id)
     }
-  }, [user, fetchData])
+  }, [user, fetchData, fetchUserOrgs])
 
   const handleUpdateDetails = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -370,35 +397,67 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     )
   }
 
+  // Redirect non-admins to home
   if (!isAdmin) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/'
+    }
     return (
-      <div className="container" style={{ paddingTop: '120px', textAlign: 'center' }}>
-        <h1>Access denied</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          You need to be an admin to access this page.
-        </p>
-        <a href={`/org/${organisationSlug}`} className="btn" style={{ marginTop: '24px' }}>
-          Back to {org.name}
-        </a>
+      <div className="loading">
+        <div className="spinner" />
       </div>
     )
   }
 
+  // Convert userOrgs to format TopNav expects
+  const userOrgsForNav: OrganisationWithMembership[] = userOrgs.map(o => ({
+    id: o.id,
+    name: o.name,
+    slug: o.slug,
+    office_location: null,
+    tagline: null,
+    created_at: null,
+    role: o.role,
+  }))
+
   return (
     <div>
-      {/* Navigation */}
-      <nav>
-        <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <a href={`/org/${organisationSlug}`} style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              ← Back to {org.name}
-            </a>
-          </div>
-        </div>
-      </nav>
+      <TopNav user={user} userOrgs={userOrgsForNav} currentOrgSlug={organisationSlug} />
 
       <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px', maxWidth: '900px' }}>
-        <h1 style={{ marginBottom: '48px' }}>{org.name}</h1>
+        <h1 style={{ marginBottom: '8px' }}>Organisation</h1>
+
+        {/* Organisation switcher tabs */}
+        {userOrgs.filter(o => o.role === 'admin').length > 0 && (
+          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: '32px', marginTop: '24px' }}>
+            {userOrgs.filter(o => o.role === 'admin').map((userOrg) => (
+              <a
+                key={userOrg.id}
+                href={`/org/${userOrg.slug}/admin`}
+                style={{
+                  padding: '16px 24px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  color: userOrg.slug === organisationSlug ? 'var(--text)' : 'var(--text-muted)',
+                  position: 'relative',
+                }}
+              >
+                {userOrg.name}
+                {userOrg.slug === organisationSlug && (
+                  <span style={{
+                    position: 'absolute',
+                    bottom: '-1px',
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'var(--accent)',
+                  }} />
+                )}
+              </a>
+            ))}
+          </div>
+        )}
 
         {error && (
           <div style={{ padding: '16px', background: '#fdf2f2', border: '1px solid var(--poor)', marginBottom: '24px', color: 'var(--poor)' }}>

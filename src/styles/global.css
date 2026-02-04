@@ -1063,3 +1063,105 @@ nav.scrolled {
     width: 100%;
   }
 }
+
+/* Top Navigation */
+.top-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.top-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+
+.top-nav-logo {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.top-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.top-nav-link,
+.top-nav-signout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.2s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+
+.top-nav-link:hover,
+.top-nav-signout:hover {
+  color: var(--text);
+}
+
+.top-nav-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.top-nav-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.top-nav-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+/* Mobile: icons only */
+@media (max-width: 768px) {
+  .top-nav-inner {
+    padding: 12px 0;
+  }
+
+  .top-nav-logo {
+    font-size: 18px;
+  }
+
+  .top-nav-links {
+    gap: 16px;
+  }
+
+  .top-nav-label {
+    display: none;
+  }
+
+  .top-nav-link,
+  .top-nav-signout {
+    padding: 8px;
+  }
+
+  .top-nav-divider {
+    display: none;
+  }
+}

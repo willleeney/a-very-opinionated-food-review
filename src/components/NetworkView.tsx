@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import type { OrganisationWithMembership, Organisation } from '../lib/database.types'
+import { TopNav } from './TopNav'
 
 type TabType = 'following' | 'followers' | 'requests' | 'find'
 
@@ -34,6 +36,7 @@ function getRatingClass(rating: number): string {
 
 export function NetworkView(): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
+  const [userOrgs, setUserOrgs] = useState<OrganisationWithMembership[]>([])
   const [isPrivate, setIsPrivate] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('following')
@@ -472,6 +475,20 @@ export function NetworkView(): JSX.Element {
           fetchFollowers(data.user.id, currentFollowingIds, currentOutgoingRequestIds),
           fetchIncomingRequests(data.user.id),
         ])
+
+        // Fetch user's orgs for TopNav
+        const { data: memberships } = await supabase
+          .from('organisation_members')
+          .select('role, organisations(*)')
+          .eq('user_id', data.user.id)
+
+        if (memberships) {
+          const orgs: OrganisationWithMembership[] = memberships.map((m) => ({
+            ...(m.organisations as Organisation),
+            role: m.role as 'admin' | 'member',
+          }))
+          setUserOrgs(orgs)
+        }
       }
       setLoading(false)
     }
@@ -556,20 +573,7 @@ export function NetworkView(): JSX.Element {
 
   return (
     <div>
-      {/* Navigation */}
-      <nav>
-        <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <a href="/" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-              &larr; Back
-            </a>
-            <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 500, letterSpacing: '0.02em' }}>
-              Tastefull
-            </a>
-            <div style={{ width: '60px' }} />
-          </div>
-        </div>
-      </nav>
+      <TopNav user={user} userOrgs={userOrgs} />
 
       {/* Header */}
       <section style={{ paddingTop: '120px', paddingBottom: '40px' }}>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Organisation, OrganisationInvite, OrganisationRequest, Profile } from '../lib/database.types'
+import type { Organisation, OrganisationInvite, OrganisationRequest, Profile, OrganisationWithMembership } from '../lib/database.types'
 import type { User } from '@supabase/supabase-js'
+import { TopNav } from './TopNav'
 
 interface OrgWithRole extends Organisation {
   role: 'admin' | 'member'
@@ -381,24 +382,15 @@ export function PersonalSettings(): JSX.Element {
     )
   }
 
+  // Convert orgs to format TopNav expects
+  const userOrgsForNav: OrganisationWithMembership[] = orgs.map(o => ({
+    ...o,
+    role: o.role,
+  }))
+
   return (
     <div>
-      {/* Navigation */}
-      <nav>
-        <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <a href="/" style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              ← Back
-            </a>
-            <button
-              onClick={handleSignOut}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </nav>
+      <TopNav user={user} userOrgs={userOrgsForNav} />
 
       <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px', maxWidth: '900px' }}>
         <h1 style={{ marginBottom: '48px' }}>Settings</h1>

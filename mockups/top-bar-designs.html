@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Bar Design Options</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --bg-warm: #f5f2ed;
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --text-muted: #999;
+      --border: #e8e4de;
+      --accent: #c45d3e;
+      --accent-light: #e8d5ce;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 40px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      margin-bottom: 16px;
+    }
+
+    .intro {
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    .option {
+      margin-bottom: 64px;
+      border: 1px solid var(--border);
+      background: white;
+    }
+
+    .option-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-warm);
+    }
+
+    .option-header h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    .option-header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .preview {
+      background: var(--bg);
+    }
+
+    /* Nav styles */
+    nav {
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-links a.active {
+      color: var(--accent);
+    }
+
+    .nav-icon-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-icon-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      transition: color 0.2s;
+    }
+
+    .nav-icon-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-icon-links a.active {
+      color: var(--accent);
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .nav-icons-only {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-icons-only a {
+      color: var(--text-muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      transition: color 0.2s;
+    }
+
+    .nav-icons-only a:hover {
+      color: var(--text);
+    }
+
+    .nav-icons-only a.active {
+      color: var(--accent);
+    }
+
+    .user-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-light);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+    }
+
+    /* Compact variant */
+    .nav-compact {
+      padding: 12px 32px;
+    }
+
+    .nav-compact .logo {
+      font-size: 18px;
+    }
+
+    /* Centered logo variant */
+    .nav-centered {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+    }
+
+    .nav-centered .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-centered .nav-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 24px;
+    }
+
+    /* Pill nav */
+    .nav-pills {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-warm);
+      padding: 4px;
+    }
+
+    .nav-pills a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 8px 16px;
+      transition: all 0.2s;
+    }
+
+    .nav-pills a:hover {
+      color: var(--text);
+    }
+
+    .nav-pills a.active {
+      background: white;
+      color: var(--text);
+    }
+
+    /* Underline nav */
+    .nav-underline {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-underline a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 0;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-underline a:hover {
+      color: var(--text);
+    }
+
+    .nav-underline a.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .btn-sign-out {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-sign-out:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    .org-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 4px 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Top Bar Designs</h1>
+  <p class="intro">
+    Alternative navigation layouts to replace the burger menu. All items visible and accessible.
+  </p>
+
+  <!-- Option A: Names Only -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option A: Text Links Only</h2>
+      <p>Clean, minimal. Just text links with uppercase styling.</p>
+    </div>
+    <div class="preview">
+      <nav>
+        <a href="/" class="logo">Tastefull</a>
+        <div class="nav-links">
+          <a href="/" class="active">Home</a>
+          <a href="/network">Network</a>
+          <a href="/settings">Settings</a>
+          <span class="divider"></span>
+          <span class="user-email">james@example.com</span>
+          <button class="btn-sign-out">Sign out</button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option B: Icons + Names -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option B: Icons + Text (with Org Settings)</h2>
+      <p>Icons paired with labels for clarity. Includes organisation admin link.</p>
+    </div>
+    <div class="preview">
+      <nav>
+        <a href="/" class="logo">Tastefull</a>
+        <div class="nav-icon-links">
+          <a href="/" class="active">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Home
+          </a>
+          <a href="/network">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Network
+          </a>
+          <a href="/org/stackone/admin">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M3 21h18"></path>
+              <path d="M5 21V7l8-4v18"></path>
+              <path d="M19 21V11l-6-4"></path>
+              <path d="M9 9v.01"></path>
+              <path d="M9 12v.01"></path>
+              <path d="M9 15v.01"></path>
+              <path d="M9 18v.01"></path>
+            </svg>
+            Organisation
+          </a>
+          <a href="/settings">
+            <svg class="icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Settings
+          </a>
+          <span class="divider"></span>
+          <span class="user-email">james@example.com</span>
+          <button class="btn-sign-out">Sign out</button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option C: Icons Only -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option C: Icons Only</h2>
+      <p>Minimal footprint. Icons with tooltips (hover for label). Best for frequent users.</p>
+    </div>
+    <div class="preview">
+      <nav>
+        <a href="/" class="logo">Tastefull</a>
+        <div style="display: flex; align-items: center; gap: 24px;">
+          <div class="nav-icons-only">
+            <a href="/" class="active" title="Home">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </a>
+            <a href="/network" title="Network">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </a>
+            <a href="/settings" title="Settings">
+              <svg class="icon" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </a>
+          </div>
+          <span class="divider"></span>
+          <div class="avatar">JM</div>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option D: Centered Logo -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option D: Centered Logo</h2>
+      <p>Logo in the middle, nav split on either side. More editorial feel.</p>
+    </div>
+    <div class="preview">
+      <nav class="nav-centered">
+        <div class="nav-left">
+          <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Home</a>
+          <a href="/network" style="color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Network</a>
+        </div>
+        <a href="/" class="logo">Tastefull</a>
+        <div class="nav-right">
+          <a href="/settings" style="color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Settings</a>
+          <span class="user-email">james@example.com</span>
+          <button class="btn-sign-out">Sign out</button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option E: Pill Navigation -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option E: Pill Tabs</h2>
+      <p>Segmented control style. Active state is clearly highlighted.</p>
+    </div>
+    <div class="preview">
+      <nav>
+        <a href="/" class="logo">Tastefull</a>
+        <div style="display: flex; align-items: center; gap: 24px;">
+          <div class="nav-pills">
+            <a href="/" class="active">Home</a>
+            <a href="/network">Network</a>
+            <a href="/settings">Settings</a>
+          </div>
+          <span class="divider"></span>
+          <span class="user-email">james@example.com</span>
+          <button class="btn-sign-out">Sign out</button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option F: Underline Navigation -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option F: Underline Tabs</h2>
+      <p>Active state shown with underline accent. Clean and familiar.</p>
+    </div>
+    <div class="preview">
+      <nav>
+        <a href="/" class="logo">Tastefull</a>
+        <div style="display: flex; align-items: center; gap: 32px;">
+          <div class="nav-underline">
+            <a href="/" class="active">Home</a>
+            <a href="/network">Network</a>
+            <a href="/settings">Settings</a>
+          </div>
+          <span class="divider"></span>
+          <span class="user-email">james@example.com</span>
+          <button class="btn-sign-out">Sign out</button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option G: With Org Switcher -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option G: With Organisation Badge</h2>
+      <p>Shows current organisation context. Good for multi-org users.</p>
+    </div>
+    <div class="preview">
+      <nav>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <a href="/" class="logo">Tastefull</a>
+          <span class="org-badge">StackOne</span>
+        </div>
+        <div class="nav-icon-links">
+          <a href="/" class="active">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Home
+          </a>
+          <a href="/network">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Network
+          </a>
+          <a href="/settings">
+            <svg class="icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Settings
+          </a>
+          <span class="divider"></span>
+          <div class="avatar">JM</div>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Option H: Compact -->
+  <div class="option">
+    <div class="option-header">
+      <h2>Option H: Compact Bar</h2>
+      <p>Smaller height, tighter spacing. Maximises content area.</p>
+    </div>
+    <div class="preview">
+      <nav class="nav-compact">
+        <a href="/" class="logo">Tastefull</a>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div class="nav-icons-only">
+            <a href="/" class="active" title="Home">
+              <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </a>
+            <a href="/network" title="Network">
+              <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </a>
+            <a href="/settings" title="Settings">
+              <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </a>
+          </div>
+          <div class="avatar" style="width: 28px; height: 28px; font-size: 10px;">JM</div>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+</body>
+</html>
