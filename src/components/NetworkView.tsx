@@ -725,10 +725,10 @@ export function NetworkView(): JSX.Element {
             <thead>
               <tr>
                 <th style={{ width: '30%' }}>Person</th>
-                <th style={{ width: '10%' }}>Reviews</th>
-                <th style={{ width: '12%' }}>Avg Rating</th>
-                <th style={{ width: '12%' }}>Lowest</th>
-                <th style={{ width: '12%' }}>Highest</th>
+                <th style={{ width: '10%', textAlign: 'center' }}>Reviews</th>
+                <th style={{ width: '12%', textAlign: 'center' }}>Avg Rating</th>
+                <th style={{ width: '12%', textAlign: 'center' }}>Lowest</th>
+                <th style={{ width: '12%', textAlign: 'center' }}>Highest</th>
                 <th style={{ width: '24%' }}></th>
               </tr>
             </thead>
@@ -762,10 +762,10 @@ export function NetworkView(): JSX.Element {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <span className="mono">{person.reviewCount}</span>
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     {person.avgRating !== null ? (
                       <span className={`mono ${getRatingClass(person.avgRating)}`}>
                         {person.avgRating.toFixed(1)}
@@ -774,7 +774,7 @@ export function NetworkView(): JSX.Element {
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     {person.lowestRating !== null ? (
                       <span className={`mono ${getRatingClass(person.lowestRating)}`}>
                         {person.lowestRating}
@@ -783,7 +783,7 @@ export function NetworkView(): JSX.Element {
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     {person.highestRating !== null ? (
                       <span className={`mono ${getRatingClass(person.highestRating)}`}>
                         {person.highestRating}
