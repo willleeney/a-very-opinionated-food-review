@@ -319,6 +319,35 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     }
   }
 
+  const handleDeleteOrg = async () => {
+    if (!org) return
+
+    const confirmText = prompt(`Type "${org.name}" to confirm deletion:`)
+    if (confirmText !== org.name) {
+      if (confirmText !== null) {
+        setError('Organisation name did not match')
+      }
+      return
+    }
+
+    setError(null)
+    setSuccess(null)
+    setSaving(true)
+
+    const { error } = await supabase
+      .from('organisations')
+      .delete()
+      .eq('id', org.id)
+
+    if (error) {
+      setError(error.message)
+      setSaving(false)
+    } else {
+      // Redirect to home after deletion
+      window.location.href = '/'
+    }
+  }
+
   if (loading) {
     return (
       <div className="loading">
@@ -591,6 +620,41 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
               ))}
             </tbody>
           </table>
+          </div>
+        </div>
+
+        {/* Danger zone */}
+        <div className="settings-row" style={{ marginTop: '48px', paddingTop: '48px', borderTop: '1px solid var(--border)' }}>
+          <div className="settings-label">
+            <h2 style={{ color: 'var(--poor)' }}>Danger Zone</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Irreversible actions
+            </p>
+          </div>
+          <div className="settings-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+                  Delete organisation
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px' }}>
+                  Permanently delete {org.name} and remove all members. This cannot be undone.
+                </p>
+              </div>
+              <button
+                onClick={handleDeleteOrg}
+                disabled={saving}
+                className="btn"
+                style={{
+                  padding: '10px 20px',
+                  width: '120px',
+                  borderColor: 'var(--poor)',
+                  color: 'var(--poor)',
+                }}
+              >
+                {saving ? '...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

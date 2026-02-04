@@ -21,6 +21,7 @@ interface FilterBarProps {
 const SOCIAL_OPTIONS: { value: SocialFilter; label: string }[] = [
   { value: 'everyone', label: 'Everyone' },
   { value: 'following', label: 'Following' },
+  { value: 'followers', label: 'Followers' },
   { value: 'just_me', label: 'Just Me' },
 ]
 

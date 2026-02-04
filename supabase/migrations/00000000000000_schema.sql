@@ -226,6 +226,11 @@ CREATE POLICY "Admins can update their organisations" ON organisations FOR UPDAT
     SELECT 1 FROM organisation_members
     WHERE organisation_id = organisations.id AND user_id = auth.uid() AND role = 'admin'
   ));
+CREATE POLICY "Admins can delete their organisations" ON organisations FOR DELETE TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM organisation_members
+    WHERE organisation_id = organisations.id AND user_id = auth.uid() AND role = 'admin'
+  ));
 
 -- Organisation members: members can view their org's members
 CREATE POLICY "Members can view organisation members" ON organisation_members FOR SELECT TO authenticated

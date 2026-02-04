@@ -65,6 +65,11 @@ export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userO
               </a>
             ))}
 
+            <a href="/network" className="dropdown-item">
+              <span className="item-check"></span>
+              <span className="item-label">Network</span>
+            </a>
+
             <a href="/settings" className="dropdown-item">
               <span className="item-check"></span>
               <span className="item-label">Settings</span>

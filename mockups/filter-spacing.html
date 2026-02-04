@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filter Spacing Variations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --bg-warm: #f5f2ed;
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --text-muted: #999;
+      --border: #e8e4de;
+      --accent: #c45d3e;
+      --accent-light: #e8d5ce;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem;
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+
+    .variation {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 32px;
+      margin-bottom: 40px;
+    }
+
+    .variation-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Common styles */
+    .row-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      border-color: var(--text-muted);
+    }
+
+    .chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .chip.add {
+      border-style: dashed;
+      color: var(--text-muted);
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      min-width: 50px;
+    }
+
+    .slider-track {
+      width: 120px;
+      height: 4px;
+      background: var(--border);
+      position: relative;
+    }
+
+    .slider-fill {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 40%;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .slider-thumb {
+      position: absolute;
+      right: 40%;
+      top: 50%;
+      transform: translate(50%, -50%);
+      width: 14px;
+      height: 14px;
+      background: white;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+    }
+
+    .slider-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      min-width: 28px;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .tab.active {
+      color: var(--accent);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ================================
+       VARIATION A: Compact Single Column
+       ================================ */
+    .v-a .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .v-a .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .v-a .row-label {
+      min-width: 50px;
+    }
+
+    .v-a .chips { display: flex; gap: 6px; }
+    .v-a .sliders { display: flex; gap: 24px; }
+
+    /* ================================
+       VARIATION B: Spacious with Dividers
+       ================================ */
+    .v-b .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .v-b .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .v-b .filter-row:last-child {
+      border-bottom: none;
+    }
+
+    .v-b .row-label {
+      min-width: 70px;
+    }
+
+    .v-b .chips { display: flex; gap: 8px; }
+    .v-b .sliders { display: flex; gap: 40px; }
+
+    /* ================================
+       VARIATION C: Grid Layout
+       ================================ */
+    .v-c .filter-bar {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 24px 16px;
+      align-items: center;
+    }
+
+    .v-c .row-label {
+      text-align: right;
+    }
+
+    .v-c .chips { display: flex; gap: 8px; }
+    .v-c .sliders { display: flex; gap: 32px; }
+
+    /* ================================
+       VARIATION D: Inline with Separators
+       ================================ */
+    .v-d .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .v-d .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .v-d .row-label {
+      min-width: 60px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border);
+    }
+
+    .v-d .chips { display: flex; gap: 8px; }
+    .v-d .sliders {
+      display: flex;
+      gap: 12px;
+    }
+
+    .v-d .slider-group {
+      padding: 0 12px;
+      border-right: 1px solid var(--border);
+    }
+
+    .v-d .slider-group:last-child {
+      border-right: none;
+    }
+
+    /* ================================
+       VARIATION E: Minimal / Tight
+       ================================ */
+    .v-e .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .v-e .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .v-e .row-label {
+      font-size: 10px;
+      min-width: 40px;
+    }
+
+    .v-e .chip {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+
+    .v-e .chips { display: flex; gap: 4px; }
+    .v-e .sliders { display: flex; gap: 16px; }
+
+    .v-e .slider-track { width: 80px; }
+    .v-e .slider-label { font-size: 11px; min-width: 40px; }
+    .v-e .slider-value { font-size: 11px; }
+
+    .v-e .tab { padding: 6px 12px; font-size: 12px; }
+
+    /* ================================
+       VARIATION F: Card Style
+       ================================ */
+    .v-f .filter-bar {
+      display: flex;
+      gap: 24px;
+    }
+
+    .v-f .filter-card {
+      background: var(--bg);
+      padding: 16px 20px;
+      flex: 1;
+    }
+
+    .v-f .row-label {
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .v-f .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .v-f .sliders { display: flex; flex-direction: column; gap: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Filter Spacing Variations</h1>
+
+  <!-- VARIATION A -->
+  <div class="variation v-a">
+    <div class="variation-title">A: Compact Single Column (current-ish)</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <span class="row-label">Type</span>
+        <div class="chips">
+          <button class="chip active">All</button>
+          <button class="chip">Lunch</button>
+          <button class="chip">Coffee</button>
+          <button class="chip">Dinner</button>
+          <button class="chip active">Brunch</button>
+          <button class="chip add">+</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Rating</span>
+        <div class="sliders">
+          <div class="slider-group">
+            <span class="slider-label">Overall</span>
+            <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+            <span class="slider-value">6+</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Value</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Taste</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Show</span>
+        <div class="tabs">
+          <button class="tab active">Everyone</button>
+          <button class="tab">Following</button>
+          <button class="tab">Just Me</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION B -->
+  <div class="variation v-b">
+    <div class="variation-title">B: Spacious with Dividers</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <span class="row-label">Type</span>
+        <div class="chips">
+          <button class="chip active">All</button>
+          <button class="chip">Lunch</button>
+          <button class="chip">Coffee</button>
+          <button class="chip">Dinner</button>
+          <button class="chip active">Brunch</button>
+          <button class="chip add">+</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Rating</span>
+        <div class="sliders">
+          <div class="slider-group">
+            <span class="slider-label">Overall</span>
+            <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+            <span class="slider-value">6+</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Value</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Taste</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Show</span>
+        <div class="tabs">
+          <button class="tab active">Everyone</button>
+          <button class="tab">Following</button>
+          <button class="tab">Just Me</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION C -->
+  <div class="variation v-c">
+    <div class="variation-title">C: Grid Layout (labels right-aligned)</div>
+    <div class="filter-bar">
+      <span class="row-label">Type</span>
+      <div class="chips">
+        <button class="chip active">All</button>
+        <button class="chip">Lunch</button>
+        <button class="chip">Coffee</button>
+        <button class="chip">Dinner</button>
+        <button class="chip active">Brunch</button>
+        <button class="chip add">+</button>
+      </div>
+      <span class="row-label">Rating</span>
+      <div class="sliders">
+        <div class="slider-group">
+          <span class="slider-label">Overall</span>
+          <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+          <span class="slider-value">6+</span>
+        </div>
+        <div class="slider-group">
+          <span class="slider-label">Value</span>
+          <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+          <span class="slider-value">Any</span>
+        </div>
+        <div class="slider-group">
+          <span class="slider-label">Taste</span>
+          <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+          <span class="slider-value">Any</span>
+        </div>
+      </div>
+      <span class="row-label">Show</span>
+      <div class="tabs">
+        <button class="tab active">Everyone</button>
+        <button class="tab">Following</button>
+        <button class="tab">Just Me</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION D -->
+  <div class="variation v-d">
+    <div class="variation-title">D: Inline with Vertical Separators</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <span class="row-label">Type</span>
+        <div class="chips">
+          <button class="chip active">All</button>
+          <button class="chip">Lunch</button>
+          <button class="chip">Coffee</button>
+          <button class="chip">Dinner</button>
+          <button class="chip active">Brunch</button>
+          <button class="chip add">+</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Rating</span>
+        <div class="sliders">
+          <div class="slider-group">
+            <span class="slider-label">Overall</span>
+            <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+            <span class="slider-value">6+</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Value</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Taste</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Show</span>
+        <div class="tabs">
+          <button class="tab active">Everyone</button>
+          <button class="tab">Following</button>
+          <button class="tab">Just Me</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION E -->
+  <div class="variation v-e">
+    <div class="variation-title">E: Minimal / Tight</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <span class="row-label">Type</span>
+        <div class="chips">
+          <button class="chip active">All</button>
+          <button class="chip">Lunch</button>
+          <button class="chip">Coffee</button>
+          <button class="chip">Dinner</button>
+          <button class="chip active">Brunch</button>
+          <button class="chip add">+</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Rating</span>
+        <div class="sliders">
+          <div class="slider-group">
+            <span class="slider-label">Overall</span>
+            <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+            <span class="slider-value">6+</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Value</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Taste</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="row-label">Show</span>
+        <div class="tabs">
+          <button class="tab active">Everyone</button>
+          <button class="tab">Following</button>
+          <button class="tab">Just Me</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION F -->
+  <div class="variation v-f">
+    <div class="variation-title">F: Card Style (horizontal sections)</div>
+    <div class="filter-bar">
+      <div class="filter-card">
+        <span class="row-label">Type</span>
+        <div class="chips">
+          <button class="chip active">All</button>
+          <button class="chip">Lunch</button>
+          <button class="chip">Coffee</button>
+          <button class="chip">Dinner</button>
+          <button class="chip active">Brunch</button>
+          <button class="chip add">+</button>
+        </div>
+      </div>
+      <div class="filter-card">
+        <span class="row-label">Rating</span>
+        <div class="sliders">
+          <div class="slider-group">
+            <span class="slider-label">Overall</span>
+            <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+            <span class="slider-value">6+</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Value</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+          <div class="slider-group">
+            <span class="slider-label">Taste</span>
+            <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+            <span class="slider-value">Any</span>
+          </div>
+        </div>
+      </div>
+      <div class="filter-card">
+        <span class="row-label">Show</span>
+        <div class="tabs">
+          <button class="tab active">Everyone</button>
+          <button class="tab">Following</button>
+          <button class="tab">Just Me</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

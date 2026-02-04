@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro'
+import { NetworkView } from '../components/NetworkView'
+
+export const prerender = false
+---
+
+<Layout title="Network">
+  <NetworkView client:only="react" />
+</Layout>

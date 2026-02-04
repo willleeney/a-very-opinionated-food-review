@@ -28,20 +28,23 @@ VALUES
   ('bbbbbbbb-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'james@stackone.com', '$2a$06$zGAFqKk3V8Rak7rDVT3IC.8v.r7v7cnmNUa5uwomHEAOiaC5fZo5S', NOW(), NOW(), NOW(), '', '', '', ''),
   ('bbbbbbbb-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'sarah@stackone.com', '$2a$06$zGAFqKk3V8Rak7rDVT3IC.8v.r7v7cnmNUa5uwomHEAOiaC5fZo5S', NOW(), NOW(), NOW(), '', '', '', ''),
   ('bbbbbbbb-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'alex@acme.com', '$2a$06$zGAFqKk3V8Rak7rDVT3IC.8v.r7v7cnmNUa5uwomHEAOiaC5fZo5S', NOW(), NOW(), NOW(), '', '', '', ''),
-  ('bbbbbbbb-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'maya@stackone.com', '$2a$06$zGAFqKk3V8Rak7rDVT3IC.8v.r7v7cnmNUa5uwomHEAOiaC5fZo5S', NOW(), NOW(), NOW(), '', '', '', '');
+  ('bbbbbbbb-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'maya@stackone.com', '$2a$06$zGAFqKk3V8Rak7rDVT3IC.8v.r7v7cnmNUa5uwomHEAOiaC5fZo5S', NOW(), NOW(), NOW(), '', '', '', ''),
+  ('bbbbbbbb-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'private@example.com', '$2a$06$zGAFqKk3V8Rak7rDVT3IC.8v.r7v7cnmNUa5uwomHEAOiaC5fZo5S', NOW(), NOW(), NOW(), '', '', '', '');
 
--- Profiles are auto-created by trigger, but let's set display names
+-- Profiles are auto-created by trigger, but let's set display names and privacy
 UPDATE profiles SET display_name = 'James Mitchell' WHERE id = 'bbbbbbbb-0000-0000-0000-000000000001';
 UPDATE profiles SET display_name = 'Sarah Kim' WHERE id = 'bbbbbbbb-0000-0000-0000-000000000002';
 UPDATE profiles SET display_name = 'Alex Lee' WHERE id = 'bbbbbbbb-0000-0000-0000-000000000003';
 UPDATE profiles SET display_name = 'Maya Roberts' WHERE id = 'bbbbbbbb-0000-0000-0000-000000000004';
+UPDATE profiles SET display_name = 'Private User', is_private = true WHERE id = 'bbbbbbbb-0000-0000-0000-000000000005';
 
 -- Add users to organisations
 INSERT INTO organisation_members (organisation_id, user_id, role) VALUES
   ('11111111-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 'admin'),  -- James @ StackOne (admin)
   ('11111111-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002', 'member'), -- Sarah @ StackOne
   ('11111111-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000004', 'member'), -- Maya @ StackOne
-  ('22222222-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000003', 'admin');  -- Alex @ Acme
+  ('22222222-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000003', 'admin'),  -- Alex @ Acme
+  ('11111111-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000005', 'member'); -- Private User @ StackOne
 
 -- Create reviews with dual ratings (value_rating and taste_rating)
 -- Note: 'rating' column is deprecated but still filled for backward compat
@@ -73,16 +76,24 @@ INSERT INTO reviews (id, restaurant_id, user_id, rating, value_rating, taste_rat
 
   -- Arabica reviews
   ('cccccccc-0000-0000-0000-000000000012', 'aaaaaaaa-0000-0000-0000-000000000008', 'bbbbbbbb-0000-0000-0000-000000000002', 8, 7, 8, 'Fantastic mezze. Great for sharing.', '11111111-0000-0000-0000-000000000001'),
-  ('cccccccc-0000-0000-0000-000000000013', 'aaaaaaaa-0000-0000-0000-000000000008', 'bbbbbbbb-0000-0000-0000-000000000003', 8, 7, 8, 'Love the shakshuka for brunch.', '22222222-0000-0000-0000-000000000002');
+  ('cccccccc-0000-0000-0000-000000000013', 'aaaaaaaa-0000-0000-0000-000000000008', 'bbbbbbbb-0000-0000-0000-000000000003', 8, 7, 8, 'Love the shakshuka for brunch.', '22222222-0000-0000-0000-000000000002'),
 
--- Create some follow relationships
+  -- Private User's review (should only be visible to followers)
+  ('cccccccc-0000-0000-0000-000000000014', 'aaaaaaaa-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000005', 9, 8, 9, 'Secret review from private user - only followers can see this!', '11111111-0000-0000-0000-000000000001');
+
+-- Create follow relationships
+-- Maya follows James (but James does NOT follow Maya back - to test Follow back button)
 INSERT INTO user_follows (follower_id, following_id) VALUES
   ('bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002'),  -- James follows Sarah
-  ('bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000004'),  -- James follows Maya
   ('bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000001'),  -- Sarah follows James
   ('bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000004'),  -- Sarah follows Maya
-  ('bbbbbbbb-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000001'),  -- Maya follows James
-  ('bbbbbbbb-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000002'); -- Maya follows Sarah
+  ('bbbbbbbb-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000001'),  -- Maya follows James (James does NOT follow back)
+  ('bbbbbbbb-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000002'),  -- Maya follows Sarah
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000005');  -- James follows Private User (can see their reviews)
+
+-- Create a pending follow request to the private user
+INSERT INTO follow_requests (requester_id, target_id) VALUES
+  ('bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000005');  -- Sarah requested to follow Private User
 
 -- Create settings table entry for office location (for backwards compatibility)
 INSERT INTO settings (key, value) VALUES

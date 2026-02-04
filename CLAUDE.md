@@ -213,11 +213,13 @@ Reviews automatically become visible - no migration needed:
 - `restaurants` - name, type, notes, latitude, longitude
 - `reviews` - rating (1-10), comment, links to restaurant + user
 - `settings` - key/value store (office_location as JSONB)
-- `profiles` - user profiles with display_name, synced from auth.users
+- `profiles` - user profiles with display_name, is_private flag, synced from auth.users
 - `organisations` - multi-tenant orgs with name, slug, office_location, tagline
 - `organisation_members` - user membership with role (admin/member)
 - `organisation_invites` - pending invites with email, token, expiry
 - `organisation_requests` - pending join requests from users
+- `user_follows` - follower/following relationships between users
+- `follow_requests` - pending follow requests for private accounts
 
 ### RLS Policies
 - Anyone can read restaurants and reviews (all fields - visibility enforced in app layer)
@@ -356,6 +358,49 @@ CREATE INDEX idx_organisation_invites_org ON organisation_invites(organisation_i
 CREATE INDEX idx_organisation_invites_token ON organisation_invites(token);
 CREATE INDEX idx_organisation_requests_org ON organisation_requests(organisation_id);
 CREATE INDEX idx_organisation_requests_user ON organisation_requests(user_id);
+
+-- 4. User follows and follow requests
+CREATE TABLE user_follows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  follower_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  following_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(follower_id, following_id)
+);
+
+CREATE TABLE follow_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  requester_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  target_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(requester_id, target_id)
+);
+
+-- Add is_private to profiles
+ALTER TABLE profiles ADD COLUMN is_private BOOLEAN DEFAULT false;
+
+ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follow_requests ENABLE ROW LEVEL SECURITY;
+
+-- User follows policies
+CREATE POLICY "Anyone can view follows" ON user_follows FOR SELECT USING (true);
+CREATE POLICY "Users can follow others" ON user_follows FOR INSERT TO authenticated
+  WITH CHECK (follower_id = auth.uid());
+CREATE POLICY "Users can unfollow" ON user_follows FOR DELETE TO authenticated
+  USING (follower_id = auth.uid());
+
+-- Follow requests policies
+CREATE POLICY "Users can view own requests" ON follow_requests FOR SELECT TO authenticated
+  USING (requester_id = auth.uid() OR target_id = auth.uid());
+CREATE POLICY "Users can create requests" ON follow_requests FOR INSERT TO authenticated
+  WITH CHECK (requester_id = auth.uid());
+CREATE POLICY "Users can delete own requests" ON follow_requests FOR DELETE TO authenticated
+  USING (requester_id = auth.uid() OR target_id = auth.uid());
+
+CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
+CREATE INDEX idx_user_follows_following ON user_follows(following_id);
+CREATE INDEX idx_follow_requests_requester ON follow_requests(requester_id);
+CREATE INDEX idx_follow_requests_target ON follow_requests(target_id);
 ```
 
 ### Local Development with Supabase

@@ -26,12 +26,18 @@ export function PersonalSettings(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
+  const [isPrivate, setIsPrivate] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [savingPrivacy, setSavingPrivacy] = useState(false)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Organisation[]>([])
   const [searching, setSearching] = useState(false)
+
+  // Create org state
+  const [newOrgName, setNewOrgName] = useState('')
+  const [creatingOrg, setCreatingOrg] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!user) return
@@ -39,12 +45,13 @@ export function PersonalSettings(): JSX.Element {
     // Fetch user's profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('display_name')
+      .select('display_name, is_private')
       .eq('id', user.id)
       .single()
 
     if (profile) {
       setDisplayName(profile.display_name || '')
+      setIsPrivate(profile.is_private || false)
     }
 
     // Fetch user's organisations
@@ -138,6 +145,29 @@ export function PersonalSettings(): JSX.Element {
       setSuccess('Name updated')
     }
     setSaving(false)
+  }
+
+  const handleTogglePrivacy = async () => {
+    if (!user) return
+
+    setSavingPrivacy(true)
+    setError(null)
+    setSuccess(null)
+
+    const newValue = !isPrivate
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_private: newValue })
+      .eq('id', user.id)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setIsPrivate(newValue)
+      setSuccess(newValue ? 'Account set to private' : 'Account set to public')
+    }
+    setSavingPrivacy(false)
   }
 
   const handleLeaveOrg = async (membershipId: string, orgName: string) => {
@@ -276,6 +306,54 @@ export function PersonalSettings(): JSX.Element {
     }
   }
 
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !newOrgName.trim()) return
+
+    setCreatingOrg(true)
+    setError(null)
+    setSuccess(null)
+
+    // Generate slug from name
+    const slug = newOrgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+
+    // Create the organisation
+    const { data: newOrg, error: orgError } = await supabase
+      .from('organisations')
+      .insert({ name: newOrgName.trim(), slug })
+      .select()
+      .single()
+
+    if (orgError) {
+      setError(orgError.message)
+      setCreatingOrg(false)
+      return
+    }
+
+    // Add current user as admin
+    const { error: memberError } = await supabase
+      .from('organisation_members')
+      .insert({
+        organisation_id: newOrg.id,
+        user_id: user.id,
+        role: 'admin',
+      })
+
+    if (memberError) {
+      setError(memberError.message)
+      setCreatingOrg(false)
+      return
+    }
+
+    setSuccess(`Created ${newOrgName} — <a href="/org/${slug}/admin" style="color: var(--great); text-decoration: underline;">Go to settings</a>`)
+    setNewOrgName('')
+    setCreatingOrg(false)
+    fetchData()
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
@@ -332,9 +410,10 @@ export function PersonalSettings(): JSX.Element {
         )}
 
         {success && (
-          <div style={{ padding: '16px', background: '#f0fdf4', border: '1px solid var(--great)', marginBottom: '24px', color: 'var(--great)' }}>
-            {success}
-          </div>
+          <div
+            style={{ padding: '16px', background: '#f0fdf4', border: '1px solid var(--great)', marginBottom: '24px', color: 'var(--great)' }}
+            dangerouslySetInnerHTML={{ __html: success }}
+          />
         )}
 
         {/* Account info */}
@@ -367,6 +446,51 @@ export function PersonalSettings(): JSX.Element {
                 Email
               </label>
               <span className="mono" style={{ fontSize: '14px' }}>{user.email}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy settings */}
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Privacy</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Control who can see your reviews
+            </p>
+          </div>
+          <div className="settings-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontWeight: 500, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  Private account
+                  {isPrivate && <span style={{ fontSize: '14px' }}>🔒</span>}
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.5' }}>
+                  {isPrivate
+                    ? 'Your reviews are hidden from non-followers. People must request to follow you and be approved before they can see your ratings and comments.'
+                    : 'Anyone can follow you and see your reviews (ratings and comments) without approval.'
+                  }
+                </p>
+                {isPrivate && (
+                  <p style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '8px' }}>
+                    Manage follow requests in your <a href="/network" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Network</a> page.
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleTogglePrivacy}
+                disabled={savingPrivacy}
+                className="btn"
+                style={{
+                  padding: '10px 20px',
+                  width: '120px',
+                  background: isPrivate ? 'var(--accent)' : 'transparent',
+                  borderColor: isPrivate ? 'var(--accent)' : 'var(--border)',
+                  color: isPrivate ? 'white' : 'var(--text-muted)',
+                }}
+              >
+                {savingPrivacy ? '...' : isPrivate ? 'Private' : 'Public'}
+              </button>
             </div>
           </div>
         </div>
@@ -563,6 +687,44 @@ export function PersonalSettings(): JSX.Element {
                 No organisations found matching "{searchQuery}"
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Create organisation */}
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Create</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Start a new organisation
+            </p>
+          </div>
+          <div className="settings-content">
+            <form onSubmit={handleCreateOrg} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  Organisation name
+                </label>
+                <input
+                  type="text"
+                  value={newOrgName}
+                  onChange={(e) => setNewOrgName(e.target.value)}
+                  placeholder="My Company"
+                  required
+                  style={{ width: '280px' }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingOrg || !newOrgName.trim()}
+                className="btn btn-accent"
+                style={{ padding: '10px 20px', width: '120px' }}
+              >
+                {creatingOrg ? '...' : 'Create'}
+              </button>
+            </form>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px' }}>
+              You'll be the admin and can invite others to join.
+            </p>
           </div>
         </div>
       </div>

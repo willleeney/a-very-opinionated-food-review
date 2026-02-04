@@ -17,6 +17,7 @@ interface DashboardProps {
 interface ReviewUser {
   id: string
   email: string
+  isPrivate: boolean
 }
 
 function getRatingClass(rating: number): string {
@@ -188,6 +189,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
   // Following state
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [followerIds, setFollowerIds] = useState<Set<string>>(new Set())
   const [followingUsers, setFollowingUsers] = useState<{ id: string; name: string }[]>([])
   const [orgMembers, setOrgMembers] = useState<{ id: string; name: string }[]>([])
   const [orgMembersByOrgId, setOrgMembersByOrgId] = useState<Map<string, Set<string>>>(new Map())
@@ -217,6 +219,20 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     } else {
       setFollowingIds(new Set())
       setFollowingUsers([])
+    }
+  }, [])
+
+  // Fetch user's followers list
+  const fetchFollowers = useCallback(async (userId: string) => {
+    const { data: follows } = await supabase
+      .from('user_follows')
+      .select('follower_id')
+      .eq('following_id', userId)
+
+    if (follows && follows.length > 0) {
+      setFollowerIds(new Set(follows.map(f => f.follower_id)))
+    } else {
+      setFollowerIds(new Set())
     }
   }, [])
 
@@ -419,11 +435,15 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (userIds.size > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, display_name')
+          .select('id, display_name, is_private')
           .in('id', Array.from(userIds))
 
         if (profiles) {
-          setUsers(profiles.map(p => ({ id: p.id, email: p.display_name || p.id.slice(0, 8) })))
+          setUsers(profiles.map(p => ({
+            id: p.id,
+            email: p.display_name || p.id.slice(0, 8),
+            isPrivate: p.is_private || false
+          })))
         }
       }
     }
@@ -440,6 +460,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (data.user) {
         fetchUserOrgs(data.user.id)
         fetchFollowing(data.user.id)
+        fetchFollowers(data.user.id)
       }
       // Fetch data after auth check completes (whether logged in or not)
       fetchData(data.user?.id)
@@ -453,12 +474,14 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
         if (session?.user) {
           fetchUserOrgs(session.user.id)
           fetchFollowing(session.user.id)
+          fetchFollowers(session.user.id)
           fetchData(session.user.id)
         } else {
           setUserOrgs([])
           setUserOrgIds(new Set())
           setIsAdmin(false)
           setFollowingIds(new Set())
+          setFollowerIds(new Set())
           fetchData(null)
         }
       }
@@ -468,7 +491,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [fetchData, fetchUserOrgs, fetchFollowing])
+  }, [fetchData, fetchUserOrgs, fetchFollowing, fetchFollowers])
 
   // Determine which reviews are "relevant" based on social filter
   const getRelevantReviews = (reviews: typeof restaurants[0]['reviews']) => {
@@ -483,6 +506,9 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     }
     if (socialFilter === 'following') {
       return reviews.filter(rev => rev.user_id && followingIds.has(rev.user_id))
+    }
+    if (socialFilter === 'followers') {
+      return reviews.filter(rev => rev.user_id && followerIds.has(rev.user_id))
     }
     // Organisation filter
     const org = userOrgs.find(o => o.slug === socialFilter)
@@ -600,13 +626,29 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   }
 
   // Check if a review's comment should be visible
-  // Visibility is derived from org membership:
-  // - Org view: reviewer must be a member of the current org
-  // - Global view: reviewer must be in any org the viewer is also in
-  const isCommentVisible = (isOrgMember: boolean): boolean => {
-    // The isOrgMember flag is computed during data fetch
-    // It's true if the reviewer is in the visible set (current org or any shared org)
-    return isOrgMember
+  // Visibility is derived from:
+  // 1. Org membership (reviewer must be in same org)
+  // 2. Privacy setting (if reviewer is private, viewer must follow them)
+  const isReviewVisible = (reviewUserId: string | null, isOrgMember: boolean): boolean => {
+    // Must be org member for base visibility
+    if (!isOrgMember) return false
+
+    // If reviewer not found, hide their details
+    if (!reviewUserId) return false
+
+    // Check if reviewer is private
+    const reviewer = users.find(u => u.id === reviewUserId)
+    if (!reviewer) return false
+
+    // If reviewer is private, viewer must follow them (or be them)
+    if (reviewer.isPrivate) {
+      // Own reviews are always visible
+      if (user && reviewUserId === user.id) return true
+      // Must follow private users to see their reviews
+      return followingIds.has(reviewUserId)
+    }
+
+    return true
   }
 
   if (loading) {
@@ -799,28 +841,33 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {restaurant.reviews.map((review) => {
                               const reviewer = users.find(u => u.id === review.user_id)
-                              const showComment = isCommentVisible(review.isOrgMember ?? false)
+                              const showDetails = isReviewVisible(review.user_id, review.isOrgMember ?? false)
                               return (
                                 <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                  <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
-                                    {review.rating}/10
-                                  </span>
-                                  {(review.value_rating || review.taste_rating) && (
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                      {review.value_rating && `Value: ${review.value_rating}/10`}
-                                      {review.value_rating && review.taste_rating && ' · '}
-                                      {review.taste_rating && `Taste: ${review.taste_rating}/10`}
-                                    </span>
-                                  )}
-                                  {showComment && (
+                                  {showDetails ? (
                                     <>
+                                      <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
+                                        {review.rating}/10
+                                      </span>
+                                      {(review.value_rating || review.taste_rating) && (
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                          {review.value_rating && `Value: ${review.value_rating}/10`}
+                                          {review.value_rating && review.taste_rating && ' · '}
+                                          {review.taste_rating && `Taste: ${review.taste_rating}/10`}
+                                        </span>
+                                      )}
                                       <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
                                         {reviewer?.email || 'Anonymous'}
+                                        {reviewer?.isPrivate && <span style={{ marginLeft: '4px', fontSize: '10px' }} title="Private account">🔒</span>}
                                       </span>
                                       {review.comment && (
                                         <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
                                       )}
                                     </>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                                      Private review — follow to see details
+                                    </span>
                                   )}
                                 </div>
                               )

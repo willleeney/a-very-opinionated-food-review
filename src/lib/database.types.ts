@@ -227,18 +227,45 @@ export type Database = {
           id: string
           name: string | null
           email: string | null
+          display_name: string | null
+          is_private: boolean
           created_at: string | null
         }
         Insert: {
           id: string
           name?: string | null
           email?: string | null
+          display_name?: string | null
+          is_private?: boolean
           created_at?: string | null
         }
         Update: {
           id?: string
           name?: string | null
           email?: string | null
+          display_name?: string | null
+          is_private?: boolean
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      follow_requests: {
+        Row: {
+          id: string
+          requester_id: string
+          target_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          requester_id: string
+          target_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          requester_id?: string
+          target_id?: string
           created_at?: string | null
         }
         Relationships: []
@@ -304,6 +331,7 @@ export type OrganisationInvite = Database['public']['Tables']['organisation_invi
 export type OrganisationRequest = Database['public']['Tables']['organisation_requests']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserFollow = Database['public']['Tables']['user_follows']['Row']
+export type FollowRequest = Database['public']['Tables']['follow_requests']['Row']
 
 // Category type
 export type RestaurantCategory = 'lunch' | 'dinner' | 'coffee' | 'brunch' | 'pub'
@@ -326,4 +354,4 @@ export type OfficeLocation = {
 }
 
 // Social filter type
-export type SocialFilter = 'everyone' | 'following' | 'just_me' | string // string for org slugs
+export type SocialFilter = 'everyone' | 'following' | 'followers' | 'just_me' | string // string for org slugs

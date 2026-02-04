@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filter Bar in Context</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --bg-warm: #f5f2ed;
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --text-muted: #999;
+      --border: #e8e4de;
+      --accent: #c45d3e;
+      --accent-light: #e8d5ce;
+      --great: #2d7a4f;
+      --good: #b8860b;
+      --poor: #a64d4d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .variation-label {
+      background: var(--accent);
+      color: white;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0;
+    }
+
+    .page-section {
+      margin-bottom: 60px;
+      border: 2px solid var(--border);
+    }
+
+    /* ================================
+       HISTOGRAM
+       ================================ */
+    .histogram-section {
+      padding: 40px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .histogram {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 60px;
+    }
+
+    .histogram-bar {
+      flex: 1;
+      background: var(--border);
+      min-height: 4px;
+      transition: background 0.2s;
+    }
+
+    .histogram-bar.great { background: var(--great); }
+    .histogram-bar.good { background: var(--good); }
+    .histogram-bar.poor { background: var(--poor); }
+
+    .histogram-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ================================
+       COMMON FILTER STYLES
+       ================================ */
+    .row-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover { border-color: var(--text-muted); }
+    .chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .chip.add {
+      border-style: dashed;
+      color: var(--text-muted);
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      min-width: 50px;
+    }
+
+    .slider-track {
+      width: 120px;
+      height: 4px;
+      background: var(--border);
+      position: relative;
+    }
+
+    .slider-fill {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 40%;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .slider-thumb {
+      position: absolute;
+      right: 40%;
+      top: 50%;
+      transform: translate(50%, -50%);
+      width: 14px;
+      height: 14px;
+      background: white;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+    }
+
+    .slider-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      min-width: 28px;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .tab.active { color: var(--accent); }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ================================
+       TABLE
+       ================================ */
+    .table-section {
+      padding: 40px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 16px 0;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:hover td {
+      background: var(--bg-warm);
+    }
+
+    .restaurant-name {
+      font-weight: 500;
+    }
+
+    .cuisine {
+      color: var(--text-secondary);
+    }
+
+    .rating-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .rating-great { color: var(--great); }
+    .rating-good { color: var(--good); }
+    .rating-poor { color: var(--poor); }
+
+    .dual-rating {
+      display: flex;
+      gap: 12px;
+    }
+
+    .rating-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .rating-item-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .reviews-count {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .view-map {
+      font-size: 12px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* ================================
+       VARIATION A: Compact
+       ================================ */
+    .v-a .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .v-a .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .v-a .row-label { min-width: 50px; }
+    .v-a .chips { display: flex; gap: 6px; }
+    .v-a .sliders { display: flex; gap: 24px; }
+
+    /* ================================
+       VARIATION B: Spacious with Dividers
+       ================================ */
+    .v-b .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .v-b .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .v-b .row-label { min-width: 70px; }
+    .v-b .chips { display: flex; gap: 8px; }
+    .v-b .sliders { display: flex; gap: 40px; }
+
+    /* ================================
+       VARIATION C: Grid Layout
+       ================================ */
+    .v-c .filter-bar {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 20px 16px;
+      align-items: center;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .v-c .row-label { text-align: right; }
+    .v-c .chips { display: flex; gap: 8px; }
+    .v-c .sliders { display: flex; gap: 32px; }
+
+    /* ================================
+       VARIATION E: Minimal
+       ================================ */
+    .v-e .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .v-e .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .v-e .row-label { font-size: 10px; min-width: 40px; }
+    .v-e .chip { padding: 4px 10px; font-size: 12px; }
+    .v-e .chips { display: flex; gap: 4px; }
+    .v-e .sliders { display: flex; gap: 16px; }
+    .v-e .slider-track { width: 80px; }
+    .v-e .slider-label { font-size: 11px; min-width: 40px; }
+    .v-e .slider-value { font-size: 11px; }
+    .v-e .tab { padding: 6px 12px; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- VARIATION A: Compact -->
+  <div class="page-section">
+    <div class="variation-label">Variation A: Compact</div>
+    <div class="container">
+      <!-- Histogram -->
+      <div class="histogram-section">
+        <div class="histogram">
+          <div class="histogram-bar poor" style="height: 10%"></div>
+          <div class="histogram-bar poor" style="height: 5%"></div>
+          <div class="histogram-bar poor" style="height: 8%"></div>
+          <div class="histogram-bar poor" style="height: 12%"></div>
+          <div class="histogram-bar poor" style="height: 15%"></div>
+          <div class="histogram-bar good" style="height: 25%"></div>
+          <div class="histogram-bar good" style="height: 45%"></div>
+          <div class="histogram-bar great" style="height: 80%"></div>
+          <div class="histogram-bar great" style="height: 60%"></div>
+          <div class="histogram-bar great" style="height: 30%"></div>
+        </div>
+        <div class="histogram-labels">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="v-a">
+        <div class="filter-bar">
+          <div class="filter-row">
+            <span class="row-label">Type</span>
+            <div class="chips">
+              <button class="chip active">All</button>
+              <button class="chip">Lunch</button>
+              <button class="chip">Coffee</button>
+              <button class="chip">Dinner</button>
+              <button class="chip add">+</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="row-label">Rating</span>
+            <div class="sliders">
+              <div class="slider-group">
+                <span class="slider-label">Overall</span>
+                <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+                <span class="slider-value">6+</span>
+              </div>
+              <div class="slider-group">
+                <span class="slider-label">Value</span>
+                <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+                <span class="slider-value">Any</span>
+              </div>
+              <div class="slider-group">
+                <span class="slider-label">Taste</span>
+                <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+                <span class="slider-value">Any</span>
+              </div>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="row-label">Show</span>
+            <div class="tabs">
+              <button class="tab active">Everyone</button>
+              <button class="tab">Following</button>
+              <button class="tab">Just Me</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Cuisine</th>
+              <th>Rating</th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="restaurant-name">Padella</span></td>
+              <td class="cuisine">Italian</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">5.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Flat Iron</span></td>
+              <td class="cuisine">Steakhouse</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-great">8.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-good">7.5</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Monmouth Coffee</span></td>
+              <td class="cuisine">Cafe</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">6.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION B: Spacious -->
+  <div class="page-section">
+    <div class="variation-label">Variation B: Spacious with Dividers</div>
+    <div class="container">
+      <!-- Histogram -->
+      <div class="histogram-section">
+        <div class="histogram">
+          <div class="histogram-bar poor" style="height: 10%"></div>
+          <div class="histogram-bar poor" style="height: 5%"></div>
+          <div class="histogram-bar poor" style="height: 8%"></div>
+          <div class="histogram-bar poor" style="height: 12%"></div>
+          <div class="histogram-bar poor" style="height: 15%"></div>
+          <div class="histogram-bar good" style="height: 25%"></div>
+          <div class="histogram-bar good" style="height: 45%"></div>
+          <div class="histogram-bar great" style="height: 80%"></div>
+          <div class="histogram-bar great" style="height: 60%"></div>
+          <div class="histogram-bar great" style="height: 30%"></div>
+        </div>
+        <div class="histogram-labels">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="v-b">
+        <div class="filter-bar">
+          <div class="filter-row">
+            <span class="row-label">Type</span>
+            <div class="chips">
+              <button class="chip active">All</button>
+              <button class="chip">Lunch</button>
+              <button class="chip">Coffee</button>
+              <button class="chip">Dinner</button>
+              <button class="chip add">+</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="row-label">Rating</span>
+            <div class="sliders">
+              <div class="slider-group">
+                <span class="slider-label">Overall</span>
+                <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+                <span class="slider-value">6+</span>
+              </div>
+              <div class="slider-group">
+                <span class="slider-label">Value</span>
+                <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+                <span class="slider-value">Any</span>
+              </div>
+              <div class="slider-group">
+                <span class="slider-label">Taste</span>
+                <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+                <span class="slider-value">Any</span>
+              </div>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="row-label">Show</span>
+            <div class="tabs">
+              <button class="tab active">Everyone</button>
+              <button class="tab">Following</button>
+              <button class="tab">Just Me</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Cuisine</th>
+              <th>Rating</th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="restaurant-name">Padella</span></td>
+              <td class="cuisine">Italian</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">5.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Flat Iron</span></td>
+              <td class="cuisine">Steakhouse</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-great">8.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-good">7.5</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Monmouth Coffee</span></td>
+              <td class="cuisine">Cafe</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">6.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION C: Grid -->
+  <div class="page-section">
+    <div class="variation-label">Variation C: Grid Layout</div>
+    <div class="container">
+      <!-- Histogram -->
+      <div class="histogram-section">
+        <div class="histogram">
+          <div class="histogram-bar poor" style="height: 10%"></div>
+          <div class="histogram-bar poor" style="height: 5%"></div>
+          <div class="histogram-bar poor" style="height: 8%"></div>
+          <div class="histogram-bar poor" style="height: 12%"></div>
+          <div class="histogram-bar poor" style="height: 15%"></div>
+          <div class="histogram-bar good" style="height: 25%"></div>
+          <div class="histogram-bar good" style="height: 45%"></div>
+          <div class="histogram-bar great" style="height: 80%"></div>
+          <div class="histogram-bar great" style="height: 60%"></div>
+          <div class="histogram-bar great" style="height: 30%"></div>
+        </div>
+        <div class="histogram-labels">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="v-c">
+        <div class="filter-bar">
+          <span class="row-label">Type</span>
+          <div class="chips">
+            <button class="chip active">All</button>
+            <button class="chip">Lunch</button>
+            <button class="chip">Coffee</button>
+            <button class="chip">Dinner</button>
+            <button class="chip add">+</button>
+          </div>
+          <span class="row-label">Rating</span>
+          <div class="sliders">
+            <div class="slider-group">
+              <span class="slider-label">Overall</span>
+              <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+              <span class="slider-value">6+</span>
+            </div>
+            <div class="slider-group">
+              <span class="slider-label">Value</span>
+              <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+              <span class="slider-value">Any</span>
+            </div>
+            <div class="slider-group">
+              <span class="slider-label">Taste</span>
+              <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+              <span class="slider-value">Any</span>
+            </div>
+          </div>
+          <span class="row-label">Show</span>
+          <div class="tabs">
+            <button class="tab active">Everyone</button>
+            <button class="tab">Following</button>
+            <button class="tab">Just Me</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Cuisine</th>
+              <th>Rating</th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="restaurant-name">Padella</span></td>
+              <td class="cuisine">Italian</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">5.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Flat Iron</span></td>
+              <td class="cuisine">Steakhouse</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-great">8.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-good">7.5</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Monmouth Coffee</span></td>
+              <td class="cuisine">Cafe</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">6.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIATION E: Minimal -->
+  <div class="page-section">
+    <div class="variation-label">Variation E: Minimal / Tight</div>
+    <div class="container">
+      <!-- Histogram -->
+      <div class="histogram-section">
+        <div class="histogram">
+          <div class="histogram-bar poor" style="height: 10%"></div>
+          <div class="histogram-bar poor" style="height: 5%"></div>
+          <div class="histogram-bar poor" style="height: 8%"></div>
+          <div class="histogram-bar poor" style="height: 12%"></div>
+          <div class="histogram-bar poor" style="height: 15%"></div>
+          <div class="histogram-bar good" style="height: 25%"></div>
+          <div class="histogram-bar good" style="height: 45%"></div>
+          <div class="histogram-bar great" style="height: 80%"></div>
+          <div class="histogram-bar great" style="height: 60%"></div>
+          <div class="histogram-bar great" style="height: 30%"></div>
+        </div>
+        <div class="histogram-labels">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="v-e">
+        <div class="filter-bar">
+          <div class="filter-row">
+            <span class="row-label">Type</span>
+            <div class="chips">
+              <button class="chip active">All</button>
+              <button class="chip">Lunch</button>
+              <button class="chip">Coffee</button>
+              <button class="chip">Dinner</button>
+              <button class="chip add">+</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="row-label">Rating</span>
+            <div class="sliders">
+              <div class="slider-group">
+                <span class="slider-label">Overall</span>
+                <div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div>
+                <span class="slider-value">6+</span>
+              </div>
+              <div class="slider-group">
+                <span class="slider-label">Value</span>
+                <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+                <span class="slider-value">Any</span>
+              </div>
+              <div class="slider-group">
+                <span class="slider-label">Taste</span>
+                <div class="slider-track"><div class="slider-fill" style="width:0"></div><div class="slider-thumb" style="right:0"></div></div>
+                <span class="slider-value">Any</span>
+              </div>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="row-label">Show</span>
+            <div class="tabs">
+              <button class="tab active">Everyone</button>
+              <button class="tab">Following</button>
+              <button class="tab">Just Me</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Cuisine</th>
+              <th>Rating</th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="restaurant-name">Padella</span></td>
+              <td class="cuisine">Italian</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">5.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Flat Iron</span></td>
+              <td class="cuisine">Steakhouse</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-great">8.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-good">7.5</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+            <tr>
+              <td><span class="restaurant-name">Monmouth Coffee</span></td>
+              <td class="cuisine">Cafe</td>
+              <td>
+                <div class="dual-rating">
+                  <span class="rating-item"><span class="rating-item-label">V</span><span class="rating-badge rating-good">6.5</span></span>
+                  <span class="rating-item"><span class="rating-item-label">T</span><span class="rating-badge rating-great">9.0</span></span>
+                </div>
+              </td>
+              <td class="reviews-count">2 reviews</td>
+              <td><button class="view-map">View on map</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
