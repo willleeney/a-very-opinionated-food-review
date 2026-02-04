@@ -229,6 +229,7 @@ export type Database = {
           email: string | null
           display_name: string | null
           is_private: boolean
+          avatar_url: string | null
           created_at: string | null
         }
         Insert: {
@@ -237,6 +238,7 @@ export type Database = {
           email?: string | null
           display_name?: string | null
           is_private?: boolean
+          avatar_url?: string | null
           created_at?: string | null
         }
         Update: {
@@ -245,6 +247,7 @@ export type Database = {
           email?: string | null
           display_name?: string | null
           is_private?: boolean
+          avatar_url?: string | null
           created_at?: string | null
         }
         Relationships: []

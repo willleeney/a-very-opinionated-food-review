@@ -11,6 +11,7 @@ interface UserWithStats {
   name: string
   email: string | null
   isPrivate: boolean
+  avatarUrl: string | null
   reviewCount: number
   avgRating: number | null
   lowestRating: number | null
@@ -103,7 +104,7 @@ export function NetworkView(): JSX.Element {
       // Fetch profiles
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, display_name, email, is_private')
+        .select('id, display_name, email, is_private, avatar_url')
         .in('id', ids)
 
       if (profiles) {
@@ -113,6 +114,7 @@ export function NetworkView(): JSX.Element {
           name: p.display_name || p.email?.split('@')[0] || p.id.slice(0, 8),
           email: p.email,
           isPrivate: p.is_private || false,
+          avatarUrl: p.avatar_url || null,
           ...stats.get(p.id) || { reviewCount: 0, avgRating: null, lowestRating: null, highestRating: null },
           isFollowing: true,
           isFollower: false,
@@ -141,7 +143,7 @@ export function NetworkView(): JSX.Element {
       // Fetch profiles
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, display_name, email, is_private')
+        .select('id, display_name, email, is_private, avatar_url')
         .in('id', ids)
 
       if (profiles) {
@@ -151,6 +153,7 @@ export function NetworkView(): JSX.Element {
           name: p.display_name || p.email?.split('@')[0] || p.id.slice(0, 8),
           email: p.email,
           isPrivate: p.is_private || false,
+          avatarUrl: p.avatar_url || null,
           ...stats.get(p.id) || { reviewCount: 0, avgRating: null, lowestRating: null, highestRating: null },
           isFollowing: currentFollowingIds.has(p.id),
           isFollower: true,
@@ -179,7 +182,7 @@ export function NetworkView(): JSX.Element {
       // Fetch profiles
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, display_name, email, is_private')
+        .select('id, display_name, email, is_private, avatar_url')
         .in('id', ids)
 
       if (profiles) {
@@ -189,6 +192,7 @@ export function NetworkView(): JSX.Element {
           name: p.display_name || p.email?.split('@')[0] || p.id.slice(0, 8),
           email: p.email,
           isPrivate: p.is_private || false,
+          avatarUrl: p.avatar_url || null,
           ...stats.get(p.id) || { reviewCount: 0, avgRating: null, lowestRating: null, highestRating: null },
           isFollowing: false,
           isFollower: false,
@@ -221,7 +225,7 @@ export function NetworkView(): JSX.Element {
   const fetchAllUsers = useCallback(async (currentUserId: string, followingSet: Set<string>, outgoingSet: Set<string>) => {
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, display_name, email, is_private')
+      .select('id, display_name, email, is_private, avatar_url')
       .neq('id', currentUserId)
       .limit(100)
 
@@ -233,6 +237,7 @@ export function NetworkView(): JSX.Element {
         name: p.display_name || p.email?.split('@')[0] || p.id.slice(0, 8),
         email: p.email,
         isPrivate: p.is_private || false,
+        avatarUrl: p.avatar_url || null,
         ...stats.get(p.id) || { reviewCount: 0, avgRating: null, lowestRating: null, highestRating: null },
         isFollowing: followingSet.has(p.id),
         isFollower: false,
@@ -737,19 +742,31 @@ export function NetworkView(): JSX.Element {
                 <tr key={person.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        background: 'var(--accent-light)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 500,
-                        color: 'var(--accent)',
-                        fontSize: '14px',
-                      }}>
-                        {person.name.slice(0, 2).toUpperCase()}
-                      </div>
+                      {person.avatarUrl ? (
+                        <img
+                          src={person.avatarUrl}
+                          alt={person.name}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          background: 'var(--accent-light)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 500,
+                          color: 'var(--accent)',
+                          fontSize: '14px',
+                        }}>
+                          {person.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {person.name}

@@ -603,16 +603,51 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const activeOrgName = currentOrg?.name || activeOrg?.name || null
   const showOffice = !!currentOrg || !!activeOrg
 
-  const restaurantsWithRatings = restaurants.filter(r => r.avgRating !== null)
-  const totalReviews = restaurants.reduce((sum, r) => sum + r.reviews.length, 0)
-  const stats = {
-    total: restaurants.length,
-    reviews: totalReviews,
-    avgRating: restaurantsWithRatings.length > 0
-      ? restaurantsWithRatings.reduce((sum, r) => sum + (r.avgRating || 0), 0) / restaurantsWithRatings.length
-      : 0,
-    topRated: restaurantsWithRatings.filter(r => r.avgRating! >= 8).length,
+  // Helper to check if a review is visible (for stats calculation)
+  const isReviewVisibleForStats = (review: { user_id: string | null; isOrgMember?: boolean }): boolean => {
+    if (!review.isOrgMember) return false
+    if (!review.user_id) return false
+    const reviewer = users.find(u => u.id === review.user_id)
+    if (!reviewer) return false
+    if (reviewer.isPrivate) {
+      if (user && review.user_id === user.id) return true
+      return followingIds.has(review.user_id)
+    }
+    return true
   }
+
+  // Calculate stats based only on visible reviews
+  const getVisibleStats = () => {
+    let totalVisibleReviews = 0
+    const restaurantVisibleRatings: { id: string; avgRating: number }[] = []
+
+    for (const r of restaurants) {
+      const visibleReviews = r.reviews.filter(rev => isReviewVisibleForStats(rev))
+      totalVisibleReviews += visibleReviews.length
+
+      const ratings = visibleReviews
+        .filter(rev => rev.rating !== null)
+        .map(rev => rev.rating as number)
+
+      if (ratings.length > 0) {
+        const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length
+        restaurantVisibleRatings.push({ id: r.id, avgRating: avg })
+      }
+    }
+
+    const avgRating = restaurantVisibleRatings.length > 0
+      ? restaurantVisibleRatings.reduce((sum, r) => sum + r.avgRating, 0) / restaurantVisibleRatings.length
+      : 0
+
+    return {
+      total: restaurants.length,
+      reviews: totalVisibleReviews,
+      avgRating,
+      topRated: restaurantVisibleRatings.filter(r => r.avgRating >= 8).length,
+    }
+  }
+
+  const stats = getVisibleStats()
 
   const handleRowClick = (restaurant: RestaurantWithReviews) => {
     if (!user) return
@@ -742,7 +777,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
+                <th style={{ paddingLeft: '16px' }}>Name</th>
                 <th className="hide-mobile">Type</th>
                 {officeLocation && <th className="hide-mobile">Distance</th>}
                 <th>Rating</th>
@@ -761,7 +796,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                       background: expandedId === restaurant.id ? 'var(--bg-warm)' : undefined
                     }}
                   >
-                    <td>
+                    <td style={{ paddingLeft: '16px' }}>
                       <strong style={{ fontWeight: 500 }}>{restaurant.name}</strong>
                     </td>
                     <td className="hide-mobile" style={{ color: 'var(--text-secondary)' }}>
@@ -810,45 +845,40 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                   {expandedId === restaurant.id && (
                     <tr key={`${restaurant.id}-expanded`}>
                       <td colSpan={officeLocation ? 6 : 5} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
-                        {restaurant.reviews.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {restaurant.reviews.map((review) => {
-                              const reviewer = users.find(u => u.id === review.user_id)
-                              const showDetails = isReviewVisible(review.user_id, review.isOrgMember ?? false)
-                              return (
-                                <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                  {showDetails ? (
-                                    <>
-                                      <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
-                                        {review.rating}/10
-                                      </span>
-                                      {(review.value_rating || review.taste_rating) && (
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                          {review.value_rating && `Value: ${review.value_rating}/10`}
-                                          {review.value_rating && review.taste_rating && ' · '}
-                                          {review.taste_rating && `Taste: ${review.taste_rating}/10`}
-                                        </span>
-                                      )}
-                                      <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
-                                        {reviewer?.email || 'Anonymous'}
-                                        {reviewer?.isPrivate && <span style={{ marginLeft: '4px', fontSize: '10px' }} title="Private account">🔒</span>}
-                                      </span>
-                                      {review.comment && (
-                                        <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
-                                      Private review — follow to see details
+                        {(() => {
+                          const visibleReviews = restaurant.reviews.filter(review =>
+                            isReviewVisible(review.user_id, review.isOrgMember ?? false)
+                          )
+                          return visibleReviews.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {visibleReviews.map((review) => {
+                                const reviewer = users.find(u => u.id === review.user_id)
+                                return (
+                                  <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                    <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
+                                      {review.rating}/10
                                     </span>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p style={{ color: 'var(--text-muted)' }}>No reviews yet</p>
-                        )}
+                                    {(review.value_rating || review.taste_rating) && (
+                                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                        {review.value_rating && `Value: ${review.value_rating}/10`}
+                                        {review.value_rating && review.taste_rating && ' · '}
+                                        {review.taste_rating && `Taste: ${review.taste_rating}/10`}
+                                      </span>
+                                    )}
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
+                                      {reviewer?.email || 'Anonymous'}
+                                    </span>
+                                    {review.comment && (
+                                      <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <p style={{ color: 'var(--text-muted)' }}>No reviews yet</p>
+                          )
+                        })()}
                         {user && (
                           <InlineReviewForm
                             restaurantId={restaurant.id}
@@ -859,7 +889,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                         )}
                         {/* Mobile map button */}
                         {restaurant.latitude && restaurant.longitude && (
-                          <div className="show-mobile" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                          <div className="show-mobile" style={{ justifyContent: 'flex-end', marginTop: '16px' }}>
                             <button
                               onClick={(e) => handleMapClick(e, restaurant)}
                               style={{

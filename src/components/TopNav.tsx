@@ -87,8 +87,13 @@ export function TopNav({ user, currentOrgSlug, userOrgs }: TopNavProps): JSX.Ele
               </button>
             </div>
           ) : (
-            <a href="/login" className="btn" style={{ padding: '8px 16px' }}>
-              Sign in
+            <a href="/login" className="top-nav-link">
+              <svg className="top-nav-icon" viewBox="0 0 24 24">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+              <span className="top-nav-label">Sign in</span>
             </a>
           )}
         </div>

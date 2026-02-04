@@ -28,8 +28,10 @@ export function PersonalSettings(): JSX.Element {
   const [success, setSuccess] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savingPrivacy, setSavingPrivacy] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -46,13 +48,14 @@ export function PersonalSettings(): JSX.Element {
     // Fetch user's profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('display_name, is_private')
+      .select('display_name, is_private, avatar_url')
       .eq('id', user.id)
       .single()
 
     if (profile) {
       setDisplayName(profile.display_name || '')
       setIsPrivate(profile.is_private || false)
+      setAvatarUrl(profile.avatar_url || null)
     }
 
     // Fetch user's organisations
@@ -169,6 +172,95 @@ export function PersonalSettings(): JSX.Element {
       setSuccess(newValue ? 'Account set to private' : 'Account set to public')
     }
     setSavingPrivacy(false)
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return
+
+    const file = e.target.files[0]
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image must be less than 2MB')
+      return
+    }
+
+    setUploadingAvatar(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      // Get file extension
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const filePath = `${user.id}/avatar.${ext}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update profile with avatar URL (add cache buster)
+      const avatarUrlWithCache = `${publicUrl}?t=${Date.now()}`
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrlWithCache })
+        .eq('id', user.id)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      setAvatarUrl(avatarUrlWithCache)
+      setSuccess('Profile picture updated')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image')
+    } finally {
+      setUploadingAvatar(false)
+      // Reset file input
+      e.target.value = ''
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    if (!user || !avatarUrl) return
+
+    setUploadingAvatar(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      // Update profile to remove avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      setAvatarUrl(null)
+      setSuccess('Profile picture removed')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove image')
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   const handleLeaveOrg = async (membershipId: string, orgName: string) => {
@@ -407,6 +499,82 @@ export function PersonalSettings(): JSX.Element {
             dangerouslySetInnerHTML={{ __html: success }}
           />
         )}
+
+        {/* Profile Picture */}
+        <div className="settings-row">
+          <div className="settings-label">
+            <h2>Profile Picture</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Shown on your network page
+            </p>
+          </div>
+          <div className="settings-content">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              {/* Avatar preview */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                background: avatarUrl ? 'transparent' : 'var(--accent-light)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 500,
+                color: 'var(--accent)',
+                fontSize: '24px',
+                overflow: 'hidden',
+              }}>
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  (displayName || user.email || '?').slice(0, 2).toUpperCase()
+                )}
+              </div>
+
+              {/* Upload controls */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label
+                  style={{
+                    display: 'inline-block',
+                    padding: '10px 20px',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    border: '1px solid var(--border)',
+                    cursor: uploadingAvatar ? 'wait' : 'pointer',
+                    opacity: uploadingAvatar ? 0.5 : 1,
+                  }}
+                >
+                  {uploadingAvatar ? 'Uploading...' : 'Upload image'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                {avatarUrl && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    disabled={uploadingAvatar}
+                    className="btn"
+                    style={{ padding: '10px 20px', color: 'var(--text-muted)' }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>
+              Max 2MB. JPG, PNG, or GIF.
+            </p>
+          </div>
+        </div>
 
         {/* Account info */}
         <div className="settings-row">
