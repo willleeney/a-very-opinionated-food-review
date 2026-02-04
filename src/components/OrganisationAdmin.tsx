@@ -424,8 +424,8 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     <div>
       <TopNav user={user} userOrgs={userOrgsForNav} currentOrgSlug={organisationSlug} />
 
-      <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px', maxWidth: '900px' }}>
-        <h1 style={{ marginBottom: '8px' }}>Organisation</h1>
+      <div className="container" style={{ paddingTop: '140px', paddingBottom: '80px', maxWidth: '900px' }}>
+        <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 400, marginBottom: '8px' }}>Organisation</h1>
 
         {/* Organisation switcher tabs */}
         {userOrgs.filter(o => o.role === 'admin').length > 0 && (

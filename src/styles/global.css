@@ -1128,8 +1128,7 @@ nav.scrolled {
 }
 
 .top-nav-label {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 14px;
 }
 
 .top-nav-divider {

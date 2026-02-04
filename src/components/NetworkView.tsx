@@ -576,7 +576,7 @@ export function NetworkView(): JSX.Element {
       <TopNav user={user} userOrgs={userOrgs} />
 
       {/* Header */}
-      <section style={{ paddingTop: '120px', paddingBottom: '40px' }}>
+      <section style={{ paddingTop: '140px', paddingBottom: '40px' }}>
         <div className="container">
           <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 400, marginBottom: '8px' }}>
             Your Network

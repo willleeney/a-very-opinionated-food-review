@@ -392,8 +392,8 @@ export function PersonalSettings(): JSX.Element {
     <div>
       <TopNav user={user} userOrgs={userOrgsForNav} />
 
-      <div className="container" style={{ paddingTop: '120px', paddingBottom: '80px', maxWidth: '900px' }}>
-        <h1 style={{ marginBottom: '48px' }}>Settings</h1>
+      <div className="container" style={{ paddingTop: '140px', paddingBottom: '80px', maxWidth: '900px' }}>
+        <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 400, marginBottom: '48px' }}>Settings</h1>
 
         {error && (
           <div style={{ padding: '16px', background: '#fdf2f2', border: '1px solid var(--poor)', marginBottom: '24px', color: 'var(--poor)' }}>
