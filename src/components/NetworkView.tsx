@@ -729,12 +729,12 @@ export function NetworkView(): JSX.Element {
           <table>
             <thead>
               <tr>
-                <th style={{ width: '30%' }}>Person</th>
-                <th style={{ width: '10%', textAlign: 'center' }}>Reviews</th>
-                <th style={{ width: '12%', textAlign: 'center' }}>Avg Rating</th>
-                <th style={{ width: '12%', textAlign: 'center' }}>Lowest</th>
-                <th style={{ width: '12%', textAlign: 'center' }}>Highest</th>
-                <th style={{ width: '24%' }}></th>
+                <th>Person</th>
+                <th className="hide-mobile" style={{ textAlign: 'center' }}>Reviews</th>
+                <th style={{ textAlign: 'center' }}>Avg</th>
+                <th className="hide-mobile" style={{ textAlign: 'center' }}>Lowest</th>
+                <th className="hide-mobile" style={{ textAlign: 'center' }}>Highest</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -779,7 +779,7 @@ export function NetworkView(): JSX.Element {
                       </div>
                     </div>
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="hide-mobile" style={{ textAlign: 'center' }}>
                     <span className="mono">{person.reviewCount}</span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
@@ -791,7 +791,7 @@ export function NetworkView(): JSX.Element {
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="hide-mobile" style={{ textAlign: 'center' }}>
                     {person.lowestRating !== null ? (
                       <span className={`mono ${getRatingClass(person.lowestRating)}`}>
                         {person.lowestRating}
@@ -800,7 +800,7 @@ export function NetworkView(): JSX.Element {
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="hide-mobile" style={{ textAlign: 'center' }}>
                     {person.highestRating !== null ? (
                       <span className={`mono ${getRatingClass(person.highestRating)}`}>
                         {person.highestRating}

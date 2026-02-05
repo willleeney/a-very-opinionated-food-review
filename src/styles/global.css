@@ -20,6 +20,13 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
@@ -988,6 +995,11 @@ nav.scrolled {
     padding: 12px 8px 12px 0;
   }
 
+  /* First column padding on mobile */
+  td:first-child, th:first-child {
+    padding-left: 12px;
+  }
+
   /* Smaller rating badge */
   .rating-badge {
     font-size: 12px;
@@ -1019,7 +1031,7 @@ nav.scrolled {
 
   /* Smaller container padding */
   .container {
-    padding: 0 16px;
+    padding: 0 12px;
   }
 
   /* Reduce hero height */
@@ -1061,6 +1073,29 @@ nav.scrolled {
 
   .category-chips {
     width: 100%;
+  }
+
+  /* Ensure modals fit on screen */
+  .modal {
+    max-width: calc(100vw - 24px);
+    padding: 24px;
+    margin: 12px;
+  }
+
+  /* Map container smaller on mobile */
+  .map-container {
+    height: 300px;
+  }
+
+  /* Table improvements for mobile */
+  table {
+    font-size: 14px;
+  }
+
+  /* Network page table */
+  .network-table td,
+  .network-table th {
+    padding: 10px 6px;
   }
 }
 
