@@ -484,7 +484,7 @@ export function PersonalSettings(): JSX.Element {
     <div>
       <TopNav user={user} userOrgs={userOrgsForNav} />
 
-      <div className="container" style={{ paddingTop: '140px', paddingBottom: '80px', maxWidth: '900px' }}>
+      <div className="container settings-container" style={{ paddingTop: '140px', paddingBottom: '80px', maxWidth: '900px' }}>
         <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 400, marginBottom: '48px' }}>Settings</h1>
 
         {error && (
@@ -583,8 +583,8 @@ export function PersonalSettings(): JSX.Element {
           </div>
           <div className="settings-content">
             <form onSubmit={handleUpdateName}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px', marginBottom: '20px' }}>
-                <div>
+              <div className="settings-form-row" style={{ marginBottom: '20px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Name
                   </label>
@@ -593,10 +593,10 @@ export function PersonalSettings(): JSX.Element {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your name"
-                    style={{ width: '280px' }}
+                    style={{ width: '100%', maxWidth: '280px' }}
                   />
                 </div>
-                <button type="submit" disabled={saving} className="btn" style={{ padding: '10px 20px', width: '120px' }}>
+                <button type="submit" disabled={saving} className="btn settings-form-btn">
                   {saving ? '...' : 'Update'}
                 </button>
               </div>
@@ -619,13 +619,13 @@ export function PersonalSettings(): JSX.Element {
             </p>
           </div>
           <div className="settings-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
+            <div className="settings-form-row settings-form-row-top">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 500, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   Private account
                   {isPrivate && <span style={{ fontSize: '14px' }}>🔒</span>}
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.5' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
                   {isPrivate
                     ? 'Your reviews are hidden from non-followers. People must request to follow you and be approved before they can see your ratings and comments.'
                     : 'Anyone can follow you and see your reviews (ratings and comments) without approval.'
@@ -640,13 +640,12 @@ export function PersonalSettings(): JSX.Element {
               <button
                 onClick={handleTogglePrivacy}
                 disabled={savingPrivacy}
-                className="btn"
+                className="btn settings-form-btn"
                 style={{
-                  padding: '10px 20px',
-                  width: '120px',
                   background: isPrivate ? 'var(--accent)' : 'transparent',
                   borderColor: isPrivate ? 'var(--accent)' : 'var(--border)',
                   color: isPrivate ? 'white' : 'var(--text-muted)',
+                  flexShrink: 0,
                 }}
               >
                 {savingPrivacy ? '...' : isPrivate ? 'Private' : 'Public'}
@@ -666,32 +665,27 @@ export function PersonalSettings(): JSX.Element {
             </div>
             <div className="settings-content">
               {invites.map((invite, i) => (
-                <div key={invite.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                <div key={invite.id} className="settings-list-item" style={{
                   paddingTop: i > 0 ? '16px' : 0,
                   marginTop: i > 0 ? '16px' : 0,
                   borderTop: i > 0 ? '1px solid var(--border)' : 'none'
                 }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontWeight: 500 }}>{invite.organisation?.name}</span>
                     <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
                       Invited by {invite.inviter?.display_name || 'someone'}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="settings-btn-group">
                     <button
                       onClick={() => handleAcceptInvite(invite)}
-                      className="btn btn-accent"
-                      style={{ padding: '10px 20px', width: '120px' }}
+                      className="btn btn-accent settings-form-btn"
                     >
                       Accept
                     </button>
                     <button
                       onClick={() => handleDeclineInvite(invite.id)}
-                      className="btn"
-                      style={{ padding: '10px 20px', width: '120px' }}
+                      className="btn settings-form-btn"
                     >
                       Decline
                     </button>
@@ -719,15 +713,12 @@ export function PersonalSettings(): JSX.Element {
             ) : (
               <>
                 {orgs.map((org, i) => (
-                  <div key={org.id} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                  <div key={org.id} className="settings-list-item" style={{
                     paddingTop: i > 0 ? '16px' : 0,
                     marginTop: i > 0 ? '16px' : 0,
                     borderTop: i > 0 ? '1px solid var(--border)' : 'none'
                   }}>
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <a href={`/org/${org.slug}`} style={{ fontWeight: 500 }}>
                         {org.name}
                       </a>
@@ -743,26 +734,17 @@ export function PersonalSettings(): JSX.Element {
                     </div>
                     <button
                       onClick={() => handleLeaveOrg(org.membershipId, org.name)}
-                      className="btn"
-                      style={{ padding: '10px 20px', width: '120px' }}
+                      className="btn settings-form-btn"
                     >
                       Leave
                     </button>
                   </div>
                 ))}
                 {pendingRequests.map((request, i) => (
-                  <div key={request.id} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '16px',
-                    marginTop: '16px',
-                    borderTop: '1px solid var(--border)',
-                    background: 'var(--bg-warm)',
-                    margin: (orgs.length > 0 || i > 0) ? '16px -24px 0' : '0 -24px',
-                    padding: '16px 24px'
+                  <div key={request.id} className="settings-list-item settings-list-item-pending" style={{
+                    marginTop: (orgs.length > 0 || i > 0) ? '16px' : 0,
                   }}>
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ fontWeight: 500 }}>{request.organisation?.name}</span>
                       <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginLeft: '12px' }}>
                         pending
@@ -770,8 +752,7 @@ export function PersonalSettings(): JSX.Element {
                     </div>
                     <button
                       onClick={() => handleCancelRequest(request.id, request.organisation?.name || '')}
-                      className="btn"
-                      style={{ padding: '10px 20px', width: '120px' }}
+                      className="btn settings-form-btn"
                     >
                       Cancel
                     </button>
@@ -791,8 +772,8 @@ export function PersonalSettings(): JSX.Element {
             </p>
           </div>
           <div className="settings-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
-              <div style={{ flex: 1 }}>
+            <div className="settings-form-row">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                   Search by name
                 </label>
@@ -802,14 +783,13 @@ export function PersonalSettings(): JSX.Element {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="Organisation name..."
-                  style={{ width: '280px' }}
+                  style={{ width: '100%', maxWidth: '280px' }}
                 />
               </div>
               <button
                 onClick={handleSearch}
                 disabled={searching || !searchQuery.trim()}
-                className="btn"
-                style={{ padding: '10px 20px', width: '120px' }}
+                className="btn settings-form-btn"
               >
                 {searching ? '...' : 'Search'}
               </button>
@@ -820,20 +800,17 @@ export function PersonalSettings(): JSX.Element {
                 {searchResults.map((org, i) => (
                   <div
                     key={org.id}
+                    className="settings-list-item"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
                       paddingTop: i > 0 ? '12px' : 0,
                       marginTop: i > 0 ? '12px' : 0,
                       borderTop: i > 0 ? '1px solid var(--border)' : 'none'
                     }}
                   >
-                    <span style={{ fontWeight: 500 }}>{org.name}</span>
+                    <span style={{ fontWeight: 500, flex: 1, minWidth: 0 }}>{org.name}</span>
                     <button
                       onClick={() => handleRequestJoin(org)}
-                      className="btn btn-accent"
-                      style={{ padding: '10px 20px', width: '120px' }}
+                      className="btn btn-accent settings-form-btn"
                     >
                       Request
                     </button>
@@ -859,8 +836,8 @@ export function PersonalSettings(): JSX.Element {
             </p>
           </div>
           <div className="settings-content">
-            <form onSubmit={handleCreateOrg} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
-              <div style={{ flex: 1 }}>
+            <form onSubmit={handleCreateOrg} className="settings-form-row">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                   Organisation name
                 </label>
@@ -870,14 +847,13 @@ export function PersonalSettings(): JSX.Element {
                   onChange={(e) => setNewOrgName(e.target.value)}
                   placeholder="My Company"
                   required
-                  style={{ width: '280px' }}
+                  style={{ width: '100%', maxWidth: '280px' }}
                 />
               </div>
               <button
                 type="submit"
                 disabled={creatingOrg || !newOrgName.trim()}
-                className="btn btn-accent"
-                style={{ padding: '10px 20px', width: '120px' }}
+                className="btn btn-accent settings-form-btn"
               >
                 {creatingOrg ? '...' : 'Create'}
               </button>

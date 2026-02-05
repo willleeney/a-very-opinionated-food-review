@@ -964,10 +964,51 @@ nav.scrolled {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 24px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .settings-content table {
   margin: 0;
+}
+
+/* Settings form rows - flex layout that stacks on mobile */
+.settings-form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.settings-form-row-top {
+  align-items: flex-start;
+}
+
+.settings-form-btn {
+  padding: 10px 20px;
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.settings-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-list-item-pending {
+  background: var(--bg-warm);
+  margin-left: -24px;
+  margin-right: -24px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-btn-group {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Mobile visibility helpers */
@@ -985,6 +1026,70 @@ nav.scrolled {
 
   .settings-content {
     padding: 16px;
+    overflow-x: auto;
+  }
+
+  /* Constrain settings container on mobile */
+  .settings-container {
+    max-width: 100% !important;
+  }
+
+  /* Ensure inputs don't overflow on mobile */
+  .settings-content input,
+  .settings-content select {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Settings form stacks on mobile */
+  .settings-form-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .settings-form-btn {
+    width: 100%;
+  }
+
+  .settings-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .settings-list-item-pending {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 16px;
+  }
+
+  .settings-btn-group {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .settings-btn-group .btn {
+    width: 100%;
+  }
+
+  /* Make settings tables scrollable on mobile */
+  .settings-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-content table th,
+  .settings-content table td {
+    white-space: nowrap;
+    padding: 10px 12px 10px 0;
+    font-size: 13px;
+  }
+
+  .settings-content table th:first-child,
+  .settings-content table td:first-child {
+    padding-left: 0;
   }
 
   /* Hide type and distance columns on mobile */

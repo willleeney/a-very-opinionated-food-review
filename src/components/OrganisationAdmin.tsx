@@ -424,7 +424,7 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
     <div>
       <TopNav user={user} userOrgs={userOrgsForNav} currentOrgSlug={organisationSlug} />
 
-      <div className="container" style={{ paddingTop: '140px', paddingBottom: '80px', maxWidth: '900px' }}>
+      <div className="container settings-container" style={{ paddingTop: '140px', paddingBottom: '80px', maxWidth: '900px' }}>
         <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 400, marginBottom: '8px' }}>Organisation</h1>
 
         {/* Organisation switcher tabs */}
@@ -478,8 +478,8 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
           </div>
           <div className="settings-content">
             <form onSubmit={handleUpdateDetails}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
-                <div>
+              <div className="settings-form-row">
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Name
                   </label>
@@ -488,10 +488,10 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
                     required
-                    style={{ width: '280px' }}
+                    style={{ width: '100%', maxWidth: '280px' }}
                   />
                 </div>
-                <button type="submit" disabled={saving} className="btn" style={{ padding: '10px 20px', width: '120px' }}>
+                <button type="submit" disabled={saving} className="btn settings-form-btn">
                   {saving ? '...' : 'Update'}
                 </button>
               </div>
@@ -500,15 +500,15 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
             {/* Transfer admin */}
             {members.filter(m => m.user_id !== user?.id).length > 0 && (
               <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
-                  <div>
+                <div className="settings-form-row">
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                       Transfer Admin Rights
                     </label>
                     <select
                       value={transferTo}
                       onChange={(e) => setTransferTo(e.target.value)}
-                      style={{ width: '280px' }}
+                      style={{ width: '100%', maxWidth: '280px' }}
                     >
                       <option value="">Select member...</option>
                       {members
@@ -524,8 +524,7 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
                     type="button"
                     onClick={handleTransferAdmin}
                     disabled={!transferTo || saving}
-                    className="btn"
-                    style={{ padding: '10px 20px', width: '120px' }}
+                    className="btn settings-form-btn"
                   >
                     Transfer
                   </button>
@@ -541,8 +540,8 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
             <h2>Invite</h2>
           </div>
           <div className="settings-content">
-            <form onSubmit={handleInvite} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
-              <div>
+            <form onSubmit={handleInvite} className="settings-form-row">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                   Email address
                 </label>
@@ -552,10 +551,10 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
                   onChange={(e) => setInviteEmail(e.target.value)}
                   required
                   placeholder="colleague@example.com"
-                  style={{ width: '280px' }}
+                  style={{ width: '100%', maxWidth: '280px' }}
                 />
               </div>
-              <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '10px 20px', width: '120px' }}>
+              <button type="submit" disabled={saving} className="btn btn-accent settings-form-btn">
                 {saving ? '...' : 'Invite'}
               </button>
             </form>
@@ -691,24 +690,23 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps):
             </p>
           </div>
           <div className="settings-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
+            <div className="settings-form-row settings-form-row-top">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 500, marginBottom: '4px' }}>
                   Delete organisation
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                   Permanently delete {org.name} and remove all members. This cannot be undone.
                 </p>
               </div>
               <button
                 onClick={handleDeleteOrg}
                 disabled={saving}
-                className="btn"
+                className="btn settings-form-btn"
                 style={{
-                  padding: '10px 20px',
-                  width: '120px',
                   borderColor: 'var(--poor)',
                   color: 'var(--poor)',
+                  flexShrink: 0,
                 }}
               >
                 {saving ? '...' : 'Delete'}
