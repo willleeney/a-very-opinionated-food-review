@@ -425,6 +425,10 @@ nav.scrolled {
   padding: 40px;
 }
 
+.modal::-webkit-scrollbar-track {
+  background: white;
+}
+
 .modal-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1049,7 +1053,7 @@ nav.scrolled {
   }
 
   .settings-form-btn {
-    width: 100%;
+    width: auto;
   }
 
   .settings-list-item {
@@ -1065,12 +1069,12 @@ nav.scrolled {
   }
 
   .settings-btn-group {
-    width: 100%;
-    flex-direction: column;
+    width: auto;
+    flex-direction: row;
   }
 
   .settings-btn-group .btn {
-    width: 100%;
+    width: auto;
   }
 
   /* Make settings tables scrollable on mobile */
@@ -1158,6 +1162,10 @@ nav.scrolled {
     gap: 10px;
   }
 
+  .filter-row.show-mobile {
+    align-items: center;
+  }
+
   .filter-row-label {
     min-width: unset;
   }
@@ -1178,8 +1186,8 @@ nav.scrolled {
   }
 
   .social-tab {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 11px;
   }
 
   .category-chips {
