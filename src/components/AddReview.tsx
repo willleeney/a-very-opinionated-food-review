@@ -208,7 +208,7 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
 
       {isOpen && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsOpen(false)}>
-          <div className="modal" style={{ maxWidth: '560px' }}>
+          <div className="modal">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
                 <h2 style={{ marginBottom: '8px' }}>Add a Place</h2>
@@ -226,7 +226,7 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
 
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'grid', gap: '20px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="modal-form-row">
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                       Name *

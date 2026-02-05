@@ -413,7 +413,7 @@ nav.scrolled {
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  padding: 24px;
+  padding: 16px;
 }
 
 .modal {
@@ -423,6 +423,12 @@ nav.scrolled {
   max-height: 90vh;
   overflow-y: auto;
   padding: 40px;
+}
+
+.modal-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
 
 /* Reduce motion */
@@ -1077,9 +1083,14 @@ nav.scrolled {
 
   /* Ensure modals fit on screen */
   .modal {
-    max-width: calc(100vw - 24px);
-    padding: 24px;
-    margin: 12px;
+    max-width: calc(100vw - 32px);
+    padding: 20px;
+    margin: 16px;
+  }
+
+  .modal-form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   /* Map container smaller on mobile */

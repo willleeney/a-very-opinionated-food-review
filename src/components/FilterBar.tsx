@@ -101,7 +101,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
     <div className="filter-bar">
       {/* Mobile: Add place at top */}
       {rightActions && (
-        <div className="filter-row show-mobile" style={{ justifyContent: 'flex-end' }}>
+        <div className="filter-row show-mobile" style={{ justifyContent: 'center' }}>
           {rightActions}
         </div>
       )}
