@@ -599,106 +599,37 @@ export function NetworkView(): JSX.Element {
 
       {/* Tabs */}
       <div className="container">
-        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: '32px' }}>
+        <div className="network-tabs">
           <button
             onClick={() => setActiveTab('following')}
-            style={{
-              padding: '16px 32px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: activeTab === 'following' ? 'var(--text)' : 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              position: 'relative',
-            }}
+            className={`network-tab ${activeTab === 'following' ? 'active' : ''}`}
           >
             Following
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
-              {followingUsers.length}
-            </span>
-            {activeTab === 'following' && (
-              <span style={{ position: 'absolute', bottom: '-1px', left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
-            )}
+            <span className="network-tab-count">{followingUsers.length}</span>
           </button>
           <button
             onClick={() => setActiveTab('followers')}
-            style={{
-              padding: '16px 32px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: activeTab === 'followers' ? 'var(--text)' : 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              position: 'relative',
-            }}
+            className={`network-tab ${activeTab === 'followers' ? 'active' : ''}`}
           >
             Followers
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
-              {followerUsers.length}
-            </span>
-            {activeTab === 'followers' && (
-              <span style={{ position: 'absolute', bottom: '-1px', left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
-            )}
+            <span className="network-tab-count">{followerUsers.length}</span>
           </button>
           {isPrivate && (
             <button
               onClick={() => setActiveTab('requests')}
-              style={{
-                padding: '16px 32px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: activeTab === 'requests' ? 'var(--text)' : 'var(--text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-              }}
+              className={`network-tab ${activeTab === 'requests' ? 'active' : ''}`}
             >
               Requests
               {requestCount > 0 && (
-                <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '11px',
-                  color: 'white',
-                  background: 'var(--accent)',
-                  padding: '2px 6px',
-                  marginLeft: '8px',
-                }}>
-                  {requestCount}
-                </span>
-              )}
-              {activeTab === 'requests' && (
-                <span style={{ position: 'absolute', bottom: '-1px', left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
+                <span className="network-tab-badge">{requestCount}</span>
               )}
             </button>
           )}
           <button
             onClick={() => setActiveTab('find')}
-            style={{
-              padding: '16px 32px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: activeTab === 'find' ? 'var(--text)' : 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              position: 'relative',
-            }}
+            className={`network-tab ${activeTab === 'find' ? 'active' : ''}`}
           >
             Find
-            {activeTab === 'find' && (
-              <span style={{ position: 'absolute', bottom: '-1px', left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
-            )}
           </button>
         </div>
 

@@ -1099,6 +1099,81 @@ nav.scrolled {
   }
 }
 
+/* Network Tabs */
+.network-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.network-tab {
+  padding: 16px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  background: none;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+}
+
+.network-tab.active {
+  color: var(--text);
+}
+
+.network-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.network-tab-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.network-tab-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: white;
+  background: var(--accent);
+  padding: 2px 6px;
+  margin-left: 8px;
+}
+
+@media (max-width: 768px) {
+  .network-tabs {
+    margin-bottom: 24px;
+  }
+
+  .network-tab {
+    padding: 12px 12px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+
+  .network-tab-count {
+    font-size: 10px;
+    margin-left: 4px;
+  }
+
+  .network-tab-badge {
+    font-size: 10px;
+    padding: 1px 4px;
+    margin-left: 4px;
+  }
+}
+
 /* Top Navigation */
 .top-nav {
   position: fixed;
