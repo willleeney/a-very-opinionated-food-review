@@ -99,7 +99,14 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
 
   return (
     <div className="filter-bar">
-      {/* Type filter row with actions on right */}
+      {/* Mobile: Add place at top */}
+      {rightActions && (
+        <div className="filter-row show-mobile" style={{ justifyContent: 'flex-end' }}>
+          {rightActions}
+        </div>
+      )}
+
+      {/* Type filter row with actions on right (desktop only) */}
       <div className="filter-row filter-row-header">
         <div className="filter-row-left">
           <span className="filter-row-label">Type</span>
@@ -108,7 +115,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             onChange={setSelectedCategories}
           />
         </div>
-        <div className="filter-row-actions">
+        <div className="filter-row-actions hide-mobile">
           {rightActions}
         </div>
       </div>
@@ -212,7 +219,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
           </div>
           {isActive && (
             <button
-              className="filter-clear-btn"
+              className="filter-clear-btn hide-mobile"
               onClick={clearFilters}
             >
               Clear all filters
@@ -254,6 +261,18 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
           </div>
         </div>
       </div>
+
+      {/* Mobile: Clear filters at bottom */}
+      {isSignedIn && isActive && (
+        <div className="filter-row show-mobile" style={{ justifyContent: 'center', paddingTop: '8px' }}>
+          <button
+            className="filter-clear-btn"
+            onClick={clearFilters}
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
     </div>
   )
 }
