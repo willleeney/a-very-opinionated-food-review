@@ -199,7 +199,7 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
                               <div>
                                 <span className="text-white/60 font-semibold text-xs uppercase tracking-wider">Reviews</span>
                                 <div className="mt-3 space-y-2">
-                                  {restaurant.reviews.map((review) => (
+                                  {restaurant.reviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).map((review) => (
                                     <div key={review.id} className="flex items-center gap-3 text-sm">
                                       <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold font-mono ${
                                         review.rating && review.rating >= 8 ? 'rating-great' :

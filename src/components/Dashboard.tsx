@@ -584,9 +584,9 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
     return true
   }).sort((a, b) => {
-    // Sort by filtered average taste rating (primary) then overall rating
-    const aRating = a.filteredAvgTasteRating ?? a.filteredAvgRating ?? 0
-    const bRating = b.filteredAvgTasteRating ?? b.filteredAvgRating ?? 0
+    // Sort by overall rating (descending)
+    const aRating = a.filteredAvgRating ?? 0
+    const bRating = b.filteredAvgRating ?? 0
     if (aRating === 0 && bRating === 0) return 0
     if (aRating === 0) return 1
     if (bRating === 0) return -1
@@ -851,7 +851,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           )
                           return visibleReviews.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              {visibleReviews.map((review) => {
+                              {visibleReviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).map((review) => {
                                 const reviewer = users.find(u => u.id === review.user_id)
                                 return (
                                   <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
