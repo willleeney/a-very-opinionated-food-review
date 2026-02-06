@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory } from '../lib/database.types'
-import { distanceFrom, formatDistance } from '../lib/distance'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
@@ -406,18 +405,12 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           ? tasteRatings.reduce((a, b) => a + b, 0) / tasteRatings.length
           : null
 
-        // Only calculate distance if we have an office location
-        const distance = office
-          ? distanceFrom(office.lat, office.lng, r.latitude, r.longitude)
-          : null
-
         return {
           ...r,
           reviews,
           avgRating,
           avgValueRating,
           avgTasteRating,
-          distance,
         }
       })
       setRestaurants(withCalculations)
@@ -779,7 +772,6 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
               <tr>
                 <th style={{ paddingLeft: '16px' }}>Name</th>
                 <th className="hide-mobile">Type</th>
-                {officeLocation && <th className="hide-mobile">Distance</th>}
                 <th>Rating</th>
                 <th></th>
                 <th className="hide-mobile"></th>
@@ -802,11 +794,6 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                     <td className="hide-mobile" style={{ color: 'var(--text-secondary)' }}>
                       {restaurant.cuisine}
                     </td>
-                    {officeLocation && (
-                      <td className="mono hide-mobile" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                        {formatDistance(restaurant.distance)}
-                      </td>
-                    )}
                     <td>
                       {restaurant.filteredAvgRating !== null ? (
                         <span className={`rating-badge ${getRatingClass(restaurant.filteredAvgRating)}`}>
@@ -844,7 +831,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                   </tr>
                   {expandedId === restaurant.id && (
                     <tr key={`${restaurant.id}-expanded`}>
-                      <td colSpan={officeLocation ? 6 : 5} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
+                      <td colSpan={5} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
                         {(() => {
                           const visibleReviews = restaurant.reviews.filter(review =>
                             isReviewVisible(review.user_id, review.isOrgMember ?? false)

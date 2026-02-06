@@ -344,7 +344,6 @@ export type RestaurantWithReviews = Restaurant & {
   avgRating: number | null
   avgValueRating: number | null
   avgTasteRating: number | null
-  distance: number | null
 }
 
 export type OrganisationWithMembership = Organisation & {

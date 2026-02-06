@@ -2,13 +2,12 @@ import { Fragment, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { RestaurantWithReviews } from '../lib/database.types'
 import { useFilterStore } from '../lib/store'
-import { formatDistance } from '../lib/distance'
 
 interface ReviewTableProps {
   restaurants: RestaurantWithReviews[]
 }
 
-type SortKey = 'name' | 'type' | 'distance' | 'avgRating'
+type SortKey = 'name' | 'type' | 'avgRating'
 type SortDir = 'asc' | 'desc'
 
 const ratingLabels: Record<number, string> = {
@@ -75,10 +74,6 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
           aVal = a.type.toLowerCase()
           bVal = b.type.toLowerCase()
           break
-        case 'distance':
-          aVal = a.distance
-          bVal = b.distance
-          break
         case 'avgRating':
           aVal = a.avgRating
           bVal = b.avgRating
@@ -122,7 +117,6 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
               {[
                 { key: 'name', label: 'Name' },
                 { key: 'type', label: 'Type' },
-                { key: 'distance', label: 'Distance' },
                 { key: 'avgRating', label: 'Rating' },
               ].map(({ key, label }) => (
                 <th
@@ -160,9 +154,6 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
                     <td className="text-white/60 font-medium">
                       {restaurant.type}
                     </td>
-                    <td className="font-mono text-white/60 text-sm">
-                      {formatDistance(restaurant.distance)}
-                    </td>
                     <td>
                       {restaurant.avgRating !== null ? (
                         <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold ${getRatingClass(restaurant.avgRating)}`}>
@@ -184,7 +175,7 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <td colSpan={4} className="!p-0">
+                        <td colSpan={3} className="!p-0">
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -228,7 +219,7 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
 
             {filteredAndSorted.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center py-12 text-white/30">
+                <td colSpan={3} className="text-center py-12 text-white/30">
                   No restaurants match the current filters
                 </td>
               </tr>

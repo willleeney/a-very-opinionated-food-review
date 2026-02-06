@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, AttributionControl } fr
 import L from 'leaflet'
 import type { RestaurantWithReviews } from '../lib/database.types'
 import { useFilterStore } from '../lib/store'
-import { formatDistance } from '../lib/distance'
 import { supabase } from '../lib/supabase'
 
 interface MapViewProps {
@@ -312,7 +311,7 @@ function RestaurantMarker({
             {restaurant.name}
           </strong>
           <p style={{ margin: '0 0 10px', color: '#666', fontSize: '13px' }}>
-            {restaurant.type}{restaurant.distance !== null && ` · ${formatDistance(restaurant.distance)}`}
+            {restaurant.type}
           </p>
 
           {isEditing ? (
