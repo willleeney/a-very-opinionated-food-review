@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap, AttributionControl } from 'react-leaflet'
 import L from 'leaflet'
 import { supabase } from '../lib/supabase'
 import type { RestaurantCategory } from '../lib/database.types'
@@ -18,10 +18,12 @@ interface AddReviewProps {
   onAdded: () => void
 }
 
-interface GeoResult {
-  lat: string
-  lon: string
-  display_name: string
+interface PlaceResult {
+  placeId: string
+  name: string
+  address: string
+  lat?: number
+  lng?: number
 }
 
 // Marker icon for selected location
@@ -64,10 +66,10 @@ function MapPanner({ lat, lng }: { lat: number | null, lng: number | null }) {
 
 export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
-  const [name, setName] = useState('')
+  const [nameQuery, setNameQuery] = useState('')
+  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null)
   const [cuisine, setCuisine] = useState('')
   const [categories, setCategories] = useState<RestaurantCategory[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [overallRating, setOverallRating] = useState('')
@@ -76,7 +78,7 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
   const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(false)
   const [lookupLoading, setLookupLoading] = useState(false)
-  const [lookupResults, setLookupResults] = useState<GeoResult[]>([])
+  const [lookupResults, setLookupResults] = useState<PlaceResult[]>([])
   const [showMap, setShowMap] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,48 +90,101 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
     )
   }
 
-  const handleLookup = async () => {
-    if (!searchQuery.trim()) return
+  // Debounced search as user types
+  useEffect(() => {
+    if (!nameQuery.trim() || nameQuery.length < 2 || selectedPlace) {
+      setLookupResults([])
+      return
+    }
 
-    setLookupLoading(true)
-    setLookupResults([])
-    setError(null)
+    const timeoutId = setTimeout(async () => {
+      setLookupLoading(true)
+      setError(null)
+
+      const apiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY
+      if (!apiKey) {
+        setLookupLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(
+          'https://places.googleapis.com/v1/places:autocomplete',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+            },
+            body: JSON.stringify({
+              input: nameQuery,
+              includedPrimaryTypes: ['restaurant', 'cafe', 'bar', 'bakery', 'meal_takeaway'],
+            })
+          }
+        )
+
+        if (!response.ok) {
+          setLookupResults([])
+          return
+        }
+
+        const data = await response.json()
+        const suggestions = data.suggestions || []
+
+        const results: PlaceResult[] = suggestions.map((s: { placePrediction: { placeId: string; structuredFormat: { mainText: { text: string }; secondaryText: { text: string } } } }) => ({
+          placeId: s.placePrediction.placeId,
+          name: s.placePrediction.structuredFormat.mainText.text,
+          address: s.placePrediction.structuredFormat.secondaryText.text
+        }))
+        setLookupResults(results)
+      } catch (err) {
+        console.error('Places API error:', err)
+        setLookupResults([])
+      } finally {
+        setLookupLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [nameQuery, selectedPlace])
+
+  const selectResult = async (result: PlaceResult) => {
+    const apiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY
 
     try {
-      const query = encodeURIComponent(searchQuery + ', London, UK')
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=5&addressdetails=1`,
-        { headers: { 'User-Agent': 'FoodReviewApp/1.0' } }
+        `https://places.googleapis.com/v1/places/${result.placeId}?fields=location`,
+        {
+          headers: {
+            'X-Goog-Api-Key': apiKey,
+          }
+        }
       )
 
-      if (!response.ok) throw new Error('Lookup failed')
+      if (!response.ok) throw new Error('Failed to get place details')
 
-      const results: GeoResult[] = await response.json()
-
-      if (results.length === 0) {
-        setError('No results found. Try different terms or place on map manually.')
+      const data = await response.json()
+      if (data.location) {
+        setLatitude(data.location.latitude)
+        setLongitude(data.location.longitude)
+        setSelectedPlace(result)
+        setNameQuery(result.name)
         setShowMap(true)
-      } else if (results.length === 1) {
-        setLatitude(parseFloat(results[0].lat))
-        setLongitude(parseFloat(results[0].lon))
-        setLookupResults([])
-        setShowMap(true)
-      } else {
-        setLookupResults(results)
       }
-    } catch (_err) {
-      setError('Failed to lookup address. Try placing on map manually.')
-      setShowMap(true)
-    } finally {
-      setLookupLoading(false)
+    } catch (err) {
+      console.error('Place details error:', err)
+      setError('Failed to get location. Try placing on map manually.')
     }
+
+    setLookupResults([])
   }
 
-  const selectResult = (result: GeoResult) => {
-    setLatitude(parseFloat(result.lat))
-    setLongitude(parseFloat(result.lon))
-    setLookupResults([])
-    setShowMap(true)
+  const clearSelectedPlace = () => {
+    setSelectedPlace(null)
+    setLatitude(null)
+    setLongitude(null)
+    setShowMap(false)
+    setNameQuery('')
   }
 
   const handleMapClick = (lat: number, lng: number) => {
@@ -141,6 +196,8 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    const name = selectedPlace?.name || nameQuery
 
     try {
       const { data: restaurant, error: restaurantError } = await supabase
@@ -163,8 +220,8 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
           restaurant_id: restaurant.id,
           user_id: userId,
           rating: parseInt(overallRating),
-          value_rating: valueRating ? parseInt(valueRating) : null,
-          taste_rating: tasteRating ? parseInt(tasteRating) : null,
+          value_rating: valueRating ? parseInt(valueRating) : undefined,
+          taste_rating: tasteRating ? parseInt(tasteRating) : undefined,
           comment: comment || null,
           organisation_id: organisationId || null,
         })
@@ -173,10 +230,10 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
       }
 
       // Reset form
-      setName('')
+      setNameQuery('')
+      setSelectedPlace(null)
       setCuisine('')
       setCategories([])
-      setSearchQuery('')
       setLatitude(null)
       setLongitude(null)
       setOverallRating('')
@@ -192,12 +249,6 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
     } finally {
       setLoading(false)
     }
-  }
-
-  const clearLocation = () => {
-    setLatitude(null)
-    setLongitude(null)
-    setShowMap(false)
   }
 
   return (
@@ -226,33 +277,148 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
 
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'grid', gap: '20px' }}>
-                <div className="modal-form-row">
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Name *
-                    </label>
+                {/* Place search - combines name and location */}
+                <div style={{ position: 'relative' }}>
+                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Place *
+                  </label>
+                  {selectedPlace ? (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-warm)'
+                    }}>
+                      <div>
+                        <span style={{ fontWeight: 500 }}>{selectedPlace.name}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px', marginLeft: '8px' }}>
+                          {selectedPlace.address}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearSelectedPlace}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
                     <input
                       type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      placeholder="Restaurant name"
+                      value={nameQuery}
+                      onChange={(e) => setNameQuery(e.target.value)}
+                      required={!selectedPlace}
+                      placeholder="Search for a restaurant..."
                       style={{ width: '100%' }}
+                      autoComplete="off"
                     />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Cuisine *
-                    </label>
-                    <input
-                      type="text"
-                      value={cuisine}
-                      onChange={(e) => setCuisine(e.target.value)}
-                      required
-                      placeholder="Thai, Sandwich, etc."
-                      style={{ width: '100%' }}
-                    />
-                  </div>
+                  )}
+
+                  {/* Search results dropdown */}
+                  {lookupResults.length > 0 && !selectedPlace && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      zIndex: 10,
+                      border: '1px solid var(--border)',
+                      background: 'white',
+                      maxHeight: '250px',
+                      overflowY: 'auto',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}>
+                      {lookupResults.map((result, i) => (
+                        <button
+                          key={result.placeId}
+                          type="button"
+                          onClick={() => selectResult(result)}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '10px 12px',
+                            textAlign: 'left',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: i < lookupResults.length - 1 ? '1px solid var(--border)' : 'none',
+                            cursor: 'pointer',
+                            lineHeight: 1.4
+                          }}
+                        >
+                          <span style={{ display: 'block', fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>
+                            {result.name}
+                          </span>
+                          <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {result.address}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {lookupLoading && (
+                    <span style={{ position: 'absolute', right: '12px', top: '32px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                      ...
+                    </span>
+                  )}
+
+                  {/* Map for confirming/adjusting location - directly below place field */}
+                  {(showMap || latitude !== null) && (
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{ height: '180px', border: '1px solid var(--border)', marginBottom: '8px' }}>
+                        <MapContainer
+                          center={[latitude || 51.5047, longitude || -0.0886]}
+                          zoom={16}
+                          scrollWheelZoom={true}
+                          style={{ height: '100%', width: '100%' }}
+                          attributionControl={false}
+                        >
+                          <AttributionControl position="bottomright" prefix={false} />
+                          <TileLayer
+                            attribution='© OpenStreetMap'
+                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                          />
+                          <MapClickHandler onLocationSelect={handleMapClick} />
+                          <MapPanner lat={latitude} lng={longitude} />
+                          {latitude !== null && longitude !== null && (
+                            <Marker position={[latitude, longitude]} icon={selectedIcon} />
+                          )}
+                        </MapContainer>
+                      </div>
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                        Click on the map to adjust location if needed
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Manual placement option - directly below place field */}
+                  {!showMap && !selectedPlace && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMap(true)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: 0, textAlign: 'left', marginTop: '8px' }}
+                    >
+                      Can't find it? Place on map manually
+                    </button>
+                  )}
+                </div>
+
+                {/* Cuisine */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Cuisine *
+                  </label>
+                  <input
+                    type="text"
+                    value={cuisine}
+                    onChange={(e) => setCuisine(e.target.value)}
+                    required
+                    placeholder="Thai, Sandwich, etc."
+                    style={{ width: '100%' }}
+                  />
                 </div>
 
                 {/* Categories */}
@@ -273,113 +439,6 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                       </button>
                     ))}
                   </div>
-                </div>
-
-                {/* Location section */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Location
-                  </label>
-
-                  {/* Search bar */}
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search by name or address..."
-                      style={{ flex: 1 }}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleLookup())}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleLookup}
-                      disabled={lookupLoading || !searchQuery.trim()}
-                      className="btn"
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      {lookupLoading ? '...' : 'Search'}
-                    </button>
-                  </div>
-
-                  {/* Search results dropdown */}
-                  {lookupResults.length > 0 && (
-                    <div style={{ marginBottom: '12px', border: '1px solid var(--border)', background: 'var(--bg)', maxHeight: '150px', overflowY: 'auto' }}>
-                      {lookupResults.map((result, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => selectResult(result)}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            padding: '10px 12px',
-                            textAlign: 'left',
-                            background: 'none',
-                            border: 'none',
-                            borderBottom: i < lookupResults.length - 1 ? '1px solid var(--border)' : 'none',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            color: 'var(--text-secondary)',
-                            lineHeight: 1.4
-                          }}
-                        >
-                          {result.display_name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Map for placing/confirming location */}
-                  {(showMap || latitude !== null) && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ height: '200px', border: '1px solid var(--border)', marginBottom: '8px' }}>
-                        <MapContainer
-                          center={[latitude || 51.5047, longitude || -0.0886]}
-                          zoom={16}
-                          scrollWheelZoom={true}
-                          style={{ height: '100%', width: '100%' }}
-                        >
-                          <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                          />
-                          <MapClickHandler onLocationSelect={handleMapClick} />
-                          <MapPanner lat={latitude} lng={longitude} />
-                          {latitude !== null && longitude !== null && (
-                            <Marker position={[latitude, longitude]} icon={selectedIcon} />
-                          )}
-                        </MapContainer>
-                      </div>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
-                        Click on the map to {latitude ? 'adjust' : 'set'} location
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Show coordinates or prompt */}
-                  {latitude !== null && longitude !== null ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <span className="mono" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {latitude.toFixed(6)}, {longitude.toFixed(6)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={clearLocation}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)' }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  ) : !showMap && (
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(true)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: 0 }}
-                    >
-                      Or place on map manually
-                    </button>
-                  )}
                 </div>
 
                 {/* Review section */}

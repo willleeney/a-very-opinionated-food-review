@@ -122,7 +122,7 @@ function OfficeMarker({
   saveError,
   saving
 }: {
-  office: OfficeLocation
+  office: OfficeLocationDisplay
   isEditing: boolean
   onStartEdit: () => void
   onCancelEdit: () => void
@@ -509,7 +509,6 @@ export function MapView({ restaurants, onLocationUpdated, officeLocation, showOf
         throw error
       }
 
-      setOffice(newOffice)
       setEditingOffice(false)
       if (onLocationUpdated) {
         onLocationUpdated()

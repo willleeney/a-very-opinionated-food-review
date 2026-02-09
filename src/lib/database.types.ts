@@ -145,6 +145,7 @@ export type Database = {
           name: string
           notes: string | null
           cuisine: string
+          type: string | null
           categories: string[]
         }
         Insert: {
@@ -156,6 +157,7 @@ export type Database = {
           name: string
           notes?: string | null
           cuisine: string
+          type?: string | null
           categories?: string[]
         }
         Update: {
@@ -167,6 +169,7 @@ export type Database = {
           name?: string
           notes?: string | null
           cuisine?: string
+          type?: string | null
           categories?: string[]
         }
         Relationships: []
@@ -177,8 +180,8 @@ export type Database = {
           created_at: string | null
           id: string
           rating: number | null
-          value_rating: number
-          taste_rating: number
+          value_rating: number | null
+          taste_rating: number | null
           restaurant_id: string | null
           user_id: string | null
           organisation_id: string | null
@@ -188,8 +191,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           rating?: number | null
-          value_rating: number
-          taste_rating: number
+          value_rating?: number | null
+          taste_rating?: number | null
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null

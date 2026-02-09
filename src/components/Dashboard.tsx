@@ -62,8 +62,8 @@ function InlineReviewForm({
     try {
       const reviewData = {
         rating: parseInt(overallRating),
-        value_rating: valueRating ? parseInt(valueRating) : null,
-        taste_rating: tasteRating ? parseInt(tasteRating) : null,
+        value_rating: valueRating ? parseInt(valueRating) : undefined,
+        taste_rating: tasteRating ? parseInt(tasteRating) : undefined,
         comment: comment || null,
       }
 

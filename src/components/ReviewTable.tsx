@@ -71,8 +71,8 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
           bVal = b.name.toLowerCase()
           break
         case 'type':
-          aVal = a.type.toLowerCase()
-          bVal = b.type.toLowerCase()
+          aVal = a.type?.toLowerCase() ?? ''
+          bVal = b.type?.toLowerCase() ?? ''
           break
         case 'avgRating':
           aVal = a.avgRating
