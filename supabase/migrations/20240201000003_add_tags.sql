@@ -24,6 +24,9 @@ ALTER TABLE review_tags ENABLE ROW LEVEL SECURITY;
 -- Tags are readable by everyone
 CREATE POLICY "Anyone can view tags" ON tags FOR SELECT USING (true);
 
+-- Authenticated users can create tags
+CREATE POLICY "Authenticated users can create tags" ON tags FOR INSERT TO authenticated WITH CHECK (true);
+
 -- Review tags are readable by everyone (visibility handled in app layer like reviews)
 CREATE POLICY "Anyone can view review tags" ON review_tags FOR SELECT USING (true);
 
