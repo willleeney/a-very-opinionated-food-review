@@ -1155,6 +1155,10 @@ nav.scrolled {
   color: white;
 }
 
+.social-tab.error::before {
+  background: var(--poor);
+}
+
 /* Dual Rating Display */
 .dual-rating {
   display: flex;

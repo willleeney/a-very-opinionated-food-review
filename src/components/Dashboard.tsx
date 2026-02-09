@@ -56,6 +56,7 @@ function InlineReviewForm({
   const [creatingTag, setCreatingTag] = useState(false)
   const [localTags, setLocalTags] = useState<Tag[]>([]) // Track newly created tags locally
   const [error, setError] = useState<string | null>(null)
+  const [showRatingRequired, setShowRatingRequired] = useState(false)
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [showRatingDropdown, setShowRatingDropdown] = useState(false)
   const [tagSearchQuery, setTagSearchQuery] = useState('')
@@ -137,7 +138,10 @@ function InlineReviewForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!overallRating) return
+    if (!overallRating) {
+      setShowRatingRequired(true)
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -221,7 +225,7 @@ function InlineReviewForm({
           <div className="category-dropdown-wrapper" ref={ratingDropdownRef}>
             <button
               type="button"
-              className={`social-tab ${overallRating ? 'active' : ''}`}
+              className={`social-tab ${overallRating ? 'active' : ''} ${showRatingRequired ? 'error' : ''}`}
               onClick={() => setShowRatingDropdown(!showRatingDropdown)}
               style={{ minWidth: '50px', textAlign: 'center' }}
             >
@@ -238,6 +242,7 @@ function InlineReviewForm({
                       onClick={() => {
                         setOverallRating(r.toString())
                         setShowRatingDropdown(false)
+                        setShowRatingRequired(false)
                       }}
                     >
                       <span className="item-check">{overallRating === r.toString() ? '✓' : ''}</span>
