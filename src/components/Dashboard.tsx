@@ -1018,7 +1018,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
             <thead>
               <tr>
                 <th style={{ paddingLeft: '16px' }}>Name</th>
-                <th className="hide-mobile">Type</th>
+                <th className="hide-mobile">Cuisine</th>
                 <th>Rating</th>
                 <th className="hide-mobile">Tags</th>
                 <th></th>
