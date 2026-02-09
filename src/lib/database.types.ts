@@ -223,19 +223,16 @@ export type Database = {
         Row: {
           id: string
           name: string
-          icon: string
           created_at: string | null
         }
         Insert: {
           id?: string
           name: string
-          icon: string
           created_at?: string | null
         }
         Update: {
           id?: string
           name?: string
-          icon?: string
           created_at?: string | null
         }
         Relationships: []

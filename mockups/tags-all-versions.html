@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tags Design Exploration - 6 Versions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --bg-warm: #f5f2ed;
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --text-muted: #999;
+      --border: #e8e4de;
+      --accent: #c45d3e;
+      --accent-light: #e8d5ce;
+      --great: #2d7a4f;
+      --good: #b8860b;
+      --poor: #a64d4d;
+
+      /* V2 colors */
+      --tag-health: #2d7a4f;
+      --tag-health-bg: #e8f5e9;
+      --tag-speed: #1565c0;
+      --tag-speed-bg: #e3f2fd;
+      --tag-value: #b8860b;
+      --tag-value-bg: #fff8e1;
+      --tag-vibe: #7b1fa2;
+      --tag-vibe-bg: #f3e5f5;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0 40px;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .nav-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 4px;
+    }
+
+    .nav-link {
+      padding: 8px 16px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--bg-warm);
+    }
+
+    .nav-link.active {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Main content */
+    main {
+      padding-top: 60px;
+    }
+
+    /* Section */
+    .version-section {
+      min-height: 100vh;
+      padding: 60px 40px 80px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .version-section:nth-child(even) {
+      background: white;
+    }
+
+    .section-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .version-header {
+      margin-bottom: 48px;
+    }
+
+    .version-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+    }
+
+    .version-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 400;
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .version-subtitle {
+      color: var(--text-secondary);
+      font-size: 18px;
+      max-width: 600px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (max-width: 1000px) {
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Shared styles */
+    .demo-card {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 32px;
+    }
+
+    .version-section:nth-child(even) .demo-card {
+      background: var(--bg);
+    }
+
+    .demo-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .demo-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .demo-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .demo-table td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .demo-table .name { font-weight: 500; }
+    .demo-table .type { color: var(--text-secondary); }
+    .demo-table .rating {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--great);
+    }
+
+    .demo-expanded {
+      background: var(--bg-warm);
+      padding: 20px;
+      margin-top: -1px;
+      border: 1px solid var(--border);
+      border-top: none;
+    }
+
+    .version-section:nth-child(even) .demo-expanded {
+      background: var(--bg);
+    }
+
+    .review-row {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .review-row:last-child { border-bottom: none; }
+
+    .review-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--great);
+      width: 36px;
+      flex-shrink: 0;
+    }
+
+    .review-content { flex: 1; }
+
+    .review-text {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    /* ============================================
+       VERSION 1: MINIMAL EDITORIAL
+       ============================================ */
+    #v1 .version-badge {
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    .tags-v1 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+
+    .tag-v1 {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 0;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .tag-v1::after {
+      content: '·';
+      margin: 0 10px;
+      color: var(--border);
+    }
+
+    .tag-v1:last-of-type::after { display: none; }
+    .tag-v1:hover { color: var(--text); }
+
+    .tag-v1.selected {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .tag-v1.selected::before {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .add-v1 {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 0;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-style: italic;
+    }
+
+    .tags-inline-v1 {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .tags-inline-v1 span { color: var(--text-secondary); }
+    .tags-inline-v1 .more { font-style: italic; }
+
+    .review-tags-v1 {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* ============================================
+       VERSION 2: COLOR CODED
+       ============================================ */
+    #v2 .version-badge {
+      background: linear-gradient(135deg, var(--tag-health), var(--tag-speed));
+      color: white;
+    }
+
+    .tag-category {
+      margin-bottom: 16px;
+    }
+
+    .tag-category:last-child { margin-bottom: 0; }
+
+    .tag-category-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-category-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .tags-v2 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag-v2 {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      border-radius: 2px;
+    }
+
+    .tag-v2.health { background: var(--tag-health-bg); color: var(--tag-health); }
+    .tag-v2.health.selected { background: var(--tag-health); color: white; }
+    .tag-v2.speed { background: var(--tag-speed-bg); color: var(--tag-speed); }
+    .tag-v2.speed.selected { background: var(--tag-speed); color: white; }
+    .tag-v2.value { background: var(--tag-value-bg); color: var(--tag-value); }
+    .tag-v2.value.selected { background: var(--tag-value); color: white; }
+    .tag-v2.vibe { background: var(--tag-vibe-bg); color: var(--tag-vibe); }
+    .tag-v2.vibe.selected { background: var(--tag-vibe); color: white; }
+
+    .tags-table-v2 {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .tag-table-v2 {
+      padding: 2px 8px;
+      font-size: 10px;
+      border-radius: 2px;
+    }
+
+    .tags-more { font-size: 10px; color: var(--text-muted); font-style: italic; }
+
+    /* ============================================
+       VERSION 3: ICON PILLS
+       ============================================ */
+    #v3 .version-badge {
+      background: var(--accent);
+      color: white;
+      border-radius: 20px;
+    }
+
+    .tags-v3 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag-v3 {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 24px;
+    }
+
+    #v3 .demo-card .tag-v3 {
+      background: var(--bg);
+    }
+
+    .tag-v3:hover {
+      border-color: var(--text-muted);
+      background: var(--bg-warm);
+    }
+
+    .tag-v3.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .tag-v3 .icon { font-size: 14px; line-height: 1; }
+    .tag-v3.selected .icon { filter: grayscale(1) brightness(10); }
+
+    .tags-table-v3 {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .tag-icon-only {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      background: var(--bg-warm);
+      border-radius: 50%;
+      font-size: 13px;
+    }
+
+    .tag-pill-small {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 3px 10px;
+      font-size: 11px;
+      border-radius: 16px;
+    }
+
+    .tag-pill-small .icon { font-size: 11px; }
+
+    /* ============================================
+       VERSION 4: COMPACT CHECKBOX GRID
+       ============================================ */
+    #v4 .version-badge {
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .tags-v4 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      border: 1px solid var(--border);
+    }
+
+    .tag-v4 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: white;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      font-size: 12px;
+      font-family: inherit;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+
+    #v4 .demo-card .tag-v4 {
+      background: var(--bg);
+    }
+
+    .tag-v4:nth-child(2n) { border-right: none; }
+    .tag-v4:nth-last-child(-n+2) { border-bottom: none; }
+    .tag-v4:hover { background: var(--bg-warm); }
+
+    .tag-v4.selected {
+      background: var(--accent);
+      color: white;
+    }
+
+    .tag-v4 .check {
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .tag-v4.selected .check {
+      background: white;
+      border-color: white;
+      color: var(--accent);
+    }
+
+    .custom-row-v4 {
+      grid-column: 1 / -1;
+      display: flex;
+      border-top: 1px solid var(--border);
+    }
+
+    .custom-input-v4 {
+      flex: 1;
+      border: none;
+      padding: 12px 14px;
+      font-size: 12px;
+      background: transparent;
+      font-family: inherit;
+    }
+
+    .custom-btn-v4 {
+      padding: 12px 16px;
+      background: var(--bg-warm);
+      border: none;
+      border-left: 1px solid var(--border);
+      color: var(--accent);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tags-table-v4 {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tag-badge-v4 {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-warm);
+      padding: 3px 8px;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .tag-badge-v4 .count {
+      background: var(--accent);
+      color: white;
+      padding: 1px 5px;
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .review-tags-v4 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .review-tags-v4 span::before {
+      content: '✓';
+      color: var(--accent);
+      margin-right: 4px;
+    }
+
+    /* ============================================
+       VERSION 5: SENTIMENT SCALES
+       ============================================ */
+    #v5 .version-badge {
+      background: linear-gradient(90deg, var(--poor), var(--good), var(--great));
+      color: white;
+    }
+
+    .scales-v5 {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .scale-row-v5 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .scale-label-v5 {
+      width: 70px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .scale-dots-v5 {
+      flex: 1;
+      display: flex;
+      gap: 4px;
+    }
+
+    .scale-dot-v5 {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--bg-warm);
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .scale-dot-v5:hover {
+      border-color: var(--text-muted);
+      transform: scale(1.1);
+    }
+
+    .scale-dot-v5.low.selected { background: var(--poor); border-color: var(--poor); }
+    .scale-dot-v5.mid.selected { background: var(--good); border-color: var(--good); }
+    .scale-dot-v5.high.selected { background: var(--great); border-color: var(--great); }
+
+    .scale-na-v5 {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: none;
+      border: 1px dashed var(--border);
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+
+    .scale-na-v5.selected {
+      background: var(--bg-warm);
+      border-style: solid;
+    }
+
+    .mini-bars-v5 {
+      display: flex;
+      gap: 12px;
+    }
+
+    .mini-bar-v5 {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .mini-bar-track-v5 {
+      width: 36px;
+      height: 5px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mini-bar-fill-v5 {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: var(--great);
+    }
+
+    .review-scales-v5 {
+      display: flex;
+      gap: 16px;
+      padding: 10px 14px;
+      background: white;
+      border: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    .review-scale-item-v5 {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .review-scale-label-v5 { color: var(--text-muted); }
+
+    .review-scale-dots-v5 {
+      display: flex;
+      gap: 2px;
+    }
+
+    .review-scale-dots-v5 span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .review-scale-dots-v5 span.filled { background: var(--great); }
+    .review-scale-dots-v5 span.filled.med { background: var(--good); }
+
+    /* ============================================
+       VERSION 6: PHYSICAL TAGS
+       ============================================ */
+    #v6 .version-badge {
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      position: relative;
+      padding-left: 20px;
+    }
+
+    #v6 .version-badge::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .tags-v6 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tag-v6 {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 10px 8px 22px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      clip-path: polygon(12px 0%, 100% 0%, 100% 100%, 12px 100%, 0% 50%);
+      margin-left: 6px;
+    }
+
+    .tag-v6::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.2s;
+    }
+
+    .tag-v6:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    .tag-v6:hover::before {
+      background: var(--text-muted);
+    }
+
+    .tag-v6.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .tag-v6.selected::before {
+      background: white;
+    }
+
+    .tag-v6 .icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .add-v6 {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1.5px dashed var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px 8px 20px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      position: relative;
+      clip-path: polygon(12px 0%, 100% 0%, 100% 100%, 12px 100%, 0% 50%);
+      margin-left: 6px;
+    }
+
+    .add-v6::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      border: 1px dashed var(--border);
+      background: transparent;
+    }
+
+    .add-v6:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Tags in table - mini physical tags */
+    .tags-table-v6 {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .tag-mini-v6 {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent);
+      color: white;
+      padding: 3px 5px 3px 14px;
+      font-size: 10px;
+      position: relative;
+      clip-path: polygon(8px 0%, 100% 0%, 100% 100%, 8px 100%, 0% 50%);
+      margin-left: 4px;
+    }
+
+    .tag-mini-v6::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .tag-mini-v6 .icon {
+      font-size: 10px;
+    }
+
+    /* Expanded tags - small physical style */
+    .tag-small-v6 {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 4px 6px 4px 16px;
+      font-size: 11px;
+      position: relative;
+      clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 10px 100%, 0% 50%);
+      margin-left: 5px;
+    }
+
+    .tag-small-v6::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .tag-small-v6 .icon {
+      font-size: 11px;
+    }
+
+    /* ========== V6 VARIATIONS ========== */
+
+    /* V6a: No hole - clean */
+    .tag-v6a {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 10px 8px 16px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 10px 100%, 0% 50%);
+      margin-left: 5px;
+    }
+    .tag-v6a:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6a.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6a .icon { font-size: 13px; }
+
+    .tag-mini-v6a {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent);
+      color: white;
+      padding: 3px 5px 3px 12px;
+      font-size: 10px;
+      clip-path: polygon(8px 0%, 100% 0%, 100% 100%, 8px 100%, 0% 50%);
+      margin-left: 4px;
+    }
+    .tag-mini-v6a .icon { font-size: 10px; }
+
+    .tag-small-v6a {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 4px 6px 4px 14px;
+      font-size: 11px;
+      clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 10px 100%, 0% 50%);
+      margin-left: 5px;
+    }
+    .tag-small-v6a .icon { font-size: 11px; }
+
+    /* V6b: Rounded right edge */
+    .tag-v6b {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 12px 8px 16px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(10px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 10px 100%, 0% 50%);
+      margin-left: 5px;
+    }
+    .tag-v6b:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6b.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6b .icon { font-size: 13px; }
+
+    /* V6c: Soft/gentle point */
+    .tag-v6c {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 10px 8px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(6px 0%, 100% 0%, 100% 100%, 6px 100%, 0% 50%);
+      margin-left: 3px;
+    }
+    .tag-v6c:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6c.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6c .icon { font-size: 13px; }
+
+    /* V6d: Sharp arrow/chevron */
+    .tag-v6d {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 10px 8px 20px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(16px 0%, 100% 0%, 100% 100%, 16px 100%, 0% 50%);
+      margin-left: 8px;
+    }
+    .tag-v6d:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6d.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6d .icon { font-size: 13px; }
+
+    /* V6e: Double-pointed (ribbon/banner) */
+    .tag-v6e {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 14px 8px 14px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%);
+      margin: 0 5px;
+    }
+    .tag-v6e:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6e.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6e .icon { font-size: 13px; }
+
+    /* V6f: Notch/flag cut */
+    .tag-v6f {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 10px 8px 14px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 8px 50%);
+      margin-left: 0;
+    }
+    .tag-v6f:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6f.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6f .icon { font-size: 13px; }
+
+    /* V6g: Chamfered corners on both left and right */
+    .tag-v6g {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 12px 8px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+      margin-left: 0;
+    }
+    .tag-v6g:hover { border-color: var(--text-muted); color: var(--text); }
+    .tag-v6g.selected { background: var(--accent); border-color: var(--accent); color: white; }
+    .tag-v6g .icon { font-size: 13px; }
+
+    .tag-mini-v6g {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent);
+      color: white;
+      padding: 3px 6px 3px 6px;
+      font-size: 10px;
+      clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    }
+    .tag-mini-v6g .icon { font-size: 10px; }
+
+    .tag-small-v6g {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 4px 8px 4px 8px;
+      font-size: 11px;
+      clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    }
+    .tag-small-v6g .icon { font-size: 11px; }
+
+    .add-v6a, .add-v6g {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1.5px dashed var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .add-v6a:hover, .add-v6g:hover { border-color: var(--accent); color: var(--accent); }
+
+    .tags-variations {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .variation-group {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .variation-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-title">Tags Design Exploration</div>
+      <div class="nav-links">
+        <a href="#v1" class="nav-link">V1 Minimal</a>
+        <a href="#v2" class="nav-link">V2 Color</a>
+        <a href="#v3" class="nav-link">V3 Icons</a>
+        <a href="#v4" class="nav-link">V4 Grid</a>
+        <a href="#v5" class="nav-link">V5 Scales</a>
+        <a href="#v6" class="nav-link">V6 Physical</a>
+        <a href="#v6-vars" class="nav-link">V6 Vars</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- VERSION 1: MINIMAL EDITORIAL -->
+    <section id="v1" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 1</div>
+          <h1 class="version-title">Minimal Editorial</h1>
+          <p class="version-subtitle">Text-only tags with underline selection. Maximum restraint, pure typography. Tags flow like prose.</p>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+            <div class="tags-v1">
+              <button class="tag-v1 selected">High Protein</button>
+              <button class="tag-v1 selected">Healthy</button>
+              <button class="tag-v1">Good Value</button>
+              <button class="tag-v1 selected">Quick</button>
+              <button class="tag-v1">Large Portion</button>
+              <button class="tag-v1">Vegan</button>
+              <button class="tag-v1">Quiet</button>
+              <button class="tag-v1">Outdoor</button>
+              <button class="add-v1">+ add</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td class="tags-inline-v1"><span>Quick</span>, <span>Protein</span> <span class="more">+3</span></td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div class="review-tags-v1">Quick, High Protein, Good Value</div>
+                </div>
+              </div>
+              <div class="review-row">
+                <div class="review-score">8/10</div>
+                <div class="review-content">
+                  <div class="review-text">Great but always busy at lunch</div>
+                  <div class="review-tags-v1">Quick, Large Portion</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERSION 2: COLOR CODED -->
+    <section id="v2" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 2</div>
+          <h1 class="version-title">Color Coded Categories</h1>
+          <p class="version-subtitle">Tags grouped by semantic category with color coding. Instant visual scanning of what matters most.</p>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+
+            <div class="tag-category">
+              <div class="tag-category-label">
+                <span class="tag-category-dot" style="background: var(--tag-health)"></span>
+                <span style="color: var(--tag-health)">Health</span>
+              </div>
+              <div class="tags-v2">
+                <button class="tag-v2 health selected">High Protein</button>
+                <button class="tag-v2 health selected">Healthy</button>
+                <button class="tag-v2 health">Vegan</button>
+              </div>
+            </div>
+
+            <div class="tag-category">
+              <div class="tag-category-label">
+                <span class="tag-category-dot" style="background: var(--tag-speed)"></span>
+                <span style="color: var(--tag-speed)">Speed</span>
+              </div>
+              <div class="tags-v2">
+                <button class="tag-v2 speed selected">Quick</button>
+                <button class="tag-v2 speed">Grab & Go</button>
+              </div>
+            </div>
+
+            <div class="tag-category">
+              <div class="tag-category-label">
+                <span class="tag-category-dot" style="background: var(--tag-value)"></span>
+                <span style="color: var(--tag-value)">Value</span>
+              </div>
+              <div class="tags-v2">
+                <button class="tag-v2 value">Good Value</button>
+                <button class="tag-v2 value">Large Portion</button>
+              </div>
+            </div>
+
+            <div class="tag-category">
+              <div class="tag-category-label">
+                <span class="tag-category-dot" style="background: var(--tag-vibe)"></span>
+                <span style="color: var(--tag-vibe)">Vibe</span>
+              </div>
+              <div class="tags-v2">
+                <button class="tag-v2 vibe">Quiet</button>
+                <button class="tag-v2 vibe">Outdoor</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="tags-table-v2">
+                        <span class="tag-table-v2" style="background: var(--tag-speed-bg); color: var(--tag-speed);">Quick</span>
+                        <span class="tag-table-v2" style="background: var(--tag-health-bg); color: var(--tag-health);">Protein</span>
+                        <span class="tags-more">+3</span>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div class="tags-table-v2" style="margin-top: 8px;">
+                    <span class="tag-table-v2" style="background: var(--tag-speed-bg); color: var(--tag-speed);">Quick</span>
+                    <span class="tag-table-v2" style="background: var(--tag-health-bg); color: var(--tag-health);">High Protein</span>
+                    <span class="tag-table-v2" style="background: var(--tag-value-bg); color: var(--tag-value);">Good Value</span>
+                  </div>
+                </div>
+              </div>
+              <div class="review-row">
+                <div class="review-score">8/10</div>
+                <div class="review-content">
+                  <div class="review-text">Great but always busy at lunch</div>
+                  <div class="tags-table-v2" style="margin-top: 8px;">
+                    <span class="tag-table-v2" style="background: var(--tag-speed-bg); color: var(--tag-speed);">Quick</span>
+                    <span class="tag-table-v2" style="background: var(--tag-value-bg); color: var(--tag-value);">Large Portion</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERSION 3: ICON PILLS -->
+    <section id="v3" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 3</div>
+          <h1 class="version-title">Icon Pills</h1>
+          <p class="version-subtitle">Rounded pills with emoji icons. Friendly, playful, and instantly scannable. Icons collapse to just emojis in the table.</p>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+            <div class="tags-v3">
+              <button class="tag-v3 selected"><span class="icon">💪</span> High Protein</button>
+              <button class="tag-v3 selected"><span class="icon">🥗</span> Healthy</button>
+              <button class="tag-v3"><span class="icon">💰</span> Good Value</button>
+              <button class="tag-v3 selected"><span class="icon">⚡</span> Quick</button>
+              <button class="tag-v3"><span class="icon">🍽️</span> Large Portion</button>
+              <button class="tag-v3"><span class="icon">🌱</span> Vegan</button>
+              <button class="tag-v3"><span class="icon">🤫</span> Quiet</button>
+              <button class="tag-v3"><span class="icon">☀️</span> Outdoor</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="tags-table-v3">
+                        <span class="tag-icon-only" title="Quick">⚡</span>
+                        <span class="tag-icon-only" title="High Protein">💪</span>
+                        <span class="tags-more">+3</span>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                    <span class="tag-pill-small"><span class="icon">⚡</span> Quick</span>
+                    <span class="tag-pill-small"><span class="icon">💪</span> High Protein</span>
+                    <span class="tag-pill-small"><span class="icon">💰</span> Good Value</span>
+                  </div>
+                </div>
+              </div>
+              <div class="review-row">
+                <div class="review-score">8/10</div>
+                <div class="review-content">
+                  <div class="review-text">Great but always busy at lunch</div>
+                  <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                    <span class="tag-pill-small"><span class="icon">⚡</span> Quick</span>
+                    <span class="tag-pill-small"><span class="icon">🍽️</span> Large Portion</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERSION 4: COMPACT CHECKBOX GRID -->
+    <section id="v4" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 4</div>
+          <h1 class="version-title">Compact Checkbox Grid</h1>
+          <p class="version-subtitle">Form-style grid with checkboxes. Efficient, familiar, and shows tag counts in the table view.</p>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+            <div class="tags-v4">
+              <button class="tag-v4 selected"><span class="check">✓</span> High Protein</button>
+              <button class="tag-v4 selected"><span class="check">✓</span> Healthy</button>
+              <button class="tag-v4"><span class="check"></span> Good Value</button>
+              <button class="tag-v4 selected"><span class="check">✓</span> Quick</button>
+              <button class="tag-v4"><span class="check"></span> Large Portion</button>
+              <button class="tag-v4"><span class="check"></span> Vegan</button>
+              <button class="tag-v4"><span class="check"></span> Quiet</button>
+              <button class="tag-v4"><span class="check"></span> Outdoor</button>
+              <div class="custom-row-v4">
+                <input type="text" class="custom-input-v4" placeholder="Add custom tag..." />
+                <button class="custom-btn-v4">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Top Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="tags-table-v4">
+                        <span class="tag-badge-v4">Quick <span class="count">4</span></span>
+                        <span class="tag-badge-v4">Protein <span class="count">3</span></span>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div class="review-tags-v4">
+                    <span>Quick</span>
+                    <span>High Protein</span>
+                    <span>Good Value</span>
+                  </div>
+                </div>
+              </div>
+              <div class="review-row">
+                <div class="review-score">8/10</div>
+                <div class="review-content">
+                  <div class="review-text">Great but always busy at lunch</div>
+                  <div class="review-tags-v4">
+                    <span>Quick</span>
+                    <span>Large Portion</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERSION 5: SENTIMENT SCALES -->
+    <section id="v5" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 5</div>
+          <h1 class="version-title">Sentiment Scales</h1>
+          <p class="version-subtitle">Rate attributes on a scale instead of binary yes/no. More nuanced feedback that can be averaged across reviews.</p>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Attributes</div>
+            <div class="scales-v5">
+              <div class="scale-row-v5">
+                <span class="scale-label-v5">Protein</span>
+                <div class="scale-dots-v5">
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 mid selected"></button>
+                  <button class="scale-dot-v5 high"></button>
+                </div>
+                <button class="scale-na-v5">N/A</button>
+              </div>
+              <div class="scale-row-v5">
+                <span class="scale-label-v5">Healthy</span>
+                <div class="scale-dots-v5">
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 high selected"></button>
+                </div>
+                <button class="scale-na-v5">N/A</button>
+              </div>
+              <div class="scale-row-v5">
+                <span class="scale-label-v5">Value</span>
+                <div class="scale-dots-v5">
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 mid selected"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 high"></button>
+                </div>
+                <button class="scale-na-v5">N/A</button>
+              </div>
+              <div class="scale-row-v5">
+                <span class="scale-label-v5">Speed</span>
+                <div class="scale-dots-v5">
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 high selected"></button>
+                </div>
+                <button class="scale-na-v5">N/A</button>
+              </div>
+              <div class="scale-row-v5">
+                <span class="scale-label-v5">Portion</span>
+                <div class="scale-dots-v5">
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 mid selected"></button>
+                  <button class="scale-dot-v5 high"></button>
+                </div>
+                <button class="scale-na-v5">N/A</button>
+              </div>
+              <div class="scale-row-v5">
+                <span class="scale-label-v5">Quiet</span>
+                <div class="scale-dots-v5">
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 low"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 mid"></button>
+                  <button class="scale-dot-v5 high"></button>
+                </div>
+                <button class="scale-na-v5 selected">N/A</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Highlights</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="mini-bars-v5">
+                        <div class="mini-bar-v5">
+                          Speed
+                          <div class="mini-bar-track-v5"><div class="mini-bar-fill-v5" style="width: 90%"></div></div>
+                        </div>
+                        <div class="mini-bar-v5">
+                          Healthy
+                          <div class="mini-bar-track-v5"><div class="mini-bar-fill-v5" style="width: 80%"></div></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div class="review-scales-v5">
+                    <div class="review-scale-item-v5">
+                      <span class="review-scale-label-v5">Protein</span>
+                      <div class="review-scale-dots-v5">
+                        <span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span></span>
+                      </div>
+                    </div>
+                    <div class="review-scale-item-v5">
+                      <span class="review-scale-label-v5">Speed</span>
+                      <div class="review-scale-dots-v5">
+                        <span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span>
+                      </div>
+                    </div>
+                    <div class="review-scale-item-v5">
+                      <span class="review-scale-label-v5">Value</span>
+                      <div class="review-scale-dots-v5">
+                        <span class="filled med"></span><span class="filled med"></span><span class="filled med"></span><span></span><span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="review-row">
+                <div class="review-score">8/10</div>
+                <div class="review-content">
+                  <div class="review-text">Great but always busy at lunch</div>
+                  <div class="review-scales-v5">
+                    <div class="review-scale-item-v5">
+                      <span class="review-scale-label-v5">Speed</span>
+                      <div class="review-scale-dots-v5">
+                        <span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span></span>
+                      </div>
+                    </div>
+                    <div class="review-scale-item-v5">
+                      <span class="review-scale-label-v5">Portion</span>
+                      <div class="review-scale-dots-v5">
+                        <span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERSION 6: PHYSICAL TAGS -->
+    <section id="v6" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 6</div>
+          <h1 class="version-title">Physical Tags</h1>
+          <p class="version-subtitle">Shaped like real clothing/price tags with pointed left edge and hole. Clear when unselected, terracotta when active.</p>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+            <div class="tags-v6">
+              <button class="tag-v6 selected"><span class="icon">💪</span> High Protein</button>
+              <button class="tag-v6 selected"><span class="icon">🥗</span> Healthy</button>
+              <button class="tag-v6"><span class="icon">💰</span> Good Value</button>
+              <button class="tag-v6 selected"><span class="icon">⚡</span> Quick</button>
+              <button class="tag-v6"><span class="icon">🍽️</span> Large Portion</button>
+              <button class="tag-v6"><span class="icon">🌱</span> Vegan</button>
+              <button class="tag-v6"><span class="icon">🤫</span> Quiet</button>
+              <button class="tag-v6"><span class="icon">☀️</span> Outdoor</button>
+              <button class="add-v6">+ Add tag</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="tags-table-v6">
+                        <span class="tag-mini-v6"><span class="icon">⚡</span> Quick</span>
+                        <span class="tag-mini-v6"><span class="icon">💪</span> Protein</span>
+                        <span class="tags-more">+3</span>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                    <span class="tag-small-v6"><span class="icon">⚡</span> Quick</span>
+                    <span class="tag-small-v6"><span class="icon">💪</span> High Protein</span>
+                    <span class="tag-small-v6"><span class="icon">💰</span> Good Value</span>
+                  </div>
+                </div>
+              </div>
+              <div class="review-row">
+                <div class="review-score">8/10</div>
+                <div class="review-content">
+                  <div class="review-text">Great but always busy at lunch</div>
+                  <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                    <span class="tag-small-v6"><span class="icon">⚡</span> Quick</span>
+                    <span class="tag-small-v6"><span class="icon">🍽️</span> Large Portion</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERSION 6 VARIATIONS -->
+    <section id="v6-vars" class="version-section">
+      <div class="section-inner">
+        <div class="version-header">
+          <div class="version-badge">Version 6 Variations</div>
+          <h1 class="version-title">Physical Tag Variations</h1>
+          <p class="version-subtitle">Different takes on the pointed tag shape - no holes, rounded edges, different angles, and more.</p>
+        </div>
+
+        <!-- V6a Full Demo -->
+        <div class="version-header" style="margin-top: 40px;">
+          <div class="version-badge">V6a</div>
+          <h2 class="version-title" style="font-size: 28px;">No Hole (Clean)</h2>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+            <div class="tags-v6" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button class="tag-v6a selected"><span class="icon">💪</span> High Protein</button>
+              <button class="tag-v6a selected"><span class="icon">🥗</span> Healthy</button>
+              <button class="tag-v6a"><span class="icon">💰</span> Good Value</button>
+              <button class="tag-v6a selected"><span class="icon">⚡</span> Quick</button>
+              <button class="tag-v6a"><span class="icon">🍽️</span> Large Portion</button>
+              <button class="tag-v6a"><span class="icon">🌱</span> Vegan</button>
+              <button class="tag-v6a"><span class="icon">🤫</span> Quiet</button>
+              <button class="tag-v6a"><span class="icon">☀️</span> Outdoor</button>
+              <button class="add-v6a">+ Add tag</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="tags-table-v6">
+                        <span class="tag-mini-v6a"><span class="icon">⚡</span> Quick</span>
+                        <span class="tag-mini-v6a"><span class="icon">💪</span> Protein</span>
+                        <span class="tags-more">+3</span>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                    <span class="tag-small-v6a"><span class="icon">⚡</span> Quick</span>
+                    <span class="tag-small-v6a"><span class="icon">💪</span> High Protein</span>
+                    <span class="tag-small-v6a"><span class="icon">💰</span> Good Value</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="variation-group">
+          <div class="variation-label">V6b — Rounded Right Edge</div>
+          <div class="tags-variations">
+            <button class="tag-v6b selected"><span class="icon">💪</span> High Protein</button>
+            <button class="tag-v6b selected"><span class="icon">🥗</span> Healthy</button>
+            <button class="tag-v6b"><span class="icon">💰</span> Good Value</button>
+            <button class="tag-v6b"><span class="icon">⚡</span> Quick</button>
+            <button class="tag-v6b"><span class="icon">🍽️</span> Large Portion</button>
+          </div>
+        </div>
+
+        <div class="variation-group">
+          <div class="variation-label">V6c — Soft Point (Subtle)</div>
+          <div class="tags-variations">
+            <button class="tag-v6c selected"><span class="icon">💪</span> High Protein</button>
+            <button class="tag-v6c selected"><span class="icon">🥗</span> Healthy</button>
+            <button class="tag-v6c"><span class="icon">💰</span> Good Value</button>
+            <button class="tag-v6c"><span class="icon">⚡</span> Quick</button>
+            <button class="tag-v6c"><span class="icon">🍽️</span> Large Portion</button>
+          </div>
+        </div>
+
+        <div class="variation-group">
+          <div class="variation-label">V6d — Sharp Arrow (Dramatic)</div>
+          <div class="tags-variations">
+            <button class="tag-v6d selected"><span class="icon">💪</span> High Protein</button>
+            <button class="tag-v6d selected"><span class="icon">🥗</span> Healthy</button>
+            <button class="tag-v6d"><span class="icon">💰</span> Good Value</button>
+            <button class="tag-v6d"><span class="icon">⚡</span> Quick</button>
+            <button class="tag-v6d"><span class="icon">🍽️</span> Large Portion</button>
+          </div>
+        </div>
+
+        <div class="variation-group">
+          <div class="variation-label">V6e — Double Point (Ribbon)</div>
+          <div class="tags-variations">
+            <button class="tag-v6e selected"><span class="icon">💪</span> High Protein</button>
+            <button class="tag-v6e selected"><span class="icon">🥗</span> Healthy</button>
+            <button class="tag-v6e"><span class="icon">💰</span> Good Value</button>
+            <button class="tag-v6e"><span class="icon">⚡</span> Quick</button>
+            <button class="tag-v6e"><span class="icon">🍽️</span> Large Portion</button>
+          </div>
+        </div>
+
+        <div class="variation-group">
+          <div class="variation-label">V6f — Flag Notch (Inverted)</div>
+          <div class="tags-variations">
+            <button class="tag-v6f selected"><span class="icon">💪</span> High Protein</button>
+            <button class="tag-v6f selected"><span class="icon">🥗</span> Healthy</button>
+            <button class="tag-v6f"><span class="icon">💰</span> Good Value</button>
+            <button class="tag-v6f"><span class="icon">⚡</span> Quick</button>
+            <button class="tag-v6f"><span class="icon">🍽️</span> Large Portion</button>
+          </div>
+        </div>
+
+        <!-- V6g Full Demo -->
+        <div class="version-header" style="margin-top: 60px;">
+          <div class="version-badge">V6g</div>
+          <h2 class="version-title" style="font-size: 28px;">Chamfered Both Sides</h2>
+        </div>
+
+        <div class="demo-grid">
+          <div class="demo-card">
+            <div class="demo-label">Add Review - Tags</div>
+            <div class="tags-v6" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button class="tag-v6g selected"><span class="icon">💪</span> High Protein</button>
+              <button class="tag-v6g selected"><span class="icon">🥗</span> Healthy</button>
+              <button class="tag-v6g"><span class="icon">💰</span> Good Value</button>
+              <button class="tag-v6g selected"><span class="icon">⚡</span> Quick</button>
+              <button class="tag-v6g"><span class="icon">🍽️</span> Large Portion</button>
+              <button class="tag-v6g"><span class="icon">🌱</span> Vegan</button>
+              <button class="tag-v6g"><span class="icon">🤫</span> Quiet</button>
+              <button class="tag-v6g"><span class="icon">☀️</span> Outdoor</button>
+              <button class="add-v6g">+ Add tag</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="demo-card" style="padding: 0;">
+              <table class="demo-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Tags</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="name">Padella</td>
+                    <td class="type">Italian</td>
+                    <td>
+                      <div class="tags-table-v6">
+                        <span class="tag-mini-v6g"><span class="icon">⚡</span> Quick</span>
+                        <span class="tag-mini-v6g"><span class="icon">💪</span> Protein</span>
+                        <span class="tags-more">+3</span>
+                      </div>
+                    </td>
+                    <td class="rating">8.5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="demo-expanded">
+              <div class="review-row">
+                <div class="review-score">9/10</div>
+                <div class="review-content">
+                  <div class="review-text">Amazing pasta, worth the queue</div>
+                  <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                    <span class="tag-small-v6g"><span class="icon">⚡</span> Quick</span>
+                    <span class="tag-small-v6g"><span class="icon">💪</span> High Protein</span>
+                    <span class="tag-small-v6g"><span class="icon">💰</span> Good Value</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // V1: Minimal toggle
+    document.querySelectorAll('.tag-v1').forEach(tag => {
+      tag.addEventListener('click', () => tag.classList.toggle('selected'));
+    });
+
+    // V2: Color coded toggle
+    document.querySelectorAll('.tag-v2').forEach(tag => {
+      tag.addEventListener('click', () => tag.classList.toggle('selected'));
+    });
+
+    // V3: Icon pills toggle
+    document.querySelectorAll('.tag-v3').forEach(tag => {
+      tag.addEventListener('click', () => tag.classList.toggle('selected'));
+    });
+
+    // V4: Checkbox toggle
+    document.querySelectorAll('.tag-v4').forEach(tag => {
+      tag.addEventListener('click', () => {
+        tag.classList.toggle('selected');
+        const check = tag.querySelector('.check');
+        check.textContent = tag.classList.contains('selected') ? '✓' : '';
+      });
+    });
+
+    // V5: Sentiment scales
+    document.querySelectorAll('.scale-row-v5').forEach(row => {
+      const dots = row.querySelectorAll('.scale-dot-v5');
+      const na = row.querySelector('.scale-na-v5');
+
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+          dots.forEach((d, i) => d.classList.toggle('selected', i <= index));
+          na.classList.remove('selected');
+        });
+      });
+
+      if (na) {
+        na.addEventListener('click', () => {
+          dots.forEach(d => d.classList.remove('selected'));
+          na.classList.toggle('selected');
+        });
+      }
+    });
+
+    // V6: Physical tags toggle
+    document.querySelectorAll('.tag-v6').forEach(tag => {
+      tag.addEventListener('click', () => tag.classList.toggle('selected'));
+    });
+
+    // V6 Variations toggle
+    ['v6a', 'v6b', 'v6c', 'v6d', 'v6e', 'v6f', 'v6g'].forEach(v => {
+      document.querySelectorAll(`.tag-${v}`).forEach(tag => {
+        tag.addEventListener('click', () => tag.classList.toggle('selected'));
+      });
+    });
+
+    // Nav highlighting
+    const sections = document.querySelectorAll('.version-section');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 100;
+        if (scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

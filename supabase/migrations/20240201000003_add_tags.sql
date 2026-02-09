@@ -5,7 +5,6 @@
 CREATE TABLE IF NOT EXISTS tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
-  icon TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -41,15 +40,15 @@ CREATE INDEX idx_review_tags_review ON review_tags(review_id);
 CREATE INDEX idx_review_tags_tag ON review_tags(tag_id);
 
 -- Insert predefined tags
-INSERT INTO tags (name, icon) VALUES
-  ('High Protein', '💪'),
-  ('Healthy', '🥗'),
-  ('Good Value', '💰'),
-  ('Quick', '⚡'),
-  ('Large Portion', '🍽️'),
-  ('Vegan Options', '🌱'),
-  ('Quiet', '🤫'),
-  ('Outdoor Seating', '☀️')
+INSERT INTO tags (name) VALUES
+  ('High Protein'),
+  ('Healthy'),
+  ('Good Value'),
+  ('Quick'),
+  ('Large Portion'),
+  ('Vegan Options'),
+  ('Quiet'),
+  ('Outdoor Seating')
 ON CONFLICT (name) DO NOTHING;
 
 -- Drop the old rating columns (optional - can keep for historical data)
