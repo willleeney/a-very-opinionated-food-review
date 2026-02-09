@@ -54,6 +54,7 @@ function InlineReviewForm({
   const [comment, setComment] = useState(existingReview?.comment || '')
   const [saving, setSaving] = useState(false)
   const [creatingTag, setCreatingTag] = useState(false)
+  const [localTags, setLocalTags] = useState<Tag[]>([]) // Track newly created tags locally
   const [error, setError] = useState<string | null>(null)
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [showRatingDropdown, setShowRatingDropdown] = useState(false)
@@ -61,6 +62,9 @@ function InlineReviewForm({
   const tagDropdownRef = useRef<HTMLDivElement>(null)
   const ratingDropdownRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Merge available tags with locally created tags
+  const allTags = [...availableTags, ...localTags.filter(lt => !availableTags.some(at => at.id === lt.id))]
 
   // Auto-resize textarea helper
   const resizeTextarea = useCallback(() => {
@@ -118,7 +122,8 @@ function InlineReviewForm({
 
       if (createError) throw createError
 
-      // Add to selected tags and notify parent
+      // Add to local tags, selected tags, and notify parent
+      setLocalTags(prev => [...prev, newTag])
       setSelectedTags(prev => [...prev, newTag.id])
       onTagCreated?.(newTag)
       setTagSearchQuery('')
@@ -194,13 +199,13 @@ function InlineReviewForm({
 
   // Show first 3 tags + any selected tags not in first 3
   const defaultTags = availableTags.slice(0, 3)
-  const selectedTagsNotInDefault = availableTags.filter(
+  const selectedTagsNotInDefault = allTags.filter(
     t => selectedTags.includes(t.id) && !defaultTags.some(dt => dt.id === t.id)
   )
   const visibleTags = [...defaultTags, ...selectedTagsNotInDefault]
 
   // Filter tags for dropdown search
-  const filteredTags = availableTags.filter(t =>
+  const filteredTags = allTags.filter(t =>
     t.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
   )
 
@@ -281,9 +286,8 @@ function InlineReviewForm({
                   {tag.name}
                 </button>
               ))}
-              {/* Search dropdown for more tags */}
-              {availableTags.length > 3 && (
-                <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
+              {/* Search dropdown for more tags or create new */}
+              <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
                   <button
                     type="button"
                     className={`add-chip ${showTagDropdown ? 'has-selection' : ''}`}
@@ -330,7 +334,7 @@ function InlineReviewForm({
                             </button>
                           )
                         })}
-                        {tagSearchQuery.trim() && !availableTags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
+                        {tagSearchQuery.trim() && !allTags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
                           <button
                             type="button"
                             className="dropdown-item"
@@ -351,7 +355,6 @@ function InlineReviewForm({
                     </div>
                   )}
                 </div>
-              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
