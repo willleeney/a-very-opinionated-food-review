@@ -372,7 +372,7 @@ function InlineReviewForm({
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
-              <button type="submit" disabled={saving || !overallRating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
+              <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '8px 16px' }}>
                 {saving ? '...' : existingReview ? 'Update' : 'Save'}
               </button>
             </div>
