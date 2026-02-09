@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { supabase } from '../lib/supabase'
 import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory, Tag } from '../lib/database.types'
 import { MapView } from './MapView'
@@ -1039,9 +1039,8 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
             </thead>
             <tbody>
               {filteredRestaurants.map((restaurant) => (
-                <>
+                <Fragment key={restaurant.id}>
                   <tr
-                    key={restaurant.id}
                     onClick={() => handleRowClick(restaurant)}
                     style={{
                       cursor: user ? 'pointer' : 'default',
@@ -1179,7 +1178,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
