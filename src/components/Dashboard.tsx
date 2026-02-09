@@ -338,7 +338,15 @@ function InlineReviewForm({
                           <button
                             type="button"
                             className="dropdown-item"
-                            onClick={() => createTag(tagSearchQuery)}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              createTag(tagSearchQuery)
+                            }}
                             disabled={creatingTag}
                             style={{ borderTop: filteredTags.length > 0 ? '1px solid var(--border)' : undefined }}
                           >
