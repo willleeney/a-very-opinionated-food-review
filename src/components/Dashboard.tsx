@@ -39,18 +39,21 @@ function InlineReviewForm({
   userId,
   existingReview,
   availableTags,
-  onSaved
+  onSaved,
+  onTagCreated
 }: {
   restaurantId: string
   userId: string
   existingReview?: { id: string; rating: number | null; comment: string | null; tags?: Tag[] }
   availableTags: Tag[]
   onSaved: () => void
+  onTagCreated?: (tag: Tag) => void
 }) {
   const [overallRating, setOverallRating] = useState(existingReview?.rating?.toString() || '')
   const [selectedTags, setSelectedTags] = useState<string[]>(existingReview?.tags?.map(t => t.id) || [])
   const [comment, setComment] = useState(existingReview?.comment || '')
   const [saving, setSaving] = useState(false)
+  const [creatingTag, setCreatingTag] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [showRatingDropdown, setShowRatingDropdown] = useState(false)
@@ -101,6 +104,29 @@ function InlineReviewForm({
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     )
+  }
+
+  const createTag = async (name: string) => {
+    if (!name.trim()) return
+    setCreatingTag(true)
+    try {
+      const { data: newTag, error: createError } = await supabase
+        .from('tags')
+        .insert({ name: name.trim() })
+        .select()
+        .single()
+
+      if (createError) throw createError
+
+      // Add to selected tags and notify parent
+      setSelectedTags(prev => [...prev, newTag.id])
+      onTagCreated?.(newTag)
+      setTagSearchQuery('')
+    } catch (err) {
+      console.error('Failed to create tag:', err)
+    } finally {
+      setCreatingTag(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -290,25 +316,36 @@ function InlineReviewForm({
                         />
                       </div>
                       <div className="dropdown-list">
-                        {filteredTags.length === 0 ? (
+                        {filteredTags.map((tag) => {
+                          const isSelected = selectedTags.includes(tag.id)
+                          return (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                              onClick={() => toggleTag(tag.id)}
+                            >
+                              <span className="item-check">{isSelected ? '✓' : ''}</span>
+                              <span className="item-label">{tag.name}</span>
+                            </button>
+                          )
+                        })}
+                        {tagSearchQuery.trim() && !availableTags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
+                          <button
+                            type="button"
+                            className="dropdown-item"
+                            onClick={() => createTag(tagSearchQuery)}
+                            disabled={creatingTag}
+                            style={{ borderTop: filteredTags.length > 0 ? '1px solid var(--border)' : undefined }}
+                          >
+                            <span className="item-check">+</span>
+                            <span className="item-label">{creatingTag ? 'Creating...' : `Create "${tagSearchQuery.trim()}"`}</span>
+                          </button>
+                        )}
+                        {filteredTags.length === 0 && !tagSearchQuery.trim() && (
                           <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                            No results
+                            No tags yet
                           </div>
-                        ) : (
-                          filteredTags.map((tag) => {
-                            const isSelected = selectedTags.includes(tag.id)
-                            return (
-                              <button
-                                key={tag.id}
-                                type="button"
-                                className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                                onClick={() => toggleTag(tag.id)}
-                              >
-                                <span className="item-check">{isSelected ? '✓' : ''}</span>
-                                <span className="item-label">{tag.name}</span>
-                              </button>
-                            )
-                          })
                         )}
                       </div>
                     </div>
@@ -1099,6 +1136,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                             existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; tags?: Tag[] } | undefined}
                             availableTags={availableTags}
                             onSaved={fetchData}
+                            onTagCreated={(tag) => setAvailableTags(prev => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
                           />
                         )}
                         {/* Mobile map button */}
