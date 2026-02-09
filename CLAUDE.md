@@ -59,6 +59,13 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 - Accent variant for primary actions (terracotta fill)
 - No border-radius (sharp corners)
 
+### Tags (Chamfered Style)
+- Octagonal shape with chamfered corners on all sides (clip-path polygon)
+- Icon on the right, text on the left (flex-direction: row-reverse)
+- Clear/transparent when unselected, terracotta fill when selected
+- Three sizes: `.tag` (full), `.tag-mini` (table cells), `.tag-small` (expanded rows)
+- Used for: review attributes (High Protein, Quick, Good Value, etc.), category selection
+
 ### Inputs
 - Borderless except bottom border
 - No background
@@ -212,6 +219,8 @@ Reviews automatically become visible - no migration needed:
 ### Tables
 - `restaurants` - name, type, notes, latitude, longitude
 - `reviews` - rating (1-10), comment, links to restaurant + user
+- `tags` - predefined descriptive tags (name, icon)
+- `review_tags` - junction table linking reviews to tags
 - `settings` - key/value store (office_location as JSONB)
 - `profiles` - user profiles with display_name, is_private flag, synced from auth.users
 - `organisations` - multi-tenant orgs with name, slug, office_location, tagline
@@ -401,6 +410,47 @@ CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
 CREATE INDEX idx_user_follows_following ON user_follows(following_id);
 CREATE INDEX idx_follow_requests_requester ON follow_requests(requester_id);
 CREATE INDEX idx_follow_requests_target ON follow_requests(target_id);
+
+-- 5. Tags (descriptive attributes for reviews)
+CREATE TABLE tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  icon TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE review_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(review_id, tag_id)
+);
+
+ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE review_tags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view tags" ON tags FOR SELECT USING (true);
+CREATE POLICY "Anyone can view review_tags" ON review_tags FOR SELECT USING (true);
+CREATE POLICY "Users can add tags to their reviews" ON review_tags FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM reviews WHERE id = review_tags.review_id AND user_id = auth.uid()));
+CREATE POLICY "Users can remove tags from their reviews" ON review_tags FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM reviews WHERE id = review_tags.review_id AND user_id = auth.uid()));
+
+CREATE INDEX idx_review_tags_review ON review_tags(review_id);
+CREATE INDEX idx_review_tags_tag ON review_tags(tag_id);
+
+-- Seed default tags
+INSERT INTO tags (name, icon) VALUES
+  ('High Protein', '💪'),
+  ('Healthy', '🥗'),
+  ('Good Value', '💰'),
+  ('Quick', '⚡'),
+  ('Large Portion', '🍽️'),
+  ('Vegan Options', '🌱'),
+  ('Quiet', '🤫'),
+  ('Outdoor Seating', '☀️')
+ON CONFLICT (name) DO NOTHING;
 ```
 
 ### Local Development with Supabase

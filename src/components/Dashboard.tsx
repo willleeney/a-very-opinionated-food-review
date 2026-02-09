@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory } from '../lib/database.types'
+import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory, Tag } from '../lib/database.types'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
@@ -38,19 +38,70 @@ function InlineReviewForm({
   restaurantId,
   userId,
   existingReview,
+  availableTags,
   onSaved
 }: {
   restaurantId: string
   userId: string
-  existingReview?: { id: string; rating: number | null; value_rating: number | null; taste_rating: number | null; comment: string | null }
+  existingReview?: { id: string; rating: number | null; comment: string | null; tags?: Tag[] }
+  availableTags: Tag[]
   onSaved: () => void
 }) {
   const [overallRating, setOverallRating] = useState(existingReview?.rating?.toString() || '')
-  const [valueRating, setValueRating] = useState(existingReview?.value_rating?.toString() || '')
-  const [tasteRating, setTasteRating] = useState(existingReview?.taste_rating?.toString() || '')
+  const [selectedTags, setSelectedTags] = useState<string[]>(existingReview?.tags?.map(t => t.id) || [])
   const [comment, setComment] = useState(existingReview?.comment || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showTagDropdown, setShowTagDropdown] = useState(false)
+  const [showRatingDropdown, setShowRatingDropdown] = useState(false)
+  const [tagSearchQuery, setTagSearchQuery] = useState('')
+  const tagDropdownRef = useRef<HTMLDivElement>(null)
+  const ratingDropdownRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-resize textarea helper
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = textarea.scrollHeight + 'px'
+    }
+  }, [])
+
+  // Sync state when existingReview changes (e.g., after data refresh)
+  useEffect(() => {
+    setOverallRating(existingReview?.rating?.toString() || '')
+    setSelectedTags(existingReview?.tags?.map(t => t.id) || [])
+    setComment(existingReview?.comment || '')
+  }, [existingReview?.id])
+
+  // Resize textarea when comment changes or on mount
+  useEffect(() => {
+    resizeTextarea()
+  }, [comment, resizeTextarea])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setShowTagDropdown(false)
+        setTagSearchQuery('')
+      }
+      if (ratingDropdownRef.current && !ratingDropdownRef.current.contains(e.target as Node)) {
+        setShowRatingDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,10 +113,10 @@ function InlineReviewForm({
     try {
       const reviewData = {
         rating: parseInt(overallRating),
-        value_rating: valueRating ? parseInt(valueRating) : undefined,
-        taste_rating: tasteRating ? parseInt(tasteRating) : undefined,
         comment: comment || null,
       }
+
+      let reviewId: string
 
       if (existingReview) {
         // Update existing review
@@ -74,16 +125,33 @@ function InlineReviewForm({
           .update(reviewData)
           .eq('id', existingReview.id)
         if (error) throw error
+        reviewId = existingReview.id
+
+        // Remove old tags
+        await supabase.from('review_tags').delete().eq('review_id', reviewId)
       } else {
         // Insert new review
-        const { error } = await supabase
+        const { data: newReview, error } = await supabase
           .from('reviews')
           .insert({
             restaurant_id: restaurantId,
             user_id: userId,
             ...reviewData,
           })
+          .select()
+          .single()
         if (error) throw error
+        reviewId = newReview.id
+      }
+
+      // Add new tags
+      if (selectedTags.length > 0) {
+        const tagInserts = selectedTags.map(tagId => ({
+          review_id: reviewId,
+          tag_id: tagId,
+        }))
+        const { error: tagError } = await supabase.from('review_tags').insert(tagInserts)
+        if (tagError) throw tagError
       }
 
       onSaved()
@@ -98,63 +166,164 @@ function InlineReviewForm({
     }
   }
 
+  // Show first 3 tags + any selected tags not in first 3
+  const defaultTags = availableTags.slice(0, 3)
+  const selectedTagsNotInDefault = availableTags.filter(
+    t => selectedTags.includes(t.id) && !defaultTags.some(dt => dt.id === t.id)
+  )
+  const visibleTags = [...defaultTags, ...selectedTagsNotInDefault]
+
+  // Filter tags for dropdown search
+  const filteredTags = availableTags.filter(t =>
+    t.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+  )
+
   return (
     <form onSubmit={handleSubmit} style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {existingReview ? 'Your review' : 'Add review'}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Overall*</span>
-          <select
-            value={overallRating}
-            onChange={(e) => setOverallRating(e.target.value)}
-            required
-            style={{ width: '70px' }}
-          >
-            <option value="">—</option>
-            {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+      <div style={{ display: 'flex', gap: '24px' }}>
+        {/* Left column: Label + Rating */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '80px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {existingReview ? 'Your review' : 'Add review'}
+          </span>
+          <div className="category-dropdown-wrapper" ref={ratingDropdownRef}>
+            <button
+              type="button"
+              className={`social-tab ${overallRating ? 'active' : ''}`}
+              onClick={() => setShowRatingDropdown(!showRatingDropdown)}
+              style={{ minWidth: '50px', textAlign: 'center' }}
+            >
+              {overallRating || '—'}
+            </button>
+            {showRatingDropdown && (
+              <div className="category-dropdown" style={{ minWidth: '60px' }}>
+                <div className="dropdown-list">
+                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={`dropdown-item ${overallRating === r.toString() ? 'selected' : ''}`}
+                      onClick={() => {
+                        setOverallRating(r.toString())
+                        setShowRatingDropdown(false)
+                      }}
+                    >
+                      <span className="item-check">{overallRating === r.toString() ? '✓' : ''}</span>
+                      <span className="item-label">{r}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Value</span>
-          <select
-            value={valueRating}
-            onChange={(e) => setValueRating(e.target.value)}
-            style={{ width: '70px' }}
-          >
-            <option value="">—</option>
-            {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+
+        {/* Right column: Comment, Tags, Button */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <textarea
+            ref={textareaRef}
+            value={comment}
+            onChange={(e) => {
+              setComment(e.target.value)
+              resizeTextarea()
+            }}
+            placeholder="Add a comment..."
+            rows={2}
+            style={{
+              maxWidth: '480px',
+              resize: 'none',
+              overflow: 'hidden',
+              minHeight: '48px',
+              lineHeight: '1.4',
+              padding: '8px 0',
+              border: 'none',
+              borderBottom: '1px solid var(--border)',
+              background: 'transparent',
+              fontFamily: 'inherit',
+              fontSize: '14px'
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+            <div className="social-tabs" style={{ flex: 1 }}>
+              {visibleTags.map((tag) => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => toggleTag(tag.id)}
+                  className={`social-tab ${selectedTags.includes(tag.id) ? 'active' : ''}`}
+                >
+                  {tag.name}
+                </button>
+              ))}
+              {/* Search dropdown for more tags */}
+              {availableTags.length > 3 && (
+                <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
+                  <button
+                    type="button"
+                    className={`add-chip ${showTagDropdown ? 'has-selection' : ''}`}
+                    onClick={() => setShowTagDropdown(!showTagDropdown)}
+                    onMouseEnter={() => setShowTagDropdown(true)}
+                  >
+                    +
+                  </button>
+                  {showTagDropdown && (
+                    <div className="category-dropdown wide">
+                      <div className="dropdown-header">
+                        <span className="dropdown-title">Search tags</span>
+                      </div>
+                      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                        <input
+                          type="text"
+                          placeholder="Type to search..."
+                          value={tagSearchQuery}
+                          onChange={(e) => setTagSearchQuery(e.target.value)}
+                          style={{
+                            width: '100%',
+                            border: 'none',
+                            borderBottom: 'none',
+                            padding: '4px 0',
+                            fontSize: '13px',
+                            background: 'transparent',
+                            outline: 'none'
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="dropdown-list">
+                        {filteredTags.length === 0 ? (
+                          <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                            No results
+                          </div>
+                        ) : (
+                          filteredTags.map((tag) => {
+                            const isSelected = selectedTags.includes(tag.id)
+                            return (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                                onClick={() => toggleTag(tag.id)}
+                              >
+                                <span className="item-check">{isSelected ? '✓' : ''}</span>
+                                <span className="item-label">{tag.name}</span>
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
+              <button type="submit" disabled={saving || !overallRating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
+                {saving ? '...' : existingReview ? 'Update' : 'Save'}
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Taste</span>
-          <select
-            value={tasteRating}
-            onChange={(e) => setTasteRating(e.target.value)}
-            style={{ width: '70px' }}
-          >
-            <option value="">—</option>
-            {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </div>
-        <input
-          type="text"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Comment (optional)"
-          style={{ flex: 1, maxWidth: '300px' }}
-        />
-        <button type="submit" disabled={saving || !overallRating} className="btn btn-accent" style={{ padding: '8px 16px' }}>
-          {saving ? '...' : existingReview ? 'Update' : 'Save'}
-        </button>
-        {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
       </div>
     </form>
   )
@@ -164,6 +333,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
   const [users, setUsers] = useState<ReviewUser[]>([])
+  const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -178,10 +348,9 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const {
     selectedCategories,
     minOverallRating,
-    minValueRating,
-    minTasteRating,
     socialFilter,
     selectedUserIds,
+    selectedTagIds,
     highlightedRestaurantId: _highlightedRestaurantId,
     setHighlightedRestaurantId,
   } = useFilterStore()
@@ -368,21 +537,45 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     }
     setCurrentOrgMemberIds(visibleReviewerIds)
 
-    // Fetch all restaurants (global)
+    // Fetch all tags
+    const { data: tagsData } = await supabase.from('tags').select('*').order('name')
+    if (tagsData) setAvailableTags(tagsData)
+
+    // Fetch all restaurants with reviews
     const { data: restaurantsData } = await supabase
       .from('restaurants')
       .select('*, reviews(*)')
       .order('name')
 
+    // Fetch all review_tags with tag details
+    const { data: reviewTagsData } = await supabase
+      .from('review_tags')
+      .select('review_id, tag_id, tags(*)')
+
+    // Build a map of review_id -> tags
+    const reviewTagsMap = new Map<string, Tag[]>()
+    if (reviewTagsData) {
+      for (const rt of reviewTagsData) {
+        if (!reviewTagsMap.has(rt.review_id)) {
+          reviewTagsMap.set(rt.review_id, [])
+        }
+        if (rt.tags) {
+          reviewTagsMap.get(rt.review_id)!.push(rt.tags as Tag)
+        }
+      }
+    }
+
     if (restaurantsData) {
       const withCalculations = restaurantsData.map((r) => {
         // Mark each review with whether the reviewer is an org member (for visibility)
+        // and attach their tags
         const reviews = (r.reviews || []).map(rev => ({
           ...rev,
-          isOrgMember: rev.user_id ? visibleReviewerIds.has(rev.user_id) : false
+          isOrgMember: rev.user_id ? visibleReviewerIds.has(rev.user_id) : false,
+          tags: reviewTagsMap.get(rev.id) || []
         }))
 
-        // Calculate legacy average rating
+        // Calculate average rating
         const ratings = reviews
           .filter((rev) => rev.rating !== null)
           .map((rev) => rev.rating as number)
@@ -390,27 +583,27 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           ? ratings.reduce((a, b) => a + b, 0) / ratings.length
           : null
 
-        // Calculate dual ratings
-        const valueRatings = reviews
-          .filter((rev) => rev.value_rating !== null && rev.value_rating !== undefined)
-          .map((rev) => rev.value_rating as number)
-        const avgValueRating = valueRatings.length > 0
-          ? valueRatings.reduce((a, b) => a + b, 0) / valueRatings.length
-          : null
-
-        const tasteRatings = reviews
-          .filter((rev) => rev.taste_rating !== null && rev.taste_rating !== undefined)
-          .map((rev) => rev.taste_rating as number)
-        const avgTasteRating = tasteRatings.length > 0
-          ? tasteRatings.reduce((a, b) => a + b, 0) / tasteRatings.length
-          : null
+        // Calculate top tags (by frequency across all reviews)
+        const tagCounts = new Map<string, { tag: Tag; count: number }>()
+        for (const rev of reviews) {
+          for (const tag of rev.tags || []) {
+            const existing = tagCounts.get(tag.id)
+            if (existing) {
+              existing.count++
+            } else {
+              tagCounts.set(tag.id, { tag, count: 1 })
+            }
+          }
+        }
+        const topTags = Array.from(tagCounts.values())
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 2)
 
         return {
           ...r,
           reviews,
           avgRating,
-          avgValueRating,
-          avgTasteRating,
+          topTags,
         }
       })
       setRestaurants(withCalculations)
@@ -526,25 +719,26 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       ? ratings.reduce((a, b) => a + b, 0) / ratings.length
       : null
 
-    const valueRatings = relevantReviews
-      .filter(rev => rev.value_rating !== null && rev.value_rating !== undefined)
-      .map(rev => rev.value_rating as number)
-    const filteredAvgValueRating = valueRatings.length > 0
-      ? valueRatings.reduce((a, b) => a + b, 0) / valueRatings.length
-      : null
-
-    const tasteRatings = relevantReviews
-      .filter(rev => rev.taste_rating !== null && rev.taste_rating !== undefined)
-      .map(rev => rev.taste_rating as number)
-    const filteredAvgTasteRating = tasteRatings.length > 0
-      ? tasteRatings.reduce((a, b) => a + b, 0) / tasteRatings.length
-      : null
+    // Recalculate top tags from relevant reviews
+    const tagCounts = new Map<string, { tag: Tag; count: number }>()
+    for (const rev of relevantReviews) {
+      for (const tag of rev.tags || []) {
+        const existing = tagCounts.get(tag.id)
+        if (existing) {
+          existing.count++
+        } else {
+          tagCounts.set(tag.id, { tag, count: 1 })
+        }
+      }
+    }
+    const filteredTopTags = Array.from(tagCounts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2)
 
     return {
       ...r,
       filteredAvgRating,
-      filteredAvgValueRating,
-      filteredAvgTasteRating,
+      filteredTopTags,
       relevantReviewCount: relevantReviews.length,
     }
   }).filter(r => {
@@ -565,14 +759,16 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (r.filteredAvgRating < minOverallRating) return false
     }
 
-    // Value rating filter
-    if (minValueRating !== null && r.filteredAvgValueRating !== null) {
-      if (r.filteredAvgValueRating < minValueRating) return false
-    }
-
-    // Taste rating filter
-    if (minTasteRating !== null && r.filteredAvgTasteRating !== null) {
-      if (r.filteredAvgTasteRating < minTasteRating) return false
+    // Tag filter - restaurant must have at least one review with ALL selected tags
+    if (selectedTagIds.length > 0) {
+      const restaurantTagIds = new Set<string>()
+      for (const review of r.reviews) {
+        for (const tag of review.tags || []) {
+          restaurantTagIds.add(tag.id)
+        }
+      }
+      const hasAllSelectedTags = selectedTagIds.every(tagId => restaurantTagIds.has(tagId))
+      if (!hasAllSelectedTags) return false
     }
 
     return true
@@ -597,16 +793,24 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const showOffice = !!currentOrg || !!activeOrg
 
   // Helper to check if a review is visible (for stats calculation)
-  const isReviewVisibleForStats = (review: { user_id: string | null; isOrgMember?: boolean }): boolean => {
-    if (!review.isOrgMember) return false
+  // Same logic as isReviewVisible - based on profile privacy
+  const isReviewVisibleForStats = (review: { user_id: string | null }): boolean => {
     if (!review.user_id) return false
     const reviewer = users.find(u => u.id === review.user_id)
     if (!reviewer) return false
-    if (reviewer.isPrivate) {
-      if (user && review.user_id === user.id) return true
-      return followingIds.has(review.user_id)
+    // Public profiles visible to all
+    if (!reviewer.isPrivate) return true
+    // Private profiles: own reviews
+    if (user && review.user_id === user.id) return true
+    // Private profiles: followers can see
+    if (followingIds.has(review.user_id)) return true
+    // Private profiles: org members can see
+    for (const [_orgId, memberIds] of orgMembersByOrgId) {
+      if (memberIds.has(review.user_id) && user && memberIds.has(user.id)) {
+        return true
+      }
     }
-    return true
+    return false
   }
 
   // Calculate stats based only on visible reviews
@@ -653,30 +857,35 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
     document.querySelector('.map-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
-  // Check if a review's comment should be visible
-  // Visibility is derived from:
-  // 1. Org membership (reviewer must be in same org)
-  // 2. Privacy setting (if reviewer is private, viewer must follow them)
-  const isReviewVisible = (reviewUserId: string | null, isOrgMember: boolean): boolean => {
-    // Must be org member for base visibility
-    if (!isOrgMember) return false
-
+  // Check if a review's details (name, comment, tags) should be visible
+  // Visibility is based on profile privacy:
+  // - Public profile: visible to everyone
+  // - Private profile: visible to followers, org members, and themselves
+  const isReviewVisible = (reviewUserId: string | null): boolean => {
     // If reviewer not found, hide their details
     if (!reviewUserId) return false
 
-    // Check if reviewer is private
+    // Check if reviewer exists in our users list
     const reviewer = users.find(u => u.id === reviewUserId)
     if (!reviewer) return false
 
-    // If reviewer is private, viewer must follow them (or be them)
-    if (reviewer.isPrivate) {
-      // Own reviews are always visible
-      if (user && reviewUserId === user.id) return true
-      // Must follow private users to see their reviews
-      return followingIds.has(reviewUserId)
+    // Public profiles are visible to everyone
+    if (!reviewer.isPrivate) return true
+
+    // Private profiles: own reviews are always visible
+    if (user && reviewUserId === user.id) return true
+
+    // Private profiles: followers can see
+    if (followingIds.has(reviewUserId)) return true
+
+    // Private profiles: org members can see (shares any org with viewer)
+    for (const [_orgId, memberIds] of orgMembersByOrgId) {
+      if (memberIds.has(reviewUserId) && user && memberIds.has(user.id)) {
+        return true
+      }
     }
 
-    return true
+    return false
   }
 
   if (loading) {
@@ -745,6 +954,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
             ...followingUsers.map(u => ({ id: u.id, name: u.name, source: 'following' as const })),
             ...orgMembers.filter(m => !followingUsers.some(f => f.id === m.id)).map(u => ({ id: u.id, name: u.name, source: 'org_member' as const }))
           ]}
+          availableTags={availableTags}
           rightActions={
             user && (
               <AddReview
@@ -773,6 +983,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                 <th style={{ paddingLeft: '16px' }}>Name</th>
                 <th className="hide-mobile">Type</th>
                 <th>Rating</th>
+                <th className="hide-mobile">Tags</th>
                 <th></th>
                 <th className="hide-mobile"></th>
               </tr>
@@ -803,6 +1014,18 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                         <span style={{ color: 'var(--text-muted)' }}>—</span>
                       )}
                     </td>
+                    <td className="hide-mobile">
+                      {restaurant.filteredTopTags && restaurant.filteredTopTags.length > 0 && (
+                        <div className="tags-table">
+                          {restaurant.filteredTopTags.map(({ tag, count }) => (
+                            <span key={tag.id} className="tag-mini">
+                              <span className="tag-mini-name">{tag.name}</span>
+                              <span className="tag-mini-count">{count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                       {restaurant.relevantReviewCount} review{restaurant.relevantReviewCount !== 1 ? 's' : ''}
                     </td>
@@ -831,32 +1054,35 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                   </tr>
                   {expandedId === restaurant.id && (
                     <tr key={`${restaurant.id}-expanded`}>
-                      <td colSpan={5} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
+                      <td colSpan={6} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
                         {(() => {
-                          const visibleReviews = restaurant.reviews.filter(review =>
-                            isReviewVisible(review.user_id, review.isOrgMember ?? false)
-                          )
-                          return visibleReviews.length > 0 ? (
+                          const reviews = restaurant.reviews
+                          return reviews.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              {visibleReviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).map((review) => {
+                              {reviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).map((review) => {
+                                const canSeeDetails = isReviewVisible(review.user_id)
                                 const reviewer = users.find(u => u.id === review.user_id)
                                 return (
-                                  <div key={review.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                    <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
-                                      {review.rating}/10
-                                    </span>
-                                    {(review.value_rating || review.taste_rating) && (
-                                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                        {review.value_rating && `Value: ${review.value_rating}/10`}
-                                        {review.value_rating && review.taste_rating && ' · '}
-                                        {review.taste_rating && `Taste: ${review.taste_rating}/10`}
+                                  <div key={review.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                      <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
+                                        {review.rating}/10
                                       </span>
-                                    )}
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
-                                      {reviewer?.email || 'Anonymous'}
-                                    </span>
-                                    {review.comment && (
-                                      <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
+                                        {canSeeDetails ? (reviewer?.email || 'Anonymous') : 'Anonymous'}
+                                      </span>
+                                      {canSeeDetails && review.comment && (
+                                        <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
+                                      )}
+                                    </div>
+                                    {canSeeDetails && review.tags && review.tags.length > 0 && (
+                                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginLeft: '66px' }}>
+                                        {review.tags.map(tag => (
+                                          <span key={tag.id} className="tag-small">
+                                            {tag.name}
+                                          </span>
+                                        ))}
+                                      </div>
                                     )}
                                   </div>
                                 )
@@ -870,7 +1096,8 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           <InlineReviewForm
                             restaurantId={restaurant.id}
                             userId={user.id}
-                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; value_rating: number | null; taste_rating: number | null; comment: string | null } | undefined}
+                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; tags?: Tag[] } | undefined}
+                            availableTags={availableTags}
                             onSaved={fetchData}
                           />
                         )}

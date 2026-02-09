@@ -180,8 +180,6 @@ export type Database = {
           created_at: string | null
           id: string
           rating: number | null
-          value_rating: number | null
-          taste_rating: number | null
           restaurant_id: string | null
           user_id: string | null
           organisation_id: string | null
@@ -191,8 +189,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           rating?: number | null
-          value_rating?: number | null
-          taste_rating?: number | null
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null
@@ -202,8 +198,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           rating?: number | null
-          value_rating?: number
-          taste_rating?: number
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null
@@ -221,6 +215,63 @@ export type Database = {
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          id: string
+          name: string
+          icon: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          icon: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          icon?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      review_tags: {
+        Row: {
+          id: string
+          review_id: string
+          tag_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          review_id: string
+          tag_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          review_id?: string
+          tag_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_tags_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
             referencedColumns: ["id"]
           },
         ]
@@ -338,15 +389,23 @@ export type OrganisationRequest = Database['public']['Tables']['organisation_req
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserFollow = Database['public']['Tables']['user_follows']['Row']
 export type FollowRequest = Database['public']['Tables']['follow_requests']['Row']
+export type Tag = Database['public']['Tables']['tags']['Row']
+export type ReviewTag = Database['public']['Tables']['review_tags']['Row']
 
 // Category type
 export type RestaurantCategory = 'lunch' | 'dinner' | 'coffee' | 'brunch' | 'pub'
 
+// Review with tags
+export type ReviewWithTags = Review & {
+  profile?: Profile | null
+  isOrgMember?: boolean
+  tags?: Tag[]
+}
+
 export type RestaurantWithReviews = Restaurant & {
-  reviews: (Review & { profile?: Profile | null; isOrgMember?: boolean })[]
+  reviews: ReviewWithTags[]
   avgRating: number | null
-  avgValueRating: number | null
-  avgTasteRating: number | null
+  topTags?: { tag: Tag; count: number }[]
 }
 
 export type OrganisationWithMembership = Organisation & {

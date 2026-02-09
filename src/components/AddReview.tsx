@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, AttributionControl } from 'react-leaflet'
 import L from 'leaflet'
 import { supabase } from '../lib/supabase'
-import type { RestaurantCategory } from '../lib/database.types'
+import type { RestaurantCategory, Tag } from '../lib/database.types'
 
 const ALL_CATEGORIES: { value: RestaurantCategory; label: string }[] = [
   { value: 'lunch', label: 'Lunch' },
@@ -73,20 +73,52 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [overallRating, setOverallRating] = useState('')
-  const [valueRating, setValueRating] = useState('')
-  const [tasteRating, setTasteRating] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(false)
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupResults, setLookupResults] = useState<PlaceResult[]>([])
   const [showMap, setShowMap] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showTagDropdown, setShowTagDropdown] = useState(false)
+  const [tagSearchQuery, setTagSearchQuery] = useState('')
+  const tagDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Fetch available tags on mount
+  useEffect(() => {
+    async function fetchTags() {
+      const { data } = await supabase.from('tags').select('*').order('name')
+      if (data) setAvailableTags(data)
+    }
+    fetchTags()
+  }, [])
+
+  // Close tag dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setShowTagDropdown(false)
+        setTagSearchQuery('')
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const toggleCategory = (cat: RestaurantCategory) => {
     setCategories(prev =>
       prev.includes(cat)
         ? prev.filter(c => c !== cat)
         : [...prev, cat]
+    )
+  }
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
     )
   }
 
@@ -216,17 +248,25 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
 
       // Only add review if overall rating is provided (required)
       if (overallRating) {
-        const { error: reviewError } = await supabase.from('reviews').insert({
+        const { data: review, error: reviewError } = await supabase.from('reviews').insert({
           restaurant_id: restaurant.id,
           user_id: userId,
           rating: parseInt(overallRating),
-          value_rating: valueRating ? parseInt(valueRating) : undefined,
-          taste_rating: tasteRating ? parseInt(tasteRating) : undefined,
           comment: comment || null,
           organisation_id: organisationId || null,
-        })
+        }).select().single()
 
         if (reviewError) throw reviewError
+
+        // Add tags to the review
+        if (review && selectedTags.length > 0) {
+          const tagInserts = selectedTags.map(tagId => ({
+            review_id: review.id,
+            tag_id: tagId,
+          }))
+          const { error: tagError } = await supabase.from('review_tags').insert(tagInserts)
+          if (tagError) throw tagError
+        }
       }
 
       // Reset form
@@ -237,8 +277,7 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
       setLatitude(null)
       setLongitude(null)
       setOverallRating('')
-      setValueRating('')
-      setTasteRating('')
+      setSelectedTags([])
       setComment('')
       setLookupResults([])
       setShowMap(false)
@@ -426,14 +465,13 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                   <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Categories
                   </label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div className="tags-container">
                     {ALL_CATEGORIES.map((cat) => (
                       <button
                         key={cat.value}
                         type="button"
                         onClick={() => toggleCategory(cat.value)}
-                        className={`default-chip accent ${categories.includes(cat.value) ? 'active' : ''}`}
-                        style={{ fontSize: '12px', padding: '4px 12px' }}
+                        className={`tag ${categories.includes(cat.value) ? 'selected' : ''}`}
                       >
                         {cat.label}
                       </button>
@@ -447,59 +485,116 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                     Your Review (optional)
                   </p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Overall *
-                      </label>
-                      <select
-                        value={overallRating}
-                        onChange={(e) => setOverallRating(e.target.value)}
-                        style={{ width: '100%' }}
-                      >
-                        <option value="">—</option>
-                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-                          <option key={r} value={r}>
-                            {r}/10
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Value
-                      </label>
-                      <select
-                        value={valueRating}
-                        onChange={(e) => setValueRating(e.target.value)}
-                        style={{ width: '100%' }}
-                      >
-                        <option value="">—</option>
-                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-                          <option key={r} value={r}>
-                            {r}/10
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Taste
-                      </label>
-                      <select
-                        value={tasteRating}
-                        onChange={(e) => setTasteRating(e.target.value)}
-                        style={{ width: '100%' }}
-                      >
-                        <option value="">—</option>
-                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-                          <option key={r} value={r}>
-                            {r}/10
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      Rating *
+                    </label>
+                    <select
+                      value={overallRating}
+                      onChange={(e) => setOverallRating(e.target.value)}
+                      style={{ width: '120px' }}
+                    >
+                      <option value="">—</option>
+                      {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                        <option key={r} value={r}>
+                          {r}/10
+                        </option>
+                      ))}
+                    </select>
                   </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      Tags
+                    </label>
+                    {(() => {
+                      // Show first 3 tags + any selected tags not in first 3
+                      const defaultTags = availableTags.slice(0, 3)
+                      const selectedTagsNotInDefault = availableTags.filter(
+                        t => selectedTags.includes(t.id) && !defaultTags.some(dt => dt.id === t.id)
+                      )
+                      const visibleTags = [...defaultTags, ...selectedTagsNotInDefault]
+                      const filteredTags = availableTags.filter(t =>
+                        t.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+                      )
+
+                      return (
+                        <div className="social-tabs">
+                          {visibleTags.map((tag) => (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              onClick={() => toggleTag(tag.id)}
+                              className={`social-tab ${selectedTags.includes(tag.id) ? 'active' : ''}`}
+                            >
+                              {tag.name}
+                            </button>
+                          ))}
+                          {/* Search dropdown for more tags */}
+                          {availableTags.length > 3 && (
+                            <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
+                              <button
+                                type="button"
+                                className={`add-chip ${showTagDropdown ? 'has-selection' : ''}`}
+                                onClick={() => setShowTagDropdown(!showTagDropdown)}
+                                onMouseEnter={() => setShowTagDropdown(true)}
+                              >
+                                +
+                              </button>
+                              {showTagDropdown && (
+                                <div className="category-dropdown wide">
+                                  <div className="dropdown-header">
+                                    <span className="dropdown-title">Search tags</span>
+                                  </div>
+                                  <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                                    <input
+                                      type="text"
+                                      placeholder="Type to search..."
+                                      value={tagSearchQuery}
+                                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                                      style={{
+                                        width: '100%',
+                                        border: 'none',
+                                        borderBottom: 'none',
+                                        padding: '4px 0',
+                                        fontSize: '13px',
+                                        background: 'transparent',
+                                        outline: 'none'
+                                      }}
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div className="dropdown-list">
+                                    {filteredTags.length === 0 ? (
+                                      <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                                        No results
+                                      </div>
+                                    ) : (
+                                      filteredTags.map((tag) => {
+                                        const isSelected = selectedTags.includes(tag.id)
+                                        return (
+                                          <button
+                                            key={tag.id}
+                                            type="button"
+                                            className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                                            onClick={() => toggleTag(tag.id)}
+                                          >
+                                            <span className="item-check">{isSelected ? '✓' : ''}</span>
+                                            <span className="item-label">{tag.name}</span>
+                                          </button>
+                                        )
+                                      })
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                       Comment

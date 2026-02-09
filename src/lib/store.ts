@@ -11,9 +11,8 @@ export interface FilterState {
   // New filters
   selectedCategories: RestaurantCategory[]
   minOverallRating: number | null
-  minValueRating: number | null
-  minTasteRating: number | null
   socialFilter: SocialFilter
+  selectedTagIds: string[]
 
   // Existing actions
   setSelectedUserIds: (userIds: string[]) => void
@@ -26,9 +25,9 @@ export interface FilterState {
   setSelectedCategories: (categories: RestaurantCategory[]) => void
   toggleCategory: (category: RestaurantCategory) => void
   setMinOverallRating: (rating: number | null) => void
-  setMinValueRating: (rating: number | null) => void
-  setMinTasteRating: (rating: number | null) => void
   setSocialFilter: (filter: SocialFilter) => void
+  setSelectedTagIds: (tagIds: string[]) => void
+  toggleTagId: (tagId: string) => void
 
   clearFilters: () => void
   hasActiveFilters: () => boolean
@@ -42,9 +41,8 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   highlightedRestaurantId: null,
   selectedCategories: [],
   minOverallRating: null,
-  minValueRating: null,
-  minTasteRating: null,
   socialFilter: 'everyone',
+  selectedTagIds: [],
 
   // Existing actions
   setSelectedUserIds: (userIds) => set({ selectedUserIds: userIds }),
@@ -65,9 +63,13 @@ export const useFilterStore = create<FilterState>((set, get) => ({
       : [...state.selectedCategories, category]
   })),
   setMinOverallRating: (rating) => set({ minOverallRating: rating }),
-  setMinValueRating: (rating) => set({ minValueRating: rating }),
-  setMinTasteRating: (rating) => set({ minTasteRating: rating }),
   setSocialFilter: (filter) => set({ socialFilter: filter }),
+  setSelectedTagIds: (tagIds) => set({ selectedTagIds: tagIds }),
+  toggleTagId: (tagId) => set((state) => ({
+    selectedTagIds: state.selectedTagIds.includes(tagId)
+      ? state.selectedTagIds.filter(id => id !== tagId)
+      : [...state.selectedTagIds, tagId]
+  })),
 
   clearFilters: () => set({
     selectedUserIds: [],
@@ -76,9 +78,8 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     highlightedRestaurantId: null,
     selectedCategories: [],
     minOverallRating: null,
-    minValueRating: null,
-    minTasteRating: null,
     socialFilter: 'everyone',
+    selectedTagIds: [],
   }),
 
   hasActiveFilters: () => {
@@ -86,10 +87,9 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     return (
       state.selectedCategories.length > 0 ||
       state.minOverallRating !== null ||
-      state.minValueRating !== null ||
-      state.minTasteRating !== null ||
       state.socialFilter !== 'everyone' ||
-      state.selectedUserIds.length > 0
+      state.selectedUserIds.length > 0 ||
+      state.selectedTagIds.length > 0
     )
   },
 }))
