@@ -127,6 +127,7 @@ function InlineReviewForm({
       setSelectedTags(prev => [...prev, newTag.id])
       onTagCreated?.(newTag)
       setTagSearchQuery('')
+      setShowTagDropdown(false)
     } catch (err) {
       console.error('Failed to create tag:', err)
     } finally {
