@@ -83,6 +83,7 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
   const [error, setError] = useState<string | null>(null)
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [tagSearchQuery, setTagSearchQuery] = useState('')
+  const [creatingTag, setCreatingTag] = useState(false)
   const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   // Fetch available tags on mount
@@ -120,6 +121,29 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     )
+  }
+
+  const createTag = async (name: string) => {
+    if (!name.trim()) return
+    setCreatingTag(true)
+    try {
+      const { data: newTag, error: createError } = await supabase
+        .from('tags')
+        .insert({ name: name.trim() })
+        .select()
+        .single()
+
+      if (createError) throw createError
+
+      setAvailableTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedTags(prev => [...prev, newTag.id])
+      setTagSearchQuery('')
+      setShowTagDropdown(false)
+    } catch (err) {
+      console.error('Failed to create tag:', err)
+    } finally {
+      setCreatingTag(false)
+    }
   }
 
   // Debounced search as user types
@@ -530,66 +554,83 @@ export function AddReview({ userId, organisationId, onAdded }: AddReviewProps): 
                               {tag.name}
                             </button>
                           ))}
-                          {/* Search dropdown for more tags */}
-                          {availableTags.length > 3 && (
-                            <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
-                              <button
-                                type="button"
-                                className={`add-chip ${showTagDropdown ? 'has-selection' : ''}`}
-                                onClick={() => setShowTagDropdown(!showTagDropdown)}
-                                onMouseEnter={() => setShowTagDropdown(true)}
-                              >
-                                +
-                              </button>
-                              {showTagDropdown && (
-                                <div className="category-dropdown wide">
-                                  <div className="dropdown-header">
-                                    <span className="dropdown-title">Search tags</span>
-                                  </div>
-                                  <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-                                    <input
-                                      type="text"
-                                      placeholder="Type to search..."
-                                      value={tagSearchQuery}
-                                      onChange={(e) => setTagSearchQuery(e.target.value)}
-                                      style={{
-                                        width: '100%',
-                                        border: 'none',
-                                        borderBottom: 'none',
-                                        padding: '4px 0',
-                                        fontSize: '13px',
-                                        background: 'transparent',
-                                        outline: 'none'
-                                      }}
-                                      autoFocus
-                                    />
-                                  </div>
-                                  <div className="dropdown-list">
-                                    {filteredTags.length === 0 ? (
-                                      <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                                        No results
-                                      </div>
-                                    ) : (
-                                      filteredTags.map((tag) => {
-                                        const isSelected = selectedTags.includes(tag.id)
-                                        return (
-                                          <button
-                                            key={tag.id}
-                                            type="button"
-                                            className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                                            onClick={() => toggleTag(tag.id)}
-                                          >
-                                            <span className="item-check">{isSelected ? '✓' : ''}</span>
-                                            <span className="item-label">{tag.name}</span>
-                                          </button>
-                                        )
-                                      })
-                                    )}
-                                  </div>
+                          {/* Search dropdown for more tags or create new */}
+                          <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
+                            <button
+                              type="button"
+                              className={`add-chip ${showTagDropdown ? 'has-selection' : ''}`}
+                              onClick={() => setShowTagDropdown(!showTagDropdown)}
+                              onMouseEnter={() => setShowTagDropdown(true)}
+                            >
+                              +
+                            </button>
+                            {showTagDropdown && (
+                              <div className="category-dropdown wide">
+                                <div className="dropdown-header">
+                                  <span className="dropdown-title">Search tags</span>
                                 </div>
-                              )}
-                            </div>
-                          )}
+                                <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Type to search..."
+                                    value={tagSearchQuery}
+                                    onChange={(e) => setTagSearchQuery(e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      border: 'none',
+                                      borderBottom: 'none',
+                                      padding: '4px 0',
+                                      fontSize: '13px',
+                                      background: 'transparent',
+                                      outline: 'none'
+                                    }}
+                                    autoFocus
+                                  />
+                                </div>
+                                <div className="dropdown-list">
+                                  {filteredTags.map((tag) => {
+                                    const isSelected = selectedTags.includes(tag.id)
+                                    return (
+                                      <button
+                                        key={tag.id}
+                                        type="button"
+                                        className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                                        onClick={() => toggleTag(tag.id)}
+                                      >
+                                        <span className="item-check">{isSelected ? '✓' : ''}</span>
+                                        <span className="item-label">{tag.name}</span>
+                                      </button>
+                                    )
+                                  })}
+                                  {tagSearchQuery.trim() && !availableTags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
+                                    <button
+                                      type="button"
+                                      className="dropdown-item"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                      }}
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        createTag(tagSearchQuery)
+                                      }}
+                                      disabled={creatingTag}
+                                      style={{ borderTop: filteredTags.length > 0 ? '1px solid var(--border)' : undefined }}
+                                    >
+                                      <span className="item-check">+</span>
+                                      <span className="item-label">{creatingTag ? 'Creating...' : `Create "${tagSearchQuery.trim()}"`}</span>
+                                    </button>
+                                  )}
+                                  {filteredTags.length === 0 && !tagSearchQuery.trim() && (
+                                    <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                                      No tags yet
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )
                     })()}
