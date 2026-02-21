@@ -122,7 +122,7 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 - Section spacing: 80px vertical padding
 - Fixed nav with transparent background
 
-### Page Structure
+### Page Structure (Authenticated — Dashboard)
 1. Fixed nav (sign in/out)
 2. Hero section (headline + tagline)
 3. Inline stats row
@@ -131,6 +131,22 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 6. Filter bar
 7. Restaurant table
 8. Footer
+
+### Page Structure (Unauthenticated — Landing Page)
+1. Fixed nav (sign in link only)
+2. Split hero: headline + social proof + sign-up CTA | top 3 rated restaurant cards
+3. Map section (same container/styling as Dashboard, popups show name + rating with blurred details + sign-up button)
+4. Bento stats grid: 4 stat cards + rating histogram + popular tags
+5. 2 visible latest review groups
+6. 3 blurred review groups behind gradient blur gate with sign-up CTA
+7. Footer
+
+### Auth Gate (`HomePage.tsx`)
+- `src/pages/index.astro` renders `<HomePage>` (not Dashboard directly)
+- HomePage checks Supabase session client-side
+- Authenticated → `<Dashboard />`
+- Unauthenticated → `<LandingPage />`
+- No guest browsing — auth is required for the full dashboard
 
 ## Data Conventions
 

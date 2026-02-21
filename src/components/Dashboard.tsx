@@ -7,6 +7,7 @@ import { AddReview } from './AddReview'
 import { TopNav } from './TopNav'
 import { FilterBar } from './FilterBar'
 import { useFilterStore } from '../lib/store'
+import { getRatingClass, getRatingLabel } from '../lib/ratings'
 import type { User } from '@supabase/supabase-js'
 
 interface DashboardProps {
@@ -17,20 +18,6 @@ interface ReviewUser {
   id: string
   email: string
   isPrivate: boolean
-}
-
-function getRatingClass(rating: number): string {
-  if (rating >= 8) return 'rating-great'
-  if (rating >= 6) return 'rating-good'
-  return 'rating-poor'
-}
-
-function getRatingLabel(rating: number): string {
-  const labels: Record<number, string> = {
-    1: 'Avoid', 2: 'Poor', 3: 'Bad', 4: 'Meh', 5: 'Ok',
-    6: 'Decent', 7: 'Good', 8: 'Great', 9: 'Excellent', 10: 'Perfect'
-  }
-  return labels[Math.round(rating)] || ''
 }
 
 // Inline review form component - simplified, visibility is derived from org membership

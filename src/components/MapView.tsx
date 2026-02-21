@@ -4,6 +4,7 @@ import L from 'leaflet'
 import type { RestaurantWithReviews } from '../lib/database.types'
 import { useFilterStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import { getRatingLabel } from '../lib/ratings'
 
 interface MapViewProps {
   restaurants: RestaurantWithReviews[]
@@ -65,14 +66,6 @@ function getRatingColor(rating: number | null): string {
   return '#a64d4d'
 }
 
-function getRatingLabel(rating: number): string {
-  const labels: Record<number, string> = {
-    1: 'Avoid', 2: 'Poor', 3: 'Bad', 4: 'Meh', 5: 'Ok',
-    6: 'Decent', 7: 'Good', 8: 'Great', 9: 'Excellent', 10: 'Perfect'
-  }
-  return labels[Math.round(rating)] || ''
-}
-
 function MapController({ highlightedId, restaurants }: { highlightedId: string | null, restaurants: RestaurantWithReviews[] }) {
   const map = useMap()
   const markersRef = useRef<Map<string, L.Marker>>(new Map())
@@ -95,16 +88,32 @@ function MapController({ highlightedId, restaurants }: { highlightedId: string |
     if (highlightedId) {
       const restaurant = restaurants.find(r => r.id === highlightedId)
       if (restaurant?.latitude && restaurant?.longitude) {
+        // Re-scan markers to get fresh references
+        map.eachLayer((layer) => {
+          if (layer instanceof L.Marker) {
+            const latLng = layer.getLatLng()
+            const r = restaurants.find(r =>
+              r.latitude === latLng.lat && r.longitude === latLng.lng
+            )
+            if (r) {
+              markersRef.current.set(r.id, layer)
+            }
+          }
+        })
+
         map.panTo([restaurant.latitude, restaurant.longitude], {
           animate: true,
           duration: 0.3,
           easeLinearity: 0.5
         })
 
-        const marker = markersRef.current.get(highlightedId)
-        if (marker) {
-          marker.openPopup()
-        }
+        // Small delay to let pan complete before opening popup
+        setTimeout(() => {
+          const marker = markersRef.current.get(highlightedId)
+          if (marker) {
+            marker.openPopup()
+          }
+        }, 350)
       }
     }
   }, [highlightedId, restaurants, map])
@@ -259,7 +268,7 @@ function RestaurantMarker({
   onStartEdit: (id: string) => void
   onCancelEdit: () => void
   onSaveLocation: (id: string, lat: number, lng: number) => void
-  onClick: (id: string) => void
+  onClick: (id: string | null) => void
   saveError: string | null
   saving: boolean
   isSignedIn: boolean
@@ -302,6 +311,7 @@ function RestaurantMarker({
       draggable={isEditing}
       eventHandlers={{
         click: () => !isEditing && onClick(restaurant.id),
+        popupclose: () => onClick(null),
         dragend: handleDragEnd,
       }}
     >
@@ -360,7 +370,7 @@ function RestaurantMarker({
                 </button>
               </div>
             </div>
-          ) : (
+          ) : isSignedIn ? (
             <>
               {restaurant.avgRating !== null && (
                 <div style={{
@@ -384,7 +394,7 @@ function RestaurantMarker({
                     Reviews ({restaurant.reviews.length})
                   </p>
                   {restaurant.reviews.slice(0, 3).map(review => {
-                    const canSeeComment = isSignedIn && (review as { isOrgMember?: boolean }).isOrgMember
+                    const canSeeComment = (review as { isOrgMember?: boolean }).isOrgMember
                     return (
                       <div key={review.id} style={{ fontSize: '12px', marginBottom: '4px' }}>
                         <span style={{
@@ -418,6 +428,71 @@ function RestaurantMarker({
               >
                 Edit location
               </button>
+            </>
+          ) : (
+            <>
+              {restaurant.avgRating !== null && (
+                <div style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: getRatingColor(restaurant.avgRating),
+                  marginBottom: '8px'
+                }}>
+                  {restaurant.avgRating.toFixed(1)}/10 — {getRatingLabel(restaurant.avgRating)}
+                </div>
+              )}
+              {/* Blurred teaser content */}
+              <div style={{ position: 'relative' }}>
+                <div style={{
+                  filter: 'blur(4px)',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}>
+                  {restaurant.notes && (
+                    <p style={{ margin: '0', color: '#666', fontSize: '12px', fontStyle: 'italic', borderTop: '1px solid #eee', paddingTop: '8px' }}>
+                      "{restaurant.notes}"
+                    </p>
+                  )}
+                  {restaurant.reviews.length > 0 && (
+                    <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '8px' }}>
+                      <p style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                        Reviews ({restaurant.reviews.length})
+                      </p>
+                      {restaurant.reviews.slice(0, 3).map(review => (
+                        <div key={review.id} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                          <span style={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            color: review.rating && review.rating >= 8 ? '#2d7a4f' : review.rating && review.rating >= 6 ? '#b8860b' : '#a64d4d'
+                          }}>
+                            {review.rating}/10
+                          </span>
+                          <span style={{ color: '#666', marginLeft: '8px' }}>Lorem ipsum review text...</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <a
+                href="/login"
+                style={{
+                  display: 'block',
+                  marginTop: '10px',
+                  padding: '8px 16px',
+                  fontSize: '11px',
+                  background: '#c45d3e',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                }}
+              >
+                Sign up to see reviews
+              </a>
             </>
           )}
         </div>
