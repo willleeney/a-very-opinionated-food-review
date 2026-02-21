@@ -244,9 +244,9 @@ export function LandingPage(): JSX.Element {
       {/* 1. Split Hero */}
       <section className="landing-hero">
         <div>
-          <h1>Your team's lunch guide to London Bridge</h1>
+          <h1>The Guide to Recommend</h1>
           <p className="landing-tagline">
-            Honest, opinionated reviews from the people you eat with. No ads, no algorithms &mdash; just real takes on the neighbourhood.
+            Honest, opinionated and questionable takes from human people. Find recommendations by people with the same taste as you.
           </p>
           <div className="landing-social-proof">
             <div className="avatar-stack">
