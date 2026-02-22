@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thermal Receipt — Apricot</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --accent: #c45d3e;
+    --great: #2d7a4f;
+    --good: #b8860b;
+    --poor: #a64d4d;
+    --paper: #f8e0c8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  h1, h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+
+  .page > h1 {
+    font-size: 48px;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 60px;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  .mockup-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 60px;
+  }
+
+  @media (max-width: 900px) {
+    .mockup-row { grid-template-columns: 1fr; }
+  }
+
+  .version-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  /* ═══════════════════════════════════════
+     THERMAL RECEIPT
+     ═══════════════════════════════════════ */
+
+  .receipt-wrap {
+    max-width: 400px;
+    margin: 0 auto;
+    filter: drop-shadow(0 4px 24px rgba(0,0,0,0.15));
+  }
+
+  /* Torn top edge — transparent triangle cutouts */
+  .torn-top {
+    display: block;
+    width: 100%;
+    height: 16px;
+    background: var(--paper);
+    -webkit-mask-image:
+      linear-gradient(135deg, transparent 6px, black 6px),
+      linear-gradient(225deg, transparent 6px, black 6px);
+    -webkit-mask-size: 12px 16px;
+    -webkit-mask-repeat: repeat-x;
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(135deg, transparent 6px, black 6px),
+      linear-gradient(225deg, transparent 6px, black 6px);
+    mask-size: 12px 16px;
+    mask-repeat: repeat-x;
+    mask-composite: intersect;
+  }
+
+  /* Torn bottom edge — transparent triangle cutouts */
+  .torn-bottom {
+    display: block;
+    width: 100%;
+    height: 16px;
+    background: var(--paper);
+    -webkit-mask-image:
+      linear-gradient(315deg, transparent 6px, black 6px),
+      linear-gradient(45deg, transparent 6px, black 6px);
+    -webkit-mask-size: 12px 16px;
+    -webkit-mask-repeat: repeat-x;
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(315deg, transparent 6px, black 6px),
+      linear-gradient(45deg, transparent 6px, black 6px);
+    mask-size: 12px 16px;
+    mask-repeat: repeat-x;
+    mask-composite: intersect;
+  }
+
+  .receipt {
+    background: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #2a2a2a;
+  }
+
+  .receipt-body {
+    padding: 20px 28px 24px;
+  }
+
+  /* Place name hero */
+  .receipt-place {
+    text-align: center;
+    padding-bottom: 14px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #ccc;
+  }
+
+  .receipt-place h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0;
+    color: #2a2a2a;
+  }
+
+  .receipt-place .search-state {
+    font-size: 13px;
+    color: #bbb;
+    font-style: italic;
+    padding: 8px 0;
+  }
+
+  /* Field rows */
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+  }
+
+  .receipt-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #999;
+  }
+
+  .receipt-value {
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .receipt-dashes {
+    border-bottom: 1px dashed #ccc;
+    margin: 14px 0;
+  }
+
+  .receipt-dots {
+    border-bottom: 1px dotted #ccc;
+    margin: 14px 0;
+  }
+
+  /* Inputs */
+  .receipt-input {
+    width: 75%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dotted #bbb;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 6px 0;
+    color: #2a2a2a;
+    outline: none;
+  }
+
+  .receipt-input::placeholder {
+    color: #ccc;
+    font-style: italic;
+  }
+
+  .receipt-input:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .receipt-input.centered {
+    text-align: center;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* Tags — active state is terracotta orange */
+  .receipt-tags {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+  }
+
+  .receipt-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid #ccc;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .receipt-tag:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .receipt-tag.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper);
+  }
+
+  .receipt-tag.add {
+    border-style: dashed;
+    color: #ccc;
+  }
+
+  /* Rating */
+  .receipt-rating {
+    text-align: center;
+    padding: 6px 0;
+  }
+
+  .receipt-rating .number {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .receipt-rating .out-of {
+    font-size: 14px;
+    font-weight: 400;
+    color: #bbb;
+  }
+
+  .receipt-rating .word {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 2px;
+  }
+
+  .receipt-rating-empty .number {
+    color: #ccc;
+  }
+
+  .receipt-rating-empty .word {
+    color: #ccc;
+  }
+
+  /* Photo zone */
+  .receipt-photo-zone {
+    border: 1px dashed #ccc;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin: 6px 0;
+  }
+
+  .receipt-photo-zone:hover {
+    border-color: var(--accent);
+    background: rgba(196, 93, 62, 0.03);
+  }
+
+  .receipt-photo-zone .hint {
+    font-size: 10px;
+    color: #ccc;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .receipt-photo-zone.has-photo {
+    border-style: solid;
+    border-color: var(--accent);
+    padding: 4px;
+  }
+
+  .receipt-photo-zone.has-photo img {
+    width: 100%;
+    max-height: 120px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Buttons */
+  .receipt-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+
+  .receipt-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 8px 20px;
+    border: 1px solid #ccc;
+    background: transparent;
+    cursor: pointer;
+    color: #888;
+    transition: all 0.15s;
+  }
+
+  .receipt-btn:hover {
+    border-color: #2a2a2a;
+    color: #2a2a2a;
+  }
+
+  .receipt-btn.primary {
+    background: #2a2a2a;
+    border-color: #2a2a2a;
+    color: var(--paper);
+  }
+
+  .receipt-btn.primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Footer */
+  .receipt-footer {
+    text-align: center;
+    padding-top: 14px;
+    margin-top: 14px;
+    border-top: 1px dashed #ccc;
+  }
+
+  /* Dark overlay demo */
+  .overlay-demo {
+    background: rgba(0,0,0,0.3);
+    padding: 48px 24px;
+    margin: 0 -24px 60px;
+  }
+
+  .overlay-demo .version-label {
+    color: rgba(255,255,255,0.6);
+  }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Thermal Receipt</h1>
+  <p class="subtitle">
+    Receipt-style Add Place form. Apricot (#f8e0c8) paper, terracotta orange active tags, transparent torn edges so the dark overlay shows through the zigzag cutouts.
+  </p>
+
+
+  <!-- ═══════════════════════════════════
+       ROW 1: Filled receipt + Empty state
+       ═══════════════════════════════════ -->
+
+  <div class="mockup-row">
+
+    <!-- PADELLA — Filled state -->
+    <div>
+      <p class="version-label">Filled — with photo</p>
+
+      <div class="receipt-wrap">
+        <div class="torn-top"></div>
+        <div class="receipt">
+          <div class="receipt-body">
+
+            <!-- Place name -->
+            <div class="receipt-place">
+              <h3>Padella</h3>
+            </div>
+
+            <!-- Address -->
+            <div class="receipt-row">
+              <span class="receipt-label">Address</span>
+              <span class="receipt-value" style="color: #999; font-weight: 400; font-size: 11px;">1 Phipp St, London SE1 8NY</span>
+            </div>
+
+            <!-- Date -->
+            <div class="receipt-row">
+              <span class="receipt-label">Date</span>
+              <span class="receipt-value" style="color: #999; font-weight: 400;">21/02/2026</span>
+            </div>
+
+            <!-- Rating -->
+            <div class="receipt-rating" style="padding-top: 10px;">
+              <div><span class="number" style="color: var(--great);">9</span><span class="out-of">/10</span></div>
+              <div class="word" style="color: var(--great);">Excellent</div>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Comment -->
+            <div style="margin-bottom: 10px;">
+              <input class="receipt-input" placeholder="comment..." value="Best fresh pasta near the office">
+            </div>
+
+            <!-- Dish -->
+            <div style="margin-bottom: 10px;">
+              <div class="receipt-row" style="margin-bottom: 2px;">
+                <span class="receipt-label">Dish</span>
+              </div>
+              <input class="receipt-input" placeholder="e.g. Pici Cacio e Pepe" value="Pici Cacio e Pepe">
+            </div>
+
+            <!-- Photo — with thumbnail -->
+            <div class="receipt-photo-zone has-photo">
+              <img src="https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=400&h=200&fit=crop" alt="Food photo">
+            </div>
+
+            <div class="receipt-dots"></div>
+
+            <!-- Cuisine -->
+            <div style="margin-bottom: 8px;">
+              <div class="receipt-row" style="margin-bottom: 4px;">
+                <span class="receipt-label">Cuisine</span>
+              </div>
+              <div class="receipt-tags">
+                <span class="receipt-tag active">Italian</span>
+                <span class="receipt-tag">Thai</span>
+                <span class="receipt-tag">Japanese</span>
+                <span class="receipt-tag add">+</span>
+              </div>
+            </div>
+
+            <!-- Categories -->
+            <div style="margin-bottom: 8px;">
+              <div class="receipt-row" style="margin-bottom: 4px;">
+                <span class="receipt-label">Type</span>
+              </div>
+              <div class="receipt-tags">
+                <span class="receipt-tag active">Lunch</span>
+                <span class="receipt-tag active">Dinner</span>
+                <span class="receipt-tag">Coffee</span>
+                <span class="receipt-tag">Brunch</span>
+                <span class="receipt-tag">Pub</span>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div style="margin-bottom: 8px;">
+              <div class="receipt-row" style="margin-bottom: 4px;">
+                <span class="receipt-label">Tags</span>
+              </div>
+              <div class="receipt-tags">
+                <span class="receipt-tag active">High Protein</span>
+                <span class="receipt-tag active">Large Portion</span>
+                <span class="receipt-tag">Quick</span>
+                <span class="receipt-tag add">+</span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="receipt-footer">
+              <div class="receipt-btns">
+                <button class="receipt-btn">Cancel</button>
+                <button class="receipt-btn primary">Submit</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="torn-bottom"></div>
+      </div>
+    </div>
+
+
+    <!-- EMPTY STATE -->
+    <div>
+      <p class="version-label">Empty state</p>
+
+      <div class="receipt-wrap">
+        <div class="torn-top"></div>
+        <div class="receipt">
+          <div class="receipt-body">
+
+            <div class="receipt-place">
+              <div class="search-state">Search for a restaurant...</div>
+            </div>
+
+            <div class="receipt-row">
+              <span class="receipt-label">Address</span>
+              <span class="receipt-value" style="color: #ccc; font-weight: 400; font-size: 11px;">&mdash;</span>
+            </div>
+
+            <div class="receipt-row">
+              <span class="receipt-label">Date</span>
+              <span class="receipt-value" style="color: #999; font-weight: 400;">21/02/2026</span>
+            </div>
+
+            <div class="receipt-rating receipt-rating-empty" style="padding-top: 10px;">
+              <div><span class="number">--</span><span class="out-of">/10</span></div>
+              <div class="word">tap to rate</div>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <div style="margin-bottom: 10px;">
+              <input class="receipt-input" placeholder="comment..." value="">
+            </div>
+
+            <div style="margin-bottom: 10px;">
+              <div class="receipt-row" style="margin-bottom: 2px;">
+                <span class="receipt-label">Dish</span>
+              </div>
+              <input class="receipt-input" placeholder="e.g. Pad Thai" value="">
+            </div>
+
+            <div class="receipt-photo-zone">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" style="margin-bottom: 2px;"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div class="hint">Drop photo or click</div>
+            </div>
+
+            <div class="receipt-dots"></div>
+
+            <div style="margin-bottom: 8px;">
+              <div class="receipt-row" style="margin-bottom: 4px;">
+                <span class="receipt-label">Cuisine</span>
+              </div>
+              <div class="receipt-tags">
+                <span class="receipt-tag">Italian</span>
+                <span class="receipt-tag">Thai</span>
+                <span class="receipt-tag">Japanese</span>
+                <span class="receipt-tag add">+</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <div class="receipt-row" style="margin-bottom: 4px;">
+                <span class="receipt-label">Type</span>
+              </div>
+              <div class="receipt-tags">
+                <span class="receipt-tag">Lunch</span>
+                <span class="receipt-tag">Dinner</span>
+                <span class="receipt-tag">Coffee</span>
+                <span class="receipt-tag">Brunch</span>
+                <span class="receipt-tag">Pub</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <div class="receipt-row" style="margin-bottom: 4px;">
+                <span class="receipt-label">Tags</span>
+              </div>
+              <div class="receipt-tags">
+                <span class="receipt-tag">High Protein</span>
+                <span class="receipt-tag">Quick</span>
+                <span class="receipt-tag">Good Value</span>
+                <span class="receipt-tag add">+</span>
+              </div>
+            </div>
+
+            <div class="receipt-footer">
+              <div class="receipt-btns">
+                <button class="receipt-btn">Cancel</button>
+                <button class="receipt-btn primary">Submit</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="torn-bottom"></div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════
+       On dark overlay — shows transparent torn edges
+       ═══════════════════════════════════ -->
+
+  <div class="overlay-demo">
+    <p class="version-label">On dark overlay — transparent zigzag edges</p>
+
+    <div class="receipt-wrap" style="max-width: 400px; margin: 24px auto 0;">
+      <div class="torn-top"></div>
+      <div class="receipt">
+        <div class="receipt-body">
+
+          <div class="receipt-place">
+            <h3>El Pastor</h3>
+          </div>
+
+          <div class="receipt-row">
+            <span class="receipt-label">Address</span>
+            <span class="receipt-value" style="color: #999; font-weight: 400; font-size: 11px;">7A Stoney St, London SE1 9AA</span>
+          </div>
+
+          <div class="receipt-row">
+            <span class="receipt-label">Date</span>
+            <span class="receipt-value" style="color: #999; font-weight: 400;">21/02/2026</span>
+          </div>
+
+          <div class="receipt-rating" style="padding-top: 10px;">
+            <div><span class="number" style="color: var(--great);">8</span><span class="out-of">/10</span></div>
+            <div class="word" style="color: var(--great);">Great</div>
+          </div>
+
+          <div class="receipt-dashes"></div>
+
+          <div style="margin-bottom: 10px;">
+            <input class="receipt-input" placeholder="comment..." value="Incredible spit-roasted pork">
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <div class="receipt-row" style="margin-bottom: 2px;">
+              <span class="receipt-label">Dish</span>
+            </div>
+            <input class="receipt-input" placeholder="e.g. Al Pastor Taco" value="Al Pastor Taco">
+          </div>
+
+          <div class="receipt-photo-zone has-photo">
+            <img src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=200&fit=crop" alt="Tacos">
+          </div>
+
+          <div class="receipt-dots"></div>
+
+          <div style="margin-bottom: 8px;">
+            <div class="receipt-row" style="margin-bottom: 4px;">
+              <span class="receipt-label">Cuisine</span>
+            </div>
+            <div class="receipt-tags">
+              <span class="receipt-tag active">Mexican</span>
+              <span class="receipt-tag">Italian</span>
+              <span class="receipt-tag">Thai</span>
+              <span class="receipt-tag add">+</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 8px;">
+            <div class="receipt-row" style="margin-bottom: 4px;">
+              <span class="receipt-label">Type</span>
+            </div>
+            <div class="receipt-tags">
+              <span class="receipt-tag active">Lunch</span>
+              <span class="receipt-tag active">Dinner</span>
+              <span class="receipt-tag">Coffee</span>
+              <span class="receipt-tag">Brunch</span>
+              <span class="receipt-tag">Pub</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 8px;">
+            <div class="receipt-row" style="margin-bottom: 4px;">
+              <span class="receipt-label">Tags</span>
+            </div>
+            <div class="receipt-tags">
+              <span class="receipt-tag active">Good Value</span>
+              <span class="receipt-tag active">High Protein</span>
+              <span class="receipt-tag">Quick</span>
+              <span class="receipt-tag add">+</span>
+            </div>
+          </div>
+
+          <div class="receipt-footer">
+            <div class="receipt-btns">
+              <button class="receipt-btn">Cancel</button>
+              <button class="receipt-btn primary">Submit</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="torn-bottom"></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -13,6 +13,7 @@ export interface FilterState {
   minOverallRating: number | null
   socialFilter: SocialFilter
   selectedTagIds: string[]
+  selectedCuisines: string[]
 
   // Existing actions
   setSelectedUserIds: (userIds: string[]) => void
@@ -28,6 +29,8 @@ export interface FilterState {
   setSocialFilter: (filter: SocialFilter) => void
   setSelectedTagIds: (tagIds: string[]) => void
   toggleTagId: (tagId: string) => void
+  setSelectedCuisines: (cuisines: string[]) => void
+  toggleCuisine: (cuisine: string) => void
 
   clearFilters: () => void
   hasActiveFilters: () => boolean
@@ -43,6 +46,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   minOverallRating: null,
   socialFilter: 'everyone',
   selectedTagIds: [],
+  selectedCuisines: [],
 
   // Existing actions
   setSelectedUserIds: (userIds) => set({ selectedUserIds: userIds }),
@@ -70,6 +74,12 @@ export const useFilterStore = create<FilterState>((set, get) => ({
       ? state.selectedTagIds.filter(id => id !== tagId)
       : [...state.selectedTagIds, tagId]
   })),
+  setSelectedCuisines: (cuisines) => set({ selectedCuisines: cuisines }),
+  toggleCuisine: (cuisine) => set((state) => ({
+    selectedCuisines: state.selectedCuisines.includes(cuisine)
+      ? state.selectedCuisines.filter(c => c !== cuisine)
+      : [...state.selectedCuisines, cuisine]
+  })),
 
   clearFilters: () => set({
     selectedUserIds: [],
@@ -80,6 +90,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     minOverallRating: null,
     socialFilter: 'everyone',
     selectedTagIds: [],
+    selectedCuisines: [],
   }),
 
   hasActiveFilters: () => {
@@ -89,7 +100,8 @@ export const useFilterStore = create<FilterState>((set, get) => ({
       state.minOverallRating !== null ||
       state.socialFilter !== 'everyone' ||
       state.selectedUserIds.length > 0 ||
-      state.selectedTagIds.length > 0
+      state.selectedTagIds.length > 0 ||
+      state.selectedCuisines.length > 0
     )
   },
 }))

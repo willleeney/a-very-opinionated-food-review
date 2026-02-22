@@ -183,6 +183,8 @@ export type Database = {
           restaurant_id: string | null
           user_id: string | null
           organisation_id: string | null
+          dish: string | null
+          photo_url: string | null
         }
         Insert: {
           comment?: string | null
@@ -192,6 +194,8 @@ export type Database = {
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null
+          dish?: string | null
+          photo_url?: string | null
         }
         Update: {
           comment?: string | null
@@ -201,6 +205,8 @@ export type Database = {
           restaurant_id?: string | null
           user_id?: string | null
           organisation_id?: string | null
+          dish?: string | null
+          photo_url?: string | null
         }
         Relationships: [
           {

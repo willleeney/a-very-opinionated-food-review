@@ -12,6 +12,7 @@
   --great: #2d7a4f;
   --good: #b8860b;
   --poor: #a64d4d;
+  --paper: #f8e0c8;
 }
 
 * {
@@ -415,6 +416,8 @@ nav.scrolled {
   justify-content: center;
   z-index: 10000;
   padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal {
@@ -2082,5 +2085,599 @@ nav.scrolled {
     padding: 24px 20px;
     flex-direction: column;
     gap: 8px;
+  }
+}
+
+/* ===========================================
+   Photo Strip & Dish Reviews
+   =========================================== */
+
+/* Photo strip - horizontal scroll container */
+.photo-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.photo-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.photo-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.photo-strip::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Photo strip item - 64px square thumbnail */
+.photo-strip-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.photo-strip-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+.photo-strip-item:hover img {
+  opacity: 0.7;
+}
+
+/* Caption overlay on thumbnail */
+.photo-strip-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2px 4px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  font-size: 9px;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Photo drop zone */
+.photo-dropzone {
+  border: 1.5px dashed var(--border);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.photo-dropzone:hover,
+.photo-dropzone.drag-over {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(196, 93, 62, 0.04);
+}
+
+.photo-dropzone.has-photo {
+  border-style: solid;
+  border-color: var(--border);
+  padding: 8px;
+}
+
+.photo-dropzone.has-photo img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Dish badge - italic label next to reviewer name */
+.dish-badge {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Review photo inline thumbnail */
+.review-photo-inline {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ===========================================
+   Receipt-style Add Place Form
+   =========================================== */
+
+.receipt-wrap {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,0.15));
+}
+
+.torn-top {
+  display: block;
+  width: 100%;
+  height: 16px;
+  background: var(--paper);
+  -webkit-mask-image:
+    linear-gradient(135deg, transparent 6px, black 6px),
+    linear-gradient(225deg, transparent 6px, black 6px);
+  -webkit-mask-size: 12px 16px;
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(135deg, transparent 6px, black 6px),
+    linear-gradient(225deg, transparent 6px, black 6px);
+  mask-size: 12px 16px;
+  mask-repeat: repeat-x;
+  mask-composite: intersect;
+}
+
+.torn-bottom {
+  display: block;
+  width: 100%;
+  height: 16px;
+  background: var(--paper);
+  -webkit-mask-image:
+    linear-gradient(315deg, transparent 6px, black 6px),
+    linear-gradient(45deg, transparent 6px, black 6px);
+  -webkit-mask-size: 12px 16px;
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(315deg, transparent 6px, black 6px),
+    linear-gradient(45deg, transparent 6px, black 6px);
+  mask-size: 12px 16px;
+  mask-repeat: repeat-x;
+  mask-composite: intersect;
+}
+
+.receipt {
+  background: var(--paper);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  max-height: 80vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.receipt-body {
+  padding: 20px 28px 24px;
+}
+
+.receipt-place {
+  text-align: center;
+  padding-bottom: 14px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed #999;
+}
+
+.receipt-place h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+}
+
+.receipt .receipt-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+}
+
+.receipt-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: #555;
+  font-weight: 400;
+  text-align: right;
+}
+
+.receipt-value.address {
+  font-size: 11px;
+}
+
+.receipt-dashes {
+  border-bottom: 1px dashed #999;
+  margin: 14px 0;
+}
+
+.receipt-dots {
+  border-bottom: 1px dotted #999;
+  margin: 14px 0;
+}
+
+.receipt-input {
+  width: 75%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted #888;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 6px 0;
+  color: var(--text);
+  outline: none;
+  border-radius: 0;
+}
+
+.receipt-input::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.receipt-input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.receipt-input.centered {
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+  width: 85%;
+}
+
+.receipt-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  align-items: center;
+}
+
+.receipt-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid #999;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.receipt-tag:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.receipt-tag.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.receipt-tag.add {
+  border-style: dashed;
+  color: #999;
+}
+
+.receipt-rating {
+  text-align: center;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.receipt-rating .number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.receipt-rating .out-of {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 400;
+  color: #777;
+}
+
+.receipt-rating .word {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 2px;
+}
+
+.receipt-rating-empty .number {
+  color: #999;
+}
+
+.receipt-rating-empty .word {
+  color: #999;
+}
+
+.receipt-section-label {
+  text-align: center;
+  margin-bottom: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #666;
+}
+
+.receipt-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted #888;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 6px 0;
+  color: var(--text);
+  outline: none;
+  border-radius: 0;
+  resize: none;
+  overflow: hidden;
+  min-height: 26px;
+  line-height: 1.5;
+}
+
+.receipt-textarea::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.receipt-textarea:focus {
+  border-bottom-color: var(--accent);
+}
+
+.receipt-photo-zone {
+  border: 1px dashed #999;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin: 6px auto;
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 50%;
+  max-width: 200px;
+}
+
+.receipt-photo-zone:hover {
+  border-color: var(--accent);
+  background: rgba(196, 93, 62, 0.03);
+}
+
+.receipt-photo-zone .hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.receipt-photo-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(196, 93, 62, 0.06);
+}
+
+.receipt-photo-zone.has-photo {
+  border-style: solid;
+  border-color: var(--accent);
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+}
+
+.receipt-photo-crop {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.receipt-photo-crop:active {
+  cursor: grabbing;
+}
+
+.receipt-photo-crop img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.receipt-zoom-slider {
+  width: 100%;
+  padding: 6px 8px 4px;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.receipt-zoom-slider input[type="range"] {
+  flex: 1;
+  height: 2px;
+  border: none;
+  border-bottom: none;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.receipt-zoom-slider .zoom-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.receipt-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.receipt-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 8px 20px;
+  border: 1px solid #999;
+  background: transparent;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.15s;
+}
+
+.receipt-btn:hover {
+  border-color: #2a2a2a;
+  color: #2a2a2a;
+}
+
+.receipt-btn.primary {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+  color: var(--paper);
+}
+
+.receipt-btn.primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.receipt-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.receipt-footer {
+  text-align: center;
+  padding: 14px 28px;
+  border-top: 1px dashed #999;
+  position: sticky;
+  bottom: 0;
+  background: var(--paper);
+  z-index: 2;
+}
+
+/* Receipt autocomplete dropdown */
+.receipt-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--paper);
+  border: 1px dashed #999;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.receipt-autocomplete-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px dotted #999;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.receipt-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.receipt-autocomplete-item:hover {
+  background: rgba(196, 93, 62, 0.06);
+}
+
+.receipt-autocomplete-item .item-name {
+  font-weight: 500;
+}
+
+.receipt-autocomplete-item .item-address {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Receipt-scoped dropdown overrides */
+.receipt .category-dropdown {
+  background: var(--paper);
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 0;
+  border-color: #999;
+}
+
+.receipt .dropdown-header {
+  border-bottom-color: #999;
+}
+
+.receipt .dropdown-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 1px dotted #999;
+}
+
+.receipt .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* Mobile responsive for receipt */
+@media (max-width: 768px) {
+  .receipt-wrap {
+    max-width: 100%;
+  }
+
+  .receipt-body {
+    padding: 16px 20px 20px;
+  }
+
+  .receipt-place h3 {
+    font-size: 16px;
   }
 }

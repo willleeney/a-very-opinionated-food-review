@@ -17,6 +17,7 @@ interface FilterBarProps {
   rightActions?: ReactNode
   searchableUsers?: SearchableUser[]
   availableTags?: Tag[]
+  availableCuisines?: string[]
 }
 
 const SOCIAL_OPTIONS: { value: SocialFilter; label: string }[] = [
@@ -26,7 +27,7 @@ const SOCIAL_OPTIONS: { value: SocialFilter; label: string }[] = [
   { value: 'just_me', label: 'Just Me' },
 ]
 
-export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, searchableUsers = [], availableTags = [] }: FilterBarProps): JSX.Element {
+export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, searchableUsers = [], availableTags = [], availableCuisines = [] }: FilterBarProps): JSX.Element {
   const {
     selectedCategories,
     setSelectedCategories,
@@ -39,6 +40,8 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
     setSelectedUserIds,
     selectedTagIds,
     toggleTagId,
+    selectedCuisines,
+    toggleCuisine,
     clearFilters,
     hasActiveFilters,
   } = useFilterStore()
@@ -156,6 +159,24 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
           onChange={setSelectedCategories}
         />
       </div>
+
+      {/* Cuisine filter row */}
+      {availableCuisines.length > 0 && (
+        <div className="filter-row">
+          <span className="filter-row-label">Cuisine</span>
+          <div className="social-tabs">
+            {availableCuisines.slice(0, 8).map((cuisine) => (
+              <button
+                key={cuisine}
+                className={`social-tab ${selectedCuisines.includes(cuisine) ? 'active' : ''}`}
+                onClick={() => toggleCuisine(cuisine)}
+              >
+                {cuisine}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Show filter row - only if signed in */}
       {isSignedIn && (

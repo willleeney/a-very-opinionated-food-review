@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Redesign Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-warm: #f5f2ed;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --border: #e8e4de;
+    --accent: #c45d3e;
+    --accent-light: #e8d5ce;
+    --great: #2d7a4f;
+    --good: #b8860b;
+    --poor: #a64d4d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875em;
+  }
+
+  .label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  /* ── Page layout ── */
+  .mockup-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+
+  .mockup-page > h1 {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .mockup-page > .subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 80px;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  .mockup-section {
+    margin-bottom: 120px;
+  }
+
+  .mockup-section > h2 {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .mockup-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .mockup-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    max-width: 640px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+  }
+
+  .mockup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 40px;
+  }
+
+  @media (max-width: 900px) {
+    .mockup-grid { grid-template-columns: 1fr; }
+  }
+
+  .mockup-box {
+    border: 1px solid var(--border);
+    background: white;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .mockup-box-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .mockup-box-header h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+  }
+
+  /* ── Shared component styles ── */
+  .rating-great { color: var(--great); }
+  .rating-good { color: var(--good); }
+  .rating-poor { color: var(--poor); }
+
+  .rating-badge {
+    display: inline-flex;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  input, select, textarea {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 0;
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 0;
+    outline: none;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-bottom-color: var(--text);
+  }
+
+  textarea {
+    resize: none;
+    min-height: 48px;
+    line-height: 1.4;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--text);
+    padding: 10px 20px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+
+  .btn:hover {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .btn-accent:hover {
+    background: #a64d3a;
+    border-color: #a64d3a;
+  }
+
+  /* Chamfered tag */
+  .tag {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    font-family: inherit;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+    z-index: 0;
+  }
+
+  .tag::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+    background: var(--border);
+    z-index: -2;
+  }
+
+  .tag::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    background: var(--bg);
+    z-index: -1;
+  }
+
+  .tag.selected {
+    color: white;
+  }
+
+  .tag.selected::before,
+  .tag.selected::after {
+    background: var(--accent);
+  }
+
+  .tag-small {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    z-index: 0;
+  }
+
+  .tag-small::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    background: var(--border);
+    z-index: -2;
+  }
+
+  .tag-small::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    background: var(--bg-warm);
+    z-index: -1;
+  }
+
+  /* Modal */
+  .modal-demo {
+    background: white;
+    width: 100%;
+    max-width: 520px;
+    padding: 40px;
+    border: 1px solid var(--border);
+    margin: 0 auto;
+  }
+
+  .modal-demo.wide {
+    max-width: 620px;
+  }
+
+  /* Photo upload zone */
+  .photo-upload {
+    border: 1.5px dashed var(--border);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .photo-upload:hover {
+    border-color: var(--accent);
+    background: rgba(196, 93, 62, 0.03);
+  }
+
+  .photo-upload .icon {
+    font-size: 24px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .photo-upload .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Photo thumbnail */
+  .photo-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .photo-grid {
+    display: grid;
+    gap: 4px;
+  }
+
+  .photo-grid.g2 { grid-template-columns: 1fr 1fr; }
+  .photo-grid.g3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .photo-slot {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--bg-warm);
+    position: relative;
+  }
+
+  .photo-slot.hero {
+    aspect-ratio: 16/9;
+    grid-column: 1 / -1;
+  }
+
+  .photo-more {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Dish pill */
+  .dish-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    background: rgba(196, 93, 62, 0.08);
+    border: 1px solid rgba(196, 93, 62, 0.2);
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+  }
+
+  /* Filter chip for dishes */
+  .dish-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .dish-filter:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .dish-filter.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Separator */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* Annotation callout */
+  .annotation {
+    background: rgba(196, 93, 62, 0.06);
+    border-left: 2px solid var(--accent);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-top: 20px;
+  }
+
+  .annotation strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Table mockup */
+  table.demo-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table.demo-table th {
+    padding: 12px 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  table.demo-table td {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  table.demo-table tr.active td {
+    background: var(--bg-warm);
+  }
+
+  .expanded-content {
+    background: var(--bg-warm);
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Popup overlay for mockup C */
+  .popup-demo {
+    background: white;
+    border: 1px solid var(--border);
+    max-width: 720px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+
+  /* Lightbox image viewer */
+  .lightbox-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .lightbox-strip .thumb {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    opacity: 0.6;
+    transition: all 0.15s;
+  }
+
+  .lightbox-strip .thumb.active {
+    border-color: var(--accent);
+    opacity: 1;
+  }
+
+  .lightbox-strip .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* TOC */
+  .toc {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 60px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toc a {
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .toc a:hover {
+    text-decoration: underline;
+  }
+
+  /* Notes section */
+  .notes {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  @media (max-width: 800px) {
+    .notes { grid-template-columns: 1fr; }
+  }
+
+  .note-card {
+    padding: 20px;
+    border: 1px solid var(--border);
+    background: white;
+  }
+
+  .note-card h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .note-card p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Placeholder images using CSS gradients */
+  .img-placeholder {
+    background: linear-gradient(135deg, #e8d5ce 0%, #f5f2ed 50%, #e8d5ce 100%);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .img-placeholder.food1 { background: linear-gradient(135deg, #d4a574 0%, #e8c9a0 50%, #f0d9b5 100%); }
+  .img-placeholder.food2 { background: linear-gradient(135deg, #8fbc8f 0%, #b8d4b8 50%, #d4e8d4 100%); }
+  .img-placeholder.food3 { background: linear-gradient(135deg, #deb887 0%, #f0d9b5 50%, #faebd7 100%); }
+  .img-placeholder.food4 { background: linear-gradient(135deg, #cd853f 0%, #deb887 50%, #f5deb3 100%); }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 0 120px 0;
+  }
+
+  /* Inline review row with photo */
+  .review-with-photo {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .review-photo-thumb {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .review-photo-thumb img, .review-photo-thumb .img-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
+</head>
+<body>
+<div class="mockup-page">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- HEADER                                      -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <h1>Review Redesign</h1>
+  <p class="subtitle">
+    Three approaches for adding dish-level reviews, photos, and filtering — while keeping the editorial warmth of the existing design.
+  </p>
+
+  <nav class="toc">
+    <a href="#mockup-a">A — Dish Cards (Expanded Row)</a>
+    <a href="#mockup-b">B — Photo Strip (Expanded Row)</a>
+    <a href="#mockup-c">C — Detail Popup (Modal)</a>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- MOCKUP A: DISH CARDS                        -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <section class="mockup-section" id="mockup-a">
+    <p class="mockup-label">Mockup A</p>
+    <h2>Dish Cards</h2>
+    <p class="mockup-desc">
+      Reviews are grouped by dish within the expanded table row. Each review can optionally name a dish and attach a photo.
+      Photos appear as small thumbnails inline with the review. Dish names become filterable chips at the top of the expanded section.
+    </p>
+
+    <div class="mockup-grid">
+
+      <!-- ── A: ADD REVIEW POPUP ── -->
+      <div>
+        <div class="mockup-box-header" style="border: 1px solid var(--border); border-bottom: none;">
+          <h4>Add Review Popup</h4>
+        </div>
+        <div class="modal-demo" style="max-width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+            <div>
+              <h2 style="margin-bottom: 8px;">Add a Place</h2>
+              <p style="color: var(--text-secondary); font-size: 14px;">Discovered somewhere new?</p>
+            </div>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer;">×</span>
+          </div>
+
+          <!-- Place (selected state) -->
+          <div style="margin-bottom: 20px;">
+            <span class="label">Place *</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); background: var(--bg-warm);">
+              <div>
+                <span style="font-weight: 500;">Padella</span>
+                <span style="color: var(--text-muted); font-size: 12px; margin-left: 8px;">1 Phipp St, London</span>
+              </div>
+              <span style="color: var(--text-muted); cursor: pointer;">×</span>
+            </div>
+          </div>
+
+          <!-- Cuisine -->
+          <div style="margin-bottom: 20px;">
+            <span class="label">Cuisine *</span>
+            <input type="text" value="Italian" style="border-bottom-color: var(--text);" readonly>
+          </div>
+
+          <!-- Categories -->
+          <div style="margin-bottom: 20px;">
+            <span class="label">Categories</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="tag selected">Lunch</span>
+              <span class="tag selected">Dinner</span>
+              <span class="tag">Coffee</span>
+              <span class="tag">Brunch</span>
+              <span class="tag">Pub</span>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <!-- ★ YOUR REVIEW SECTION (redesigned) -->
+          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 16px; font-weight: 600;">
+            Your Review
+          </p>
+
+          <!-- Dish name (NEW) -->
+          <div style="margin-bottom: 16px;">
+            <span class="label">Dish (optional)</span>
+            <input type="text" placeholder="e.g. Pici Cacio e Pepe" value="Pici Cacio e Pepe" style="border-bottom-color: var(--text);" readonly>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">
+              Leave blank for an overall review of the place
+            </span>
+          </div>
+
+          <!-- Rating -->
+          <div style="margin-bottom: 16px;">
+            <span class="label">Rating</span>
+            <div style="display: inline-flex; align-items: center; gap: 12px;">
+              <div class="tag selected" style="min-width: 56px; justify-content: center;">9/10</div>
+              <span style="font-size: 13px; color: var(--text-muted);">Excellent</span>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div style="margin-bottom: 16px;">
+            <span class="label">Tags</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="tag selected">High Protein</span>
+              <span class="tag selected">Large Portion</span>
+              <span class="tag">Good Value</span>
+              <span style="display: inline-flex; align-items: center; padding: 6px 12px; font-size: 13px; border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer;">+</span>
+            </div>
+          </div>
+
+          <!-- Photo upload (NEW) -->
+          <div style="margin-bottom: 16px;">
+            <span class="label">Photo (optional)</span>
+            <div class="photo-upload" style="display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px;">
+              <div style="width: 56px; height: 56px; flex-shrink: 0; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="0"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+              <div>
+                <span style="font-size: 13px; color: var(--text); font-weight: 500;">Add a photo</span>
+                <span class="hint" style="display: block;">Snap your dish — JPG or PNG, max 5 MB</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comment -->
+          <div style="margin-bottom: 24px;">
+            <span class="label">Comment</span>
+            <input type="text" placeholder="Brief comment..." value="Best fresh pasta near the office, hands down." readonly>
+          </div>
+
+          <!-- Buttons -->
+          <div style="display: flex; gap: 16px; justify-content: flex-end;">
+            <button class="btn">Cancel</button>
+            <button class="btn btn-accent">Add Place</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── A: EXPANDED ROW ── -->
+      <div>
+        <div class="mockup-box-header" style="border: 1px solid var(--border); border-bottom: none;">
+          <h4>Expanded Restaurant Row</h4>
+        </div>
+        <div class="mockup-box">
+          <!-- Table header row -->
+          <table class="demo-table" style="padding: 0 16px;">
+            <thead>
+              <tr>
+                <th style="padding-left: 16px;">Name</th>
+                <th>Cuisine</th>
+                <th>Rating</th>
+                <th>Reviews</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="active">
+                <td style="padding-left: 16px;"><strong style="font-weight: 500;">Padella</strong></td>
+                <td style="color: var(--text-secondary);">Italian</td>
+                <td><span class="rating-badge rating-great">8.7 — Great</span></td>
+                <td style="color: var(--text-muted); font-size: 13px;">4 reviews</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Expanded content -->
+          <div class="expanded-content">
+
+            <!-- Dish filter chips -->
+            <div style="margin-bottom: 20px;">
+              <span class="label">Filter by dish</span>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="dish-filter active">All</button>
+                <button class="dish-filter">Pici Cacio e Pepe</button>
+                <button class="dish-filter">Pappardelle Ragu</button>
+                <button class="dish-filter">Overall</button>
+              </div>
+            </div>
+
+            <!-- Reviews -->
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+
+              <!-- Review 1: with photo + dish -->
+              <div class="review-with-photo">
+                <div class="review-photo-thumb">
+                  <div class="img-placeholder food1"></div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <span class="mono rating-great" style="font-size: 14px; min-width: 50px;">9/10</span>
+                    <span class="dish-name">Pici Cacio e Pepe</span>
+                    <span style="color: var(--text-muted); font-size: 13px;">will@stackone.com</span>
+                  </div>
+                  <p style="color: var(--text-secondary); margin-top: 4px; font-size: 14px;">Best fresh pasta near the office, hands down.</p>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                    <span class="tag-small">High Protein</span>
+                    <span class="tag-small">Large Portion</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Review 2: with photo + dish -->
+              <div class="review-with-photo">
+                <div class="review-photo-thumb">
+                  <div class="img-placeholder food2"></div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <span class="mono rating-great" style="font-size: 14px; min-width: 50px;">8/10</span>
+                    <span class="dish-name">Pappardelle Ragu</span>
+                    <span style="color: var(--text-muted); font-size: 13px;">alex@stackone.com</span>
+                  </div>
+                  <p style="color: var(--text-secondary); margin-top: 4px; font-size: 14px;">Rich sauce, generous portion. Queue was 25 min though.</p>
+                </div>
+              </div>
+
+              <!-- Review 3: no photo, overall -->
+              <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 64px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <span class="mono rating-great" style="font-size: 14px; min-width: 50px;">9/10</span>
+                  <span style="color: var(--text-muted); font-size: 13px;">sam@stackone.com</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 14px;">Easily the best lunch spot in the area.</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <span class="tag-small">Quick</span>
+                  <span class="tag-small">Good Value</span>
+                </div>
+              </div>
+
+              <!-- Review 4: anonymous -->
+              <div style="padding-left: 64px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span class="mono rating-good" style="font-size: 14px; min-width: 50px;">7/10</span>
+                  <span style="color: var(--text-muted); font-size: 13px;">Anonymous</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="annotation">
+          <strong>Dish filter chips</strong> appear at the top of the expanded row. "All" is default. Clicking a dish name filters reviews to just that dish. "Overall" shows reviews with no dish specified.<br><br>
+          <strong>Photos</strong> sit as 48px thumbnails on the left of each review. Reviews without photos are indented to align. Clicking a thumbnail opens a lightbox.
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note-card">
+        <h4>Dish Input</h4>
+        <p>Free-text input with autocomplete from previously entered dishes for the same restaurant. "Leave blank for overall review" hint keeps it optional and low-friction.</p>
+      </div>
+      <div class="note-card">
+        <h4>Photo Storage</h4>
+        <p>Photos uploaded to Supabase Storage bucket. Stored as <code>reviews/{review_id}.jpg</code>. Thumbnails generated on upload (64px, 200px). Original kept for lightbox.</p>
+      </div>
+      <div class="note-card">
+        <h4>Filtering</h4>
+        <p>Dish chips are derived from reviews — no separate table. Filter is local to the expanded row. Could extend to the global filter bar as a "dish" dropdown in future.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- MOCKUP B: PHOTO STRIP                      -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <section class="mockup-section" id="mockup-b">
+    <p class="mockup-label">Mockup B</p>
+    <h2>Photo Strip</h2>
+    <p class="mockup-desc">
+      The expanded row leads with a horizontal photo strip — all dish photos from every review, scrollable.
+      Below it, reviews are listed in the existing format with a dish label badge. The add-review form is a taller modal with a
+      prominent photo area and a dish field grouped with rating.
+    </p>
+
+    <div class="mockup-grid">
+
+      <!-- ── B: ADD REVIEW POPUP ── -->
+      <div>
+        <div class="mockup-box-header" style="border: 1px solid var(--border); border-bottom: none;">
+          <h4>Add Review Popup</h4>
+        </div>
+        <div class="modal-demo" style="max-width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+            <div>
+              <h2 style="margin-bottom: 8px;">Add a Place</h2>
+              <p style="color: var(--text-secondary); font-size: 14px;">Discovered somewhere new?</p>
+            </div>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer;">×</span>
+          </div>
+
+          <!-- Place -->
+          <div style="margin-bottom: 20px;">
+            <span class="label">Place *</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); background: var(--bg-warm);">
+              <div>
+                <span style="font-weight: 500;">Bao Borough</span>
+                <span style="color: var(--text-muted); font-size: 12px; margin-left: 8px;">13 Stoney St, London</span>
+              </div>
+              <span style="color: var(--text-muted); cursor: pointer;">×</span>
+            </div>
+          </div>
+
+          <!-- Cuisine + Categories inline -->
+          <div style="display: flex; gap: 24px; margin-bottom: 20px;">
+            <div style="flex: 1;">
+              <span class="label">Cuisine *</span>
+              <input type="text" value="Taiwanese" readonly>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <span class="label">Categories</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="tag selected">Lunch</span>
+              <span class="tag selected">Dinner</span>
+              <span class="tag">Coffee</span>
+              <span class="tag">Brunch</span>
+              <span class="tag">Pub</span>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 16px; font-weight: 600;">
+            Your Review
+          </p>
+
+          <!-- Photo upload — large, top of review section -->
+          <div style="margin-bottom: 20px;">
+            <div class="photo-upload" style="padding: 0; height: 140px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="0"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <span style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Drop a photo or click to upload</span>
+              <span style="font-size: 11px; color: var(--text-muted);">JPG or PNG, max 5 MB</span>
+            </div>
+          </div>
+
+          <!-- Dish + Rating on same row -->
+          <div style="display: flex; gap: 24px; margin-bottom: 16px;">
+            <div style="flex: 1;">
+              <span class="label">Dish (optional)</span>
+              <input type="text" placeholder="e.g. Classic Bao" value="">
+            </div>
+            <div style="width: 100px;">
+              <span class="label">Rating</span>
+              <div class="tag selected" style="min-width: 56px; justify-content: center; margin-top: 8px;">8/10</div>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div style="margin-bottom: 16px;">
+            <span class="label">Tags</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="tag selected">Quick</span>
+              <span class="tag">High Protein</span>
+              <span class="tag">Good Value</span>
+              <span style="display: inline-flex; align-items: center; padding: 6px 12px; font-size: 13px; border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer;">+</span>
+            </div>
+          </div>
+
+          <!-- Comment -->
+          <div style="margin-bottom: 24px;">
+            <span class="label">Comment</span>
+            <input type="text" placeholder="Brief comment..." value="">
+          </div>
+
+          <div style="display: flex; gap: 16px; justify-content: flex-end;">
+            <button class="btn">Cancel</button>
+            <button class="btn btn-accent">Add Place</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── B: EXPANDED ROW ── -->
+      <div>
+        <div class="mockup-box-header" style="border: 1px solid var(--border); border-bottom: none;">
+          <h4>Expanded Restaurant Row</h4>
+        </div>
+        <div class="mockup-box">
+          <table class="demo-table" style="padding: 0 16px;">
+            <thead>
+              <tr>
+                <th style="padding-left: 16px;">Name</th>
+                <th>Cuisine</th>
+                <th>Rating</th>
+                <th>Reviews</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="active">
+                <td style="padding-left: 16px;"><strong style="font-weight: 500;">Bao Borough</strong></td>
+                <td style="color: var(--text-secondary);">Taiwanese</td>
+                <td><span class="rating-badge rating-great">8.3 — Great</span></td>
+                <td style="color: var(--text-muted); font-size: 13px;">3 reviews</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="expanded-content">
+
+            <!-- Photo strip -->
+            <div style="margin-bottom: 20px;">
+              <span class="label">Photos</span>
+              <div class="lightbox-strip">
+                <div class="thumb active">
+                  <div class="img-placeholder food1" style="font-size: 0;"></div>
+                </div>
+                <div class="thumb">
+                  <div class="img-placeholder food2" style="font-size: 0;"></div>
+                </div>
+                <div class="thumb">
+                  <div class="img-placeholder food4" style="font-size: 0;"></div>
+                </div>
+                <div class="thumb">
+                  <div class="img-placeholder food3" style="font-size: 0;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dish filter dropdown -->
+            <div style="margin-bottom: 20px; display: flex; gap: 12px; align-items: center;">
+              <span class="label" style="margin-bottom: 0;">Show:</span>
+              <select style="width: auto; padding: 6px 24px 6px 8px; font-size: 12px; border: 1px solid var(--border); border-bottom: 1px solid var(--border); background: white; cursor: pointer;">
+                <option>All reviews</option>
+                <option>Classic Bao</option>
+                <option>Fried Chicken Bao</option>
+                <option>Overall reviews</option>
+              </select>
+            </div>
+
+            <!-- Reviews list -->
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <span class="mono rating-great" style="font-size: 14px; min-width: 50px;">9/10</span>
+                  <span class="dish-name">Classic Bao</span>
+                  <span style="color: var(--text-muted); font-size: 13px;">will@stackone.com</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-left: 62px; font-size: 14px;">Pillowy soft buns, insane filling. Best in London.</p>
+                <div style="display: flex; gap: 6px; margin-left: 62px;">
+                  <span class="tag-small">Quick</span>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <span class="mono rating-great" style="font-size: 14px; min-width: 50px;">8/10</span>
+                  <span class="dish-name">Fried Chicken Bao</span>
+                  <span style="color: var(--text-muted); font-size: 13px;">alex@stackone.com</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-left: 62px; font-size: 14px;">Crispy, juicy. Slightly too much mayo for me.</p>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span class="mono rating-good" style="font-size: 14px; min-width: 50px;">7/10</span>
+                  <span style="color: var(--text-muted); font-size: 13px;">Anonymous</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="annotation">
+          <strong>Photo strip</strong> sits above the reviews — a scrollable row of 64px thumbnails. Clicking one opens it in a larger lightbox view. Active photo gets an accent border.<br><br>
+          <strong>Dish filter</strong> is a minimal &lt;select&gt; dropdown instead of chips — takes less space and works better when there are many dishes. "All reviews" is default.
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note-card">
+        <h4>Photo-First</h4>
+        <p>Large upload zone in the form encourages photos. The strip in the expanded row creates a visual "gallery" feel even with just a few photos.</p>
+      </div>
+      <div class="note-card">
+        <h4>Grouped Fields</h4>
+        <p>Dish and Rating sit on the same row — you're describing what you ate and how you rated it in one glance. Reduces form height.</p>
+      </div>
+      <div class="note-card">
+        <h4>Dropdown Filter</h4>
+        <p>A &lt;select&gt; dropdown is compact and fits the existing filter bar style. Scales to any number of dishes without layout issues.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- MOCKUP C: DETAIL POPUP                     -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <section class="mockup-section" id="mockup-c">
+    <p class="mockup-label">Mockup C</p>
+    <h2>Detail Popup</h2>
+    <p class="mockup-desc">
+      Instead of expanding a row, clicking a restaurant opens a centered popup (modal) with a photo grid at the top and reviews below.
+      The add-review form is <em>inside</em> this popup as a collapsible section. This gives more room for photos and richer layout.
+    </p>
+
+    <div style="margin-bottom: 40px;">
+      <div class="mockup-box-header" style="border: 1px solid var(--border); border-bottom: none; max-width: 720px; margin: 0 auto;">
+        <h4>Add Review Popup (standalone — for adding new place)</h4>
+      </div>
+    </div>
+
+    <!-- ── C: ADD REVIEW POPUP ── -->
+    <div class="modal-demo wide" style="margin-bottom: 60px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+        <div>
+          <h2 style="margin-bottom: 8px;">Add a Place</h2>
+          <p style="color: var(--text-secondary); font-size: 14px;">Discovered somewhere new?</p>
+        </div>
+        <span style="font-size: 24px; color: var(--text-muted); cursor: pointer;">×</span>
+      </div>
+
+      <!-- Place -->
+      <div style="margin-bottom: 20px;">
+        <span class="label">Place *</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); background: var(--bg-warm);">
+          <div>
+            <span style="font-weight: 500;">El Pastor</span>
+            <span style="color: var(--text-muted); font-size: 12px; margin-left: 8px;">7A Stoney St, London</span>
+          </div>
+          <span style="color: var(--text-muted); cursor: pointer;">×</span>
+        </div>
+      </div>
+
+      <!-- Cuisine + Categories -->
+      <div style="margin-bottom: 20px;">
+        <span class="label">Cuisine *</span>
+        <input type="text" value="Mexican" readonly>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <span class="label">Categories</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="tag selected">Lunch</span>
+          <span class="tag selected">Dinner</span>
+          <span class="tag">Coffee</span>
+          <span class="tag">Brunch</span>
+          <span class="tag">Pub</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 16px; font-weight: 600;">
+        Your Review
+      </p>
+
+      <!-- Two-column: photo left, fields right -->
+      <div style="display: flex; gap: 24px; margin-bottom: 20px;">
+        <!-- Photo -->
+        <div style="width: 160px; flex-shrink: 0;">
+          <div class="photo-upload" style="width: 160px; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="0"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+            <span style="font-size: 12px; color: var(--text-muted); text-align: center;">Add photo</span>
+          </div>
+        </div>
+
+        <!-- Fields -->
+        <div style="flex: 1;">
+          <div style="margin-bottom: 14px;">
+            <span class="label">Dish (optional)</span>
+            <input type="text" placeholder="e.g. Al Pastor Taco" style="padding: 8px 0;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <span class="label">Rating</span>
+            <div style="display: inline-flex; align-items: center; gap: 12px; margin-top: 4px;">
+              <div class="tag selected" style="min-width: 56px; justify-content: center;">8/10</div>
+              <span style="font-size: 13px; color: var(--text-muted);">Great</span>
+            </div>
+          </div>
+          <div>
+            <span class="label">Comment</span>
+            <input type="text" placeholder="Brief comment..." style="padding: 8px 0;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div style="margin-bottom: 24px;">
+        <span class="label">Tags</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="tag selected">Good Value</span>
+          <span class="tag">High Protein</span>
+          <span class="tag">Quick</span>
+          <span style="display: inline-flex; align-items: center; padding: 6px 12px; font-size: 13px; border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer;">+</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 16px; justify-content: flex-end;">
+        <button class="btn">Cancel</button>
+        <button class="btn btn-accent">Add Place</button>
+      </div>
+    </div>
+
+    <!-- ── C: RESTAURANT DETAIL POPUP ── -->
+    <div style="margin-bottom: 40px;">
+      <div class="mockup-box-header" style="border: 1px solid var(--border); border-bottom: none; max-width: 720px; margin: 0 auto;">
+        <h4>Restaurant Detail Popup (click row to open)</h4>
+      </div>
+    </div>
+
+    <div class="popup-demo">
+      <!-- Photo grid header -->
+      <div class="photo-grid" style="grid-template-columns: 1fr 1fr; grid-template-rows: 180px 90px;">
+        <div class="photo-slot" style="grid-row: 1 / 3;">
+          <div class="img-placeholder food1" style="font-size: 0; height: 100%;"></div>
+        </div>
+        <div class="photo-slot">
+          <div class="img-placeholder food2" style="font-size: 0;"></div>
+        </div>
+        <div class="photo-slot" style="position: relative;">
+          <div class="img-placeholder food4" style="font-size: 0;"></div>
+          <div class="photo-more">+3</div>
+        </div>
+      </div>
+
+      <!-- Restaurant info -->
+      <div style="padding: 32px 32px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+          <h2 style="font-size: 28px;">El Pastor</h2>
+          <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1;">×</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">Mexican · 7A Stoney St, London</p>
+        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 24px;">
+          <span class="rating-badge rating-great" style="font-size: 16px;">8.2 — Great</span>
+          <span style="color: var(--text-muted); font-size: 13px;">5 reviews</span>
+        </div>
+
+        <!-- Dish filter tabs -->
+        <div style="display: flex; gap: 0; border-bottom: 1px solid var(--border);">
+          <button style="padding: 10px 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; background: none; border: none; border-bottom: 2px solid var(--accent); color: var(--accent); cursor: pointer; font-family: inherit;">All</button>
+          <button style="padding: 10px 16px; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); cursor: pointer; font-family: inherit;">Al Pastor Taco</button>
+          <button style="padding: 10px 16px; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); cursor: pointer; font-family: inherit;">Tostada</button>
+          <button style="padding: 10px 16px; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); cursor: pointer; font-family: inherit;">Overall</button>
+        </div>
+      </div>
+
+      <!-- Reviews -->
+      <div style="padding: 24px 32px;">
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+
+          <!-- Review with photo -->
+          <div class="review-with-photo">
+            <div class="review-photo-thumb" style="width: 56px; height: 56px;">
+              <div class="img-placeholder food1" style="font-size: 0;"></div>
+            </div>
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="mono rating-great" style="font-size: 14px;">9/10</span>
+                <span class="dish-name">Al Pastor Taco</span>
+                <span style="color: var(--text-muted); font-size: 12px; margin-left: auto;">will@stackone.com</span>
+              </div>
+              <p style="color: var(--text-secondary); font-size: 14px;">Incredible spit-roasted pork. The pineapple salsa makes it.</p>
+              <div style="display: flex; gap: 6px; margin-top: 6px;">
+                <span class="tag-small">Good Value</span>
+                <span class="tag-small">High Protein</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-with-photo">
+            <div class="review-photo-thumb" style="width: 56px; height: 56px;">
+              <div class="img-placeholder food3" style="font-size: 0;"></div>
+            </div>
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="mono rating-great" style="font-size: 14px;">8/10</span>
+                <span class="dish-name">Tostada</span>
+                <span style="color: var(--text-muted); font-size: 12px; margin-left: auto;">alex@stackone.com</span>
+              </div>
+              <p style="color: var(--text-secondary); font-size: 14px;">Crispy, fresh, beautiful presentation.</p>
+            </div>
+          </div>
+
+          <!-- Review without photo -->
+          <div style="padding-left: 72px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <span class="mono rating-good" style="font-size: 14px;">7/10</span>
+              <span style="color: var(--text-muted); font-size: 12px; margin-left: auto;">sam@stackone.com</span>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 14px;">Good tacos but overpriced for the portion size.</p>
+          </div>
+
+          <div style="padding-left: 72px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="mono rating-great" style="font-size: 14px;">8/10</span>
+              <span style="color: var(--text-muted); font-size: 12px; margin-left: auto;">Anonymous</span>
+            </div>
+          </div>
+
+          <div style="padding-left: 72px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="mono rating-good" style="font-size: 14px;">7/10</span>
+              <span style="color: var(--text-muted); font-size: 12px; margin-left: auto;">Anonymous</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inline add review (collapsible) -->
+      <div style="border-top: 1px solid var(--border); padding: 24px 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600;">Add your review</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(180deg);">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+        <!-- Expanded form -->
+        <div style="margin-top: 20px;">
+          <div style="display: flex; gap: 20px; margin-bottom: 16px;">
+            <!-- Photo area -->
+            <div class="photo-upload" style="width: 100px; height: 100px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="0"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <span style="font-size: 10px; color: var(--text-muted);">Photo</span>
+            </div>
+
+            <!-- Fields -->
+            <div style="flex: 1;">
+              <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                  <span class="label">Dish</span>
+                  <input type="text" placeholder="e.g. Al Pastor Taco" style="padding: 6px 0; font-size: 13px;">
+                </div>
+                <div style="width: 70px;">
+                  <span class="label">Rating</span>
+                  <div class="tag" style="min-width: 50px; justify-content: center; margin-top: 4px; font-size: 12px; padding: 4px 10px; cursor: pointer;">—</div>
+                </div>
+              </div>
+              <textarea placeholder="Comment..." style="font-size: 13px; padding: 6px 0; min-height: 36px;"></textarea>
+            </div>
+          </div>
+
+          <!-- Tags + save -->
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <span class="tag" style="font-size: 11px; padding: 4px 10px;">Good Value</span>
+              <span class="tag" style="font-size: 11px; padding: 4px 10px;">Quick</span>
+              <span style="display: inline-flex; align-items: center; padding: 4px 10px; font-size: 11px; border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer;">+</span>
+            </div>
+            <button class="btn btn-accent" style="padding: 8px 16px;">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotation" style="max-width: 720px; margin: 20px auto 0;">
+      <strong>Photo grid</strong> sits at the top of the popup like a hero image. The grid layout adapts: 1 photo fills the width, 2 photos split 50/50, 3+ shows a "+N" overlay on the last slot.
+      Clicking opens a full-screen lightbox.<br><br>
+      <strong>Dish tabs</strong> use a horizontal tab bar (underline style) — feels more like navigation within the popup. "All" is active by default. Tabs are derived from review dish names.<br><br>
+      <strong>Inline form</strong> at the bottom is collapsible — "Add your review" header toggles it open. Photo upload is a compact 100px square to the left of the fields, keeping everything on one "row".
+    </div>
+
+    <div class="notes" style="margin-top: 40px;">
+      <div class="note-card">
+        <h4>Modal vs Row</h4>
+        <p>Replaces the expanded row pattern. Gives much more room for photos and reviews. The table row click now opens this popup instead of expanding inline.</p>
+      </div>
+      <div class="note-card">
+        <h4>Tab Navigation</h4>
+        <p>Underline tabs feel like browsing a menu. The "Overall" tab catches reviews that didn't specify a dish. Could add a "Photos" tab that shows only the gallery.</p>
+      </div>
+      <div class="note-card">
+        <h4>Collapsible Form</h4>
+        <p>Form defaults to collapsed so the focus is on reading reviews. Opens when you want to add yours. Keeps the popup clean when you're just browsing.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- COMPARISON                                  -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <section class="mockup-section">
+    <p class="mockup-label">Comparison</p>
+    <h2>At a Glance</h2>
+
+    <table class="demo-table" style="margin-top: 32px;">
+      <thead>
+        <tr>
+          <th></th>
+          <th>A — Dish Cards</th>
+          <th>B — Photo Strip</th>
+          <th>C — Detail Popup</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Display pattern</strong></td>
+          <td style="font-size: 14px;">Expanded table row</td>
+          <td style="font-size: 14px;">Expanded table row</td>
+          <td style="font-size: 14px;">Centered modal popup</td>
+        </tr>
+        <tr>
+          <td><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Photo placement</strong></td>
+          <td style="font-size: 14px;">48px thumbs inline with each review</td>
+          <td style="font-size: 14px;">Horizontal strip above reviews</td>
+          <td style="font-size: 14px;">Hero photo grid at top of popup</td>
+        </tr>
+        <tr>
+          <td><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Dish filtering</strong></td>
+          <td style="font-size: 14px;">Chamfered chip buttons</td>
+          <td style="font-size: 14px;">Select dropdown</td>
+          <td style="font-size: 14px;">Underline tab bar</td>
+        </tr>
+        <tr>
+          <td><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Add review form</strong></td>
+          <td style="font-size: 14px;">Same modal as today, extended</td>
+          <td style="font-size: 14px;">Photo-first modal</td>
+          <td style="font-size: 14px;">Photo + fields side-by-side, collapsible inline</td>
+        </tr>
+        <tr>
+          <td><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Photo emphasis</strong></td>
+          <td style="font-size: 14px;">Low — small thumbnails</td>
+          <td style="font-size: 14px;">Medium — dedicated strip</td>
+          <td style="font-size: 14px;">High — hero grid</td>
+        </tr>
+        <tr>
+          <td><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Migration effort</strong></td>
+          <td style="font-size: 14px;">Low — extends existing row</td>
+          <td style="font-size: 14px;">Low — extends existing row</td>
+          <td style="font-size: 14px;">Medium — new popup component</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>
