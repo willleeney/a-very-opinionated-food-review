@@ -119,6 +119,7 @@ select {
 .btn {
   background: transparent;
   border: 1px solid var(--text);
+  border-radius: 3px;
   color: var(--text);
   padding: 12px 24px;
   font-size: 12px;
@@ -238,10 +239,57 @@ tr:hover td {
 .leaflet-popup-content-wrapper {
   border-radius: 0;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
 }
 
 .leaflet-popup-tip {
   display: none;
+}
+
+/* Map Popup */
+.map-popup {
+  font-family: 'Inter', sans-serif;
+  min-width: 200px;
+  cursor: pointer;
+  padding: 12px 14px;
+}
+
+.map-popup-name {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.map-popup-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-popup-meta .rating-badge {
+  font-size: 12px;
+}
+
+.map-popup-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.map-popup-footer {
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
 }
 
 .leaflet-control-attribution {
@@ -631,82 +679,57 @@ nav.scrolled {
 .category-chips {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.default-chip {
-  position: relative;
+/* Unified Chip — replaces .default-chip, .tag, .social-tab */
+.chip {
   display: inline-flex;
   align-items: center;
   background: transparent;
-  border: none;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
   color: var(--text-secondary);
-  padding: 6px 14px;
+  padding: 8px 16px;
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   white-space: nowrap;
-  isolation: isolate;
 }
 
-.default-chip::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
-  z-index: -2;
-  transition: background 0.2s;
+.chip:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
 }
 
-.default-chip::after {
-  content: '';
-  position: absolute;
-  inset: 1.5px;
-  background: var(--bg);
-  clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
-  z-index: -1;
-  transition: background 0.2s;
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
-.default-chip.small {
+.chip.error {
+  border-color: var(--poor);
+}
+
+.chip.sm {
   padding: 4px 10px;
   font-size: 12px;
 }
 
-.default-chip.small::before {
-  clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
-}
-
-.default-chip.small::after {
-  clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
-}
-
-.default-chip:hover::before {
-  background: var(--text-muted);
-}
-
-.default-chip:hover {
-  color: var(--text);
-}
-
-.default-chip.accent.active::before {
-  background: var(--accent);
-}
-
-.default-chip.accent.active::after {
-  background: var(--accent);
-}
-
-.default-chip.accent.active {
-  color: white;
+.chip.lg {
+  flex-direction: row-reverse;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
 }
 
 .add-chip {
   background: transparent;
   border: 1px dashed var(--border);
+  border-radius: 3px;
   color: var(--text-muted);
   padding: 6px 12px;
   font-size: 13px;
@@ -732,61 +755,31 @@ nav.scrolled {
   background: rgba(196, 93, 62, 0.1);
 }
 
-/* Chamfered Tags - V6g style with chamfered corners on both sides */
+/* Tag picker (large chip variant) */
 .tag {
-  position: relative;
   display: inline-flex;
   flex-direction: row-reverse;
   align-items: center;
   gap: 8px;
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
   color: var(--text-secondary);
-  padding: 8px 12px 8px 12px;
+  padding: 8px 12px;
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
-  isolation: isolate;
-}
-
-.tag::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
-  z-index: -2;
-  transition: background 0.2s;
-}
-
-.tag::after {
-  content: '';
-  position: absolute;
-  inset: 1.5px;
-  background: var(--bg);
-  clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
-  z-index: -1;
-  transition: background 0.2s;
-}
-
-.tag:hover::before {
-  background: var(--text-muted);
+  transition: all 0.15s;
 }
 
 .tag:hover {
+  border-color: var(--text-muted);
   color: var(--text);
 }
 
-.tag.selected::before {
-  background: var(--accent);
-}
-
-.tag.selected::after {
-  background: var(--accent);
-}
-
 .tag.selected {
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 
@@ -801,10 +794,10 @@ nav.scrolled {
   align-items: center;
   gap: 6px;
   background: var(--bg-warm);
-  border: 1px solid var(--border);
   padding: 3px 8px;
-  border-radius: 2px;
   font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
 }
 
 .tag-mini-name {
@@ -820,35 +813,16 @@ nav.scrolled {
 
 /* Small tags for expanded rows */
 .tag-small {
-  position: relative;
   display: inline-flex;
   flex-direction: row-reverse;
   align-items: center;
   gap: 4px;
-  background: transparent;
-  border: none;
   color: var(--text-secondary);
-  padding: 4px 8px 4px 8px;
+  padding: 4px 8px;
   font-size: 11px;
-  isolation: isolate;
-}
-
-.tag-small::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
-  z-index: -2;
-}
-
-.tag-small::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
   background: var(--bg-warm);
-  clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
-  z-index: -1;
+  border: 1px solid var(--border);
+  border-radius: 3px;
 }
 
 .tag-small .icon {
@@ -863,6 +837,7 @@ nav.scrolled {
   gap: 6px;
   background: transparent;
   border: 1.5px dashed var(--border);
+  border-radius: 3px;
   color: var(--text-muted);
   padding: 8px 14px;
   font-size: 12px;
@@ -1099,69 +1074,11 @@ nav.scrolled {
 /* Social Filter Tabs */
 .social-tabs {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.social-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  background: transparent;
-  border: none;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-family: inherit;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  isolation: isolate;
-}
-
-.social-tab::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
-  z-index: -2;
-  transition: background 0.15s;
-}
-
-.social-tab::after {
-  content: '';
-  position: absolute;
-  inset: 1.5px;
-  background: var(--bg);
-  clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
-  z-index: -1;
-  transition: background 0.15s;
-}
-
-.social-tab:hover::before {
-  background: var(--text-muted);
-}
-
-.social-tab:hover {
-  color: var(--text);
-}
-
-.social-tab.active::before {
-  background: var(--accent);
-}
-
-.social-tab.active::after {
-  background: var(--accent);
-}
-
-.social-tab.active {
-  color: white;
-}
-
-.social-tab.error::before {
-  background: var(--poor);
-}
+/* .social-tab removed — use .chip instead */
 
 /* Dual Rating Display */
 .dual-rating {
@@ -1434,10 +1351,9 @@ nav.scrolled {
     width: auto;
   }
 
-  .social-tab {
+  .chip {
     padding: 4px 8px;
     font-size: 11px;
-    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
   }
 
   .category-chips {
@@ -2360,6 +2276,7 @@ nav.scrolled {
   font-size: 10px;
   padding: 3px 8px;
   border: 1px solid #999;
+  border-radius: 3px;
   background: transparent;
   color: #555;
   cursor: pointer;
@@ -2561,6 +2478,7 @@ nav.scrolled {
   letter-spacing: 0.12em;
   padding: 8px 20px;
   border: 1px solid #999;
+  border-radius: 3px;
   background: transparent;
   cursor: pointer;
   color: #555;
@@ -2679,5 +2597,376 @@ nav.scrolled {
 
   .receipt-place h3 {
     font-size: 16px;
+  }
+}
+
+/* ===========================================
+   Restaurant Detail Popup (Split Panel)
+   =========================================== */
+
+.restaurant-popup {
+  max-width: 600px;
+  width: 100%;
+  background: white;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.restaurant-popup.has-photos {
+  max-width: 860px;
+  overflow-y: hidden;
+}
+
+.restaurant-popup::-webkit-scrollbar-track {
+  background: white;
+}
+
+.popup-header {
+  padding: 24px 24px 20px;
+}
+
+/* ── Split Panel Layout ── */
+
+.split-panel {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  max-height: 90vh;
+}
+
+.split-gallery {
+  background: var(--bg-warm);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.split-gallery::-webkit-scrollbar {
+  width: 4px;
+}
+
+.split-gallery::-webkit-scrollbar-track {
+  background: var(--bg-warm);
+}
+
+.split-gallery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+}
+
+.split-gallery-item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+.split-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.15s;
+}
+
+.split-gallery-item:hover img {
+  opacity: 0.85;
+}
+
+.split-gallery-item.active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--accent);
+}
+
+.mini-score {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+}
+
+.mini-score.rating-great { color: #6fcf97; }
+.mini-score.rating-good { color: #f2c94c; }
+.mini-score.rating-poor { color: #eb5757; }
+
+/* ── Split Reviews Panel ── */
+
+.split-reviews {
+  overflow-y: auto;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-reviews::-webkit-scrollbar {
+  width: 4px;
+}
+
+.split-reviews::-webkit-scrollbar-track {
+  background: white;
+}
+
+.split-reviews-header {
+  padding: 24px 24px 20px;
+}
+
+.split-reviews-list {
+  padding: 0 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Photo Lightbox ── */
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-lightbox img {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+}
+
+.photo-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 32px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 8px;
+  z-index: 2;
+}
+
+.photo-lightbox-close:hover {
+  color: white;
+}
+
+.photo-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  z-index: 2;
+}
+
+.photo-lightbox-nav:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.photo-lightbox-nav.prev {
+  left: 16px;
+}
+
+.photo-lightbox-nav.next {
+  right: 16px;
+}
+
+.photo-lightbox-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 32px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  color: white;
+}
+
+.lightbox-tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Review Row ── */
+
+.popup-review-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  transition: background 0.15s;
+}
+
+.popup-review-row.highlighted {
+  background: rgba(196, 93, 62, 0.04);
+  margin: 0 -24px;
+  padding: 10px 24px;
+}
+
+.review-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-warm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.review-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Collapsible Add Review ── */
+
+.popup-add-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.popup-add-review-header:hover {
+  background: var(--bg-warm);
+}
+
+.popup-add-review-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.popup-add-review-chevron {
+  transition: transform 0.2s;
+}
+
+.popup-add-review-chevron.open {
+  transform: rotate(180deg);
+}
+
+.popup-add-review-body {
+  border-top: 1px dashed var(--border);
+}
+
+/* ── Receipt Review Form (Popup) ── */
+
+.popup-receipt-form {
+  max-height: none;
+  overflow-y: visible;
+  overscroll-behavior: auto;
+  padding: 20px 28px 24px;
+}
+
+.popup-receipt-form .receipt-photo-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.receipt-rating-error .number,
+.receipt-rating-error .word {
+  color: var(--poor) !important;
+}
+
+/* ── Mobile ── */
+
+@media (max-width: 768px) {
+  .restaurant-popup {
+    max-height: 95vh;
+  }
+
+  .restaurant-popup.has-photos {
+    max-width: 100%;
+    overflow-y: auto;
+  }
+
+  .split-panel {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  .split-gallery {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 240px;
+  }
+
+  .split-reviews {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .popup-header {
+    padding: 20px 16px 16px;
+  }
+
+  .split-reviews-header {
+    padding: 20px 16px 16px;
+  }
+
+  .split-reviews-list {
+    padding: 0 16px 16px;
+  }
+
+  .popup-review-row.highlighted {
+    margin: 0 -16px;
+    padding: 10px 16px;
+  }
+
+  .popup-add-review-header {
+    padding: 16px;
+  }
+
+  .popup-receipt-form {
+    padding: 16px 20px 20px;
   }
 }

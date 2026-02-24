@@ -143,7 +143,6 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
-          notes: string | null
           cuisine: string
           type: string | null
           categories: string[]
@@ -155,7 +154,6 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
-          notes?: string | null
           cuisine: string
           type?: string | null
           categories?: string[]
@@ -167,7 +165,6 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
-          notes?: string | null
           cuisine?: string
           type?: string | null
           categories?: string[]

@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory, Tag } from '../lib/database.types'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { AddReview } from './AddReview'
+import { PhotoUpload } from './PhotoUpload'
+import type { PhotoUploadHandle } from './PhotoUpload'
 import { TopNav } from './TopNav'
 import { FilterBar } from './FilterBar'
 import { useFilterStore } from '../lib/store'
@@ -18,6 +20,7 @@ interface ReviewUser {
   id: string
   email: string
   isPrivate: boolean
+  avatarUrl: string | null
 }
 
 // Inline review form component - simplified, visibility is derived from org membership
@@ -40,8 +43,6 @@ function InlineReviewForm({
   const [selectedTags, setSelectedTags] = useState<string[]>(existingReview?.tags?.map(t => t.id) || [])
   const [comment, setComment] = useState(existingReview?.comment || '')
   const [dish, setDish] = useState(existingReview?.dish || '')
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(existingReview?.photo_url || null)
   const [saving, setSaving] = useState(false)
   const [creatingTag, setCreatingTag] = useState(false)
   const [localTags, setLocalTags] = useState<Tag[]>([]) // Track newly created tags locally
@@ -52,7 +53,7 @@ function InlineReviewForm({
   const tagDropdownRef = useRef<HTMLDivElement>(null)
   const ratingDropdownRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const photoInputRef = useRef<HTMLInputElement>(null)
+  const photoRef = useRef<PhotoUploadHandle>(null)
 
   // Merge available tags with locally created tags
   const allTags = [...availableTags, ...localTags.filter(lt => !availableTags.some(at => at.id === lt.id))]
@@ -72,23 +73,7 @@ function InlineReviewForm({
     setSelectedTags(existingReview?.tags?.map(t => t.id) || [])
     setComment(existingReview?.comment || '')
     setDish(existingReview?.dish || '')
-    setPhotoPreview(existingReview?.photo_url || null)
-    setPhotoFile(null)
   }, [existingReview?.id])
-
-  const handlePhotoSelect = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5MB')
-      return
-    }
-    setPhotoFile(file)
-    setPhotoPreview(URL.createObjectURL(file))
-    setError(null)
-  }
 
   // Resize textarea when comment changes or on mount
   useEffect(() => {
@@ -186,21 +171,23 @@ function InlineReviewForm({
         reviewId = newReview.id
       }
 
-      // Upload photo if selected
-      if (photoFile) {
-        const ext = photoFile.name.split('.').pop() || 'jpg'
-        const filePath = `${userId}/${reviewId}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('review-photos')
-          .upload(filePath, photoFile, { upsert: true })
-        if (uploadError) throw uploadError
+      // Upload photo if selected (crop to square first)
+      if (photoRef.current?.hasNewPhoto) {
+        const croppedBlob = await photoRef.current.getCroppedBlob()
+        if (croppedBlob) {
+          const filePath = `${userId}/${reviewId}.jpg`
+          const { error: uploadError } = await supabase.storage
+            .from('review-photos')
+            .upload(filePath, croppedBlob, { upsert: true, contentType: 'image/jpeg' })
+          if (uploadError) throw uploadError
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('review-photos')
-          .getPublicUrl(filePath)
+          const { data: { publicUrl } } = supabase.storage
+            .from('review-photos')
+            .getPublicUrl(filePath)
 
-        const photoUrlWithCache = `${publicUrl}?t=${Date.now()}`
-        await supabase.from('reviews').update({ photo_url: photoUrlWithCache }).eq('id', reviewId)
+          const photoUrlWithCache = `${publicUrl}?t=${Date.now()}`
+          await supabase.from('reviews').update({ photo_url: photoUrlWithCache }).eq('id', reviewId)
+        }
       }
 
       // Add new tags
@@ -238,229 +225,172 @@ function InlineReviewForm({
   )
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', gap: '24px' }}>
-        {/* Left column: Label + Rating */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '80px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {existingReview ? 'Your review' : 'Add review'}
+    <form onSubmit={handleSubmit} className="receipt popup-receipt-form">
+      {/* Rating */}
+      <div className="category-dropdown-wrapper" ref={ratingDropdownRef} style={{ display: 'flex', justifyContent: 'center' }}>
+        <div
+          className={`receipt-rating ${!overallRating ? 'receipt-rating-empty' : ''} ${showRatingRequired ? 'receipt-rating-error' : ''}`}
+          onClick={() => setOpenDropdown(openDropdown === 'rating' ? null : 'rating')}
+        >
+          <span className={`number ${overallRating ? getRatingClass(parseInt(overallRating)) : ''}`}>
+            {overallRating || '\u00A0'}
           </span>
-          <div className="category-dropdown-wrapper" ref={ratingDropdownRef}>
+          <span className="out-of">/10</span>
+          <div className="word">
+            {overallRating ? getRatingLabel(parseInt(overallRating)) : 'tap to rate'}
+          </div>
+        </div>
+        {openDropdown === 'rating' && (
+          <div className="category-dropdown" style={{ minWidth: '200px', left: '50%', transform: 'translateX(-50%)' }}>
+            <div className="dropdown-list">
+              {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className={`dropdown-item ${overallRating === r.toString() ? 'selected' : ''}`}
+                  onClick={() => {
+                    setOverallRating(r.toString())
+                    setOpenDropdown(null)
+                    setShowRatingRequired(false)
+                  }}
+                >
+                  <span className="item-check">{overallRating === r.toString() ? '✓' : ''}</span>
+                  <span className="item-label">{r}/10 — {getRatingLabel(r)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="receipt-dashes" />
+
+      {/* Photo */}
+      <PhotoUpload
+        key={existingReview?.id || 'new'}
+        ref={photoRef}
+        initialPreview={existingReview?.photo_url || null}
+        onError={setError}
+      />
+
+      {/* Dish */}
+      <div className="receipt-row" style={{ alignItems: 'flex-start', marginTop: '10px' }}>
+        <span className="receipt-label" style={{ paddingTop: '8px', minWidth: '70px' }}>Dish</span>
+        <input
+          className="receipt-input"
+          type="text"
+          style={{ flex: 1, textAlign: 'right', width: 'auto' }}
+          value={dish}
+          onChange={(e) => setDish(e.target.value)}
+          placeholder="e.g. Pad Thai"
+        />
+      </div>
+
+      {/* Comment */}
+      <div className="receipt-row" style={{ alignItems: 'flex-start', marginBottom: '10px' }}>
+        <span className="receipt-label" style={{ paddingTop: '8px', minWidth: '70px' }}>Comment</span>
+        <textarea
+          ref={textareaRef}
+          className="receipt-textarea"
+          style={{ flex: 1, textAlign: 'right' }}
+          value={comment}
+          onChange={(e) => { setComment(e.target.value); resizeTextarea() }}
+          placeholder="Your thoughts..."
+          rows={1}
+        />
+      </div>
+
+      {/* Tags */}
+      <div className="receipt-row" style={{ alignItems: 'flex-start' }}>
+        <span className="receipt-label" style={{ paddingTop: '4px' }}>Tags</span>
+        <div className="receipt-tags" style={{ justifyContent: 'flex-end', flex: 1 }}>
+          {visibleTags.map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              className={`receipt-tag ${selectedTags.includes(tag.id) ? 'active' : ''}`}
+              onClick={() => toggleTag(tag.id)}
+            >
+              {tag.name}
+            </button>
+          ))}
+          <div className="category-dropdown-wrapper" ref={tagDropdownRef} style={{ display: 'inline-block' }}>
             <button
               type="button"
-              className={`social-tab ${overallRating ? 'active' : ''} ${showRatingRequired ? 'error' : ''}`}
-              onClick={() => setOpenDropdown(openDropdown === 'rating' ? null : 'rating')}
-              style={{ minWidth: '50px', textAlign: 'center' }}
+              className="receipt-tag add"
+              onClick={() => setOpenDropdown(openDropdown === 'tag' ? null : 'tag')}
             >
-              {overallRating || '—'}
+              +
             </button>
-            {openDropdown === 'rating' && (
-              <div className="category-dropdown" style={{ minWidth: '60px' }}>
+            {openDropdown === 'tag' && (
+              <div className="category-dropdown wide">
+                <div className="dropdown-header">
+                  <span className="dropdown-title">Search tags</span>
+                </div>
+                <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                  <input
+                    type="text"
+                    placeholder="Type to search..."
+                    value={tagSearchQuery}
+                    onChange={(e) => setTagSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      border: 'none',
+                      padding: '4px 0',
+                      fontSize: '13px',
+                      background: 'transparent',
+                      outline: 'none',
+                      fontFamily: "'JetBrains Mono', monospace"
+                    }}
+                    autoFocus
+                  />
+                </div>
                 <div className="dropdown-list">
-                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                  {filteredTags.map((tag) => {
+                    const isSelected = selectedTags.includes(tag.id)
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleTag(tag.id)}
+                      >
+                        <span className="item-check">{isSelected ? '✓' : ''}</span>
+                        <span className="item-label">{tag.name}</span>
+                      </button>
+                    )
+                  })}
+                  {tagSearchQuery.trim() && !allTags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
                     <button
-                      key={r}
                       type="button"
-                      className={`dropdown-item ${overallRating === r.toString() ? 'selected' : ''}`}
-                      onClick={() => {
-                        setOverallRating(r.toString())
-                        setOpenDropdown(null)
-                        setShowRatingRequired(false)
-                      }}
+                      className="dropdown-item"
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); createTag(tagSearchQuery) }}
+                      disabled={creatingTag}
+                      style={{ borderTop: filteredTags.length > 0 ? '1px solid var(--border)' : undefined }}
                     >
-                      <span className="item-check">{overallRating === r.toString() ? '✓' : ''}</span>
-                      <span className="item-label">{r}</span>
+                      <span className="item-check">+</span>
+                      <span className="item-label">{creatingTag ? 'Creating...' : `Create "${tagSearchQuery.trim()}"`}</span>
                     </button>
-                  ))}
+                  )}
+                  {filteredTags.length === 0 && !tagSearchQuery.trim() && (
+                    <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                      No tags yet
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right column: Dish, Comment, Tags, Photo, Button */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <input
-            type="text"
-            value={dish}
-            onChange={(e) => setDish(e.target.value)}
-            placeholder="Dish name (optional)"
-            style={{
-              maxWidth: '300px',
-              padding: '6px 0',
-              fontSize: '14px',
-              fontStyle: dish ? 'italic' : 'normal'
-            }}
-          />
-          <textarea
-            ref={textareaRef}
-            value={comment}
-            onChange={(e) => {
-              setComment(e.target.value)
-              resizeTextarea()
-            }}
-            placeholder="Add a comment..."
-            rows={2}
-            style={{
-              maxWidth: '480px',
-              resize: 'none',
-              overflow: 'hidden',
-              minHeight: '48px',
-              lineHeight: '1.4',
-              padding: '8px 0',
-              border: 'none',
-              borderBottom: '1px solid var(--border)',
-              background: 'transparent',
-              fontFamily: 'inherit',
-              fontSize: '14px'
-            }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-            <div className="social-tabs" style={{ flex: 1 }}>
-              {visibleTags.map((tag) => (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => toggleTag(tag.id)}
-                  className={`social-tab ${selectedTags.includes(tag.id) ? 'active' : ''}`}
-                >
-                  {tag.name}
-                </button>
-              ))}
-              {/* Search dropdown for more tags or create new */}
-              <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
-                  <button
-                    type="button"
-                    className={`add-chip ${openDropdown === 'tag' ? 'has-selection' : ''}`}
-                    onClick={() => setOpenDropdown(openDropdown === 'tag' ? null : 'tag')}
-                    onMouseEnter={() => setOpenDropdown('tag')}
-                  >
-                    +
-                  </button>
-                  {openDropdown === 'tag' && (
-                    <div className="category-dropdown wide">
-                      <div className="dropdown-header">
-                        <span className="dropdown-title">Search tags</span>
-                      </div>
-                      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-                        <input
-                          type="text"
-                          placeholder="Type to search..."
-                          value={tagSearchQuery}
-                          onChange={(e) => setTagSearchQuery(e.target.value)}
-                          style={{
-                            width: '100%',
-                            border: 'none',
-                            borderBottom: 'none',
-                            padding: '4px 0',
-                            fontSize: '13px',
-                            background: 'transparent',
-                            outline: 'none'
-                          }}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="dropdown-list">
-                        {filteredTags.map((tag) => {
-                          const isSelected = selectedTags.includes(tag.id)
-                          return (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                              onClick={() => toggleTag(tag.id)}
-                            >
-                              <span className="item-check">{isSelected ? '✓' : ''}</span>
-                              <span className="item-label">{tag.name}</span>
-                            </button>
-                          )
-                        })}
-                        {tagSearchQuery.trim() && !allTags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
-                          <button
-                            type="button"
-                            className="dropdown-item"
-                            onMouseDown={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              createTag(tagSearchQuery)
-                            }}
-                            disabled={creatingTag}
-                            style={{ borderTop: filteredTags.length > 0 ? '1px solid var(--border)' : undefined }}
-                          >
-                            <span className="item-check">+</span>
-                            <span className="item-label">{creatingTag ? 'Creating...' : `Create "${tagSearchQuery.trim()}"`}</span>
-                          </button>
-                        )}
-                        {filteredTags.length === 0 && !tagSearchQuery.trim() && (
-                          <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                            No tags yet
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Photo upload */}
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handlePhotoSelect(file)
-                }}
-              />
-              {photoPreview ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <img src={photoPreview} alt="Preview" className="review-photo-inline" />
-                  <button
-                    type="button"
-                    onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1 }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  style={{
-                    background: 'none',
-                    border: '1px dashed var(--border)',
-                    cursor: 'pointer',
-                    color: 'var(--text-muted)',
-                    padding: '6px 10px',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.2s'
-                  }}
-                  title="Add photo"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                    <polyline points="21 15 16 10 5 21"></polyline>
-                  </svg>
-                  Photo
-                </button>
-              )}
-              {error && <span style={{ color: 'var(--poor)', fontSize: '12px' }}>{error}</span>}
-              <button type="submit" disabled={saving} className="btn btn-accent" style={{ padding: '8px 16px' }}>
-                {saving ? '...' : existingReview ? 'Update' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Button */}
+      <div className="receipt-btns">
+        {error && <span style={{ color: 'var(--poor)', fontSize: '11px', fontFamily: "'JetBrains Mono', monospace" }}>{error}</span>}
+        <button type="submit" disabled={saving} className="receipt-btn primary">
+          {saving ? '...' : existingReview ? 'Update' : 'Submit'}
+        </button>
       </div>
     </form>
   )
@@ -472,8 +402,9 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const [users, setUsers] = useState<ReviewUser[]>([])
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [dishFilter, setDishFilter] = useState('')
+  const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantWithReviews | null>(null)
+  const [selectedPhotoReviewId, setSelectedPhotoReviewId] = useState<string | null>(null)
+  const [addReviewOpen, setAddReviewOpen] = useState(false)
 
   // Organisation state
   const [currentOrg, setCurrentOrg] = useState<Organisation | null>(null)
@@ -760,14 +691,15 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       if (userIds.size > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, display_name, is_private')
+          .select('id, display_name, is_private, avatar_url')
           .in('id', Array.from(userIds))
 
         if (profiles) {
           setUsers(profiles.map(p => ({
             id: p.id,
             email: p.display_name || p.id.slice(0, 8),
-            isPrivate: p.is_private || false
+            isPrivate: p.is_private || false,
+            avatarUrl: p.avatar_url || null
           })))
         }
       }
@@ -817,6 +749,34 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       subscription.unsubscribe()
     }
   }, [fetchData, fetchUserOrgs, fetchFollowing, fetchFollowers])
+
+  // Keyboard navigation for photo lightbox
+  useEffect(() => {
+    if (!selectedPhotoReviewId || !selectedRestaurant) return
+    const photosInReviews = selectedRestaurant.reviews.filter(r => r.photo_url)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentIdx = photosInReviews.findIndex(r => r.id === selectedPhotoReviewId)
+      if (e.key === 'ArrowRight' && currentIdx < photosInReviews.length - 1) {
+        setSelectedPhotoReviewId(photosInReviews[currentIdx + 1].id)
+      } else if (e.key === 'ArrowLeft' && currentIdx > 0) {
+        setSelectedPhotoReviewId(photosInReviews[currentIdx - 1].id)
+      } else if (e.key === 'Escape') {
+        setSelectedPhotoReviewId(null)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedPhotoReviewId, selectedRestaurant])
+
+  // Keep selectedRestaurant in sync when restaurants data refreshes
+  useEffect(() => {
+    if (selectedRestaurant) {
+      const updated = restaurants.find(r => r.id === selectedRestaurant.id)
+      if (updated && updated !== selectedRestaurant) {
+        setSelectedRestaurant(updated)
+      }
+    }
+  }, [restaurants, selectedRestaurant])
 
   // Determine which reviews are "relevant" based on social filter
   const getRelevantReviews = (reviews: typeof restaurants[0]['reviews']) => {
@@ -991,9 +951,17 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
   const stats = getVisibleStats()
 
   const handleRowClick = (restaurant: RestaurantWithReviews) => {
-    if (!user) return
-    setExpandedId(expandedId === restaurant.id ? null : restaurant.id)
-    setDishFilter('')
+    setSelectedRestaurant(restaurant)
+    setAddReviewOpen(false)
+    setSelectedPhotoReviewId(null)
+    document.body.style.overflow = 'hidden'
+  }
+
+  const closePopup = () => {
+    setSelectedRestaurant(null)
+    setSelectedPhotoReviewId(null)
+    setAddReviewOpen(false)
+    document.body.style.overflow = ''
   }
 
   const handleMapClick = (e: React.MouseEvent, restaurant: RestaurantWithReviews) => {
@@ -1084,7 +1052,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
             officeLocation={activeOfficeLocation}
             showOfficeMarker={showOffice}
             orgName={activeOrgName}
-            isSignedIn={!!user}
+            onRestaurantClick={handleRowClick}
           />
         </div>
       </section>
@@ -1136,200 +1104,68 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
             </thead>
             <tbody>
               {filteredRestaurants.map((restaurant) => (
-                <Fragment key={restaurant.id}>
-                  <tr
-                    onClick={() => handleRowClick(restaurant)}
-                    style={{
-                      cursor: user ? 'pointer' : 'default',
-                      background: expandedId === restaurant.id ? 'var(--bg-warm)' : undefined
-                    }}
-                  >
-                    <td style={{ paddingLeft: '16px' }}>
-                      <strong style={{ fontWeight: 500 }}>{restaurant.name}</strong>
-                    </td>
-                    <td className="hide-mobile">
-                      {restaurant.cuisine && (
-                        <span className="tag-mini">
-                          <span className="tag-mini-name">{restaurant.cuisine}</span>
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {restaurant.filteredAvgRating !== null ? (
-                        <span className={`rating-badge ${getRatingClass(restaurant.filteredAvgRating)}`}>
-                          {restaurant.filteredAvgRating.toFixed(1)} — {getRatingLabel(restaurant.filteredAvgRating)}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-                    <td className="hide-mobile">
-                      {restaurant.filteredTopTags && restaurant.filteredTopTags.length > 0 && (
-                        <div className="tags-table">
-                          {restaurant.filteredTopTags.map(({ tag, count }) => (
-                            <span key={tag.id} className="tag-mini">
-                              <span className="tag-mini-name">{tag.name}</span>
-                              <span className="tag-mini-count">{count}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                      {restaurant.relevantReviewCount} review{restaurant.relevantReviewCount !== 1 ? 's' : ''}
-                    </td>
-                    <td className="hide-mobile" style={{ textAlign: 'right' }}>
-                      {restaurant.latitude && restaurant.longitude && (
-                        <button
-                          onClick={(e) => handleMapClick(e, restaurant)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--accent)',
-                            padding: '4px',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                          title="View on map"
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                            <circle cx="12" cy="10" r="3"></circle>
-                          </svg>
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {expandedId === restaurant.id && (
-                    <tr key={`${restaurant.id}-expanded`}>
-                      <td colSpan={6} style={{ background: 'var(--bg-warm)', padding: '24px' }}>
-                        {(() => {
-                          const reviews = restaurant.reviews
-                          const photosInReviews = reviews.filter(r => r.photo_url)
-                          const uniqueDishes = [...new Set(reviews.filter(r => r.dish).map(r => r.dish!))]
-
-                          return (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                              {/* Photo strip */}
-                              {photosInReviews.length > 0 && (
-                                <div className="photo-strip">
-                                  {photosInReviews.map((review) => (
-                                    <div key={review.id} className="photo-strip-item">
-                                      <img src={review.photo_url!} alt={review.dish || 'Review photo'} />
-                                      {review.dish && (
-                                        <span className="photo-strip-caption">{review.dish}</span>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Dish filter + review count */}
-                              {uniqueDishes.length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dish</span>
-                                  <select
-                                    value={dishFilter}
-                                    onChange={(e) => setDishFilter(e.target.value)}
-                                    style={{ fontSize: '13px', padding: '4px 20px 4px 0', minWidth: '120px' }}
-                                  >
-                                    <option value="">All reviews</option>
-                                    {uniqueDishes.map(d => (
-                                      <option key={d} value={d}>{d}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-
-                              {/* Reviews list */}
-                              {(() => {
-                                const filteredReviews = dishFilter
-                                  ? reviews.filter(r => r.dish === dishFilter)
-                                  : reviews
-                                return filteredReviews.length > 0 ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {filteredReviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).map((review) => {
-                                      const canSeeDetails = isReviewVisible(review.user_id)
-                                      const reviewer = users.find(u => u.id === review.user_id)
-                                      return (
-                                        <div key={review.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                            {review.photo_url && (
-                                              <img src={review.photo_url} alt="" className="review-photo-inline" />
-                                            )}
-                                            <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '14px', minWidth: '50px' }}>
-                                              {review.rating}/10
-                                            </span>
-                                            <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '80px' }}>
-                                              {canSeeDetails ? (reviewer?.email || 'Anonymous') : 'Anonymous'}
-                                            </span>
-                                            {canSeeDetails && review.dish && (
-                                              <span className="dish-badge">{review.dish}</span>
-                                            )}
-                                            {canSeeDetails && review.comment && (
-                                              <span style={{ color: 'var(--text-secondary)' }}>{review.comment}</span>
-                                            )}
-                                          </div>
-                                          {canSeeDetails && review.tags && review.tags.length > 0 && (
-                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginLeft: '66px' }}>
-                                              {review.tags.map(tag => (
-                                                <span key={tag.id} className="tag-small">
-                                                  {tag.name}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                ) : (
-                                  <p style={{ color: 'var(--text-muted)' }}>No reviews yet</p>
-                                )
-                              })()}
-                            </div>
-                          )
-                        })()}
-                        {user && (
-                          <InlineReviewForm
-                            restaurantId={restaurant.id}
-                            userId={user.id}
-                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; dish?: string | null; photo_url?: string | null; tags?: Tag[] } | undefined}
-                            availableTags={availableTags}
-                            onSaved={fetchData}
-                            onTagCreated={(tag) => setAvailableTags(prev => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
-                          />
-                        )}
-                        {/* Mobile map button */}
-                        {restaurant.latitude && restaurant.longitude && (
-                          <div className="show-mobile" style={{ justifyContent: 'flex-end', marginTop: '16px' }}>
-                            <button
-                              onClick={(e) => handleMapClick(e, restaurant)}
-                              style={{
-                                background: 'none',
-                                border: '1px solid var(--border)',
-                                cursor: 'pointer',
-                                color: 'var(--accent)',
-                                padding: '8px 12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '12px',
-                              }}
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                              </svg>
-                              View on map
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
+                <tr
+                  key={restaurant.id}
+                  onClick={() => handleRowClick(restaurant)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td style={{ paddingLeft: '16px' }}>
+                    <strong style={{ fontWeight: 500 }}>{restaurant.name}</strong>
+                  </td>
+                  <td className="hide-mobile">
+                    {restaurant.cuisine && (
+                      <span className="tag-mini">
+                        <span className="tag-mini-name">{restaurant.cuisine}</span>
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {restaurant.filteredAvgRating !== null ? (
+                      <span className={`rating-badge ${getRatingClass(restaurant.filteredAvgRating)}`}>
+                        {restaurant.filteredAvgRating.toFixed(1)} — {getRatingLabel(restaurant.filteredAvgRating)}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>—</span>
+                    )}
+                  </td>
+                  <td className="hide-mobile">
+                    {restaurant.filteredTopTags && restaurant.filteredTopTags.length > 0 && (
+                      <div className="tags-table">
+                        {restaurant.filteredTopTags.map(({ tag, count }) => (
+                          <span key={tag.id} className="tag-mini">
+                            <span className="tag-mini-name">{tag.name}</span>
+                            <span className="tag-mini-count">{count}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                    {restaurant.relevantReviewCount} review{restaurant.relevantReviewCount !== 1 ? 's' : ''}
+                  </td>
+                  <td className="hide-mobile" style={{ textAlign: 'right' }}>
+                    {restaurant.latitude && restaurant.longitude && (
+                      <button
+                        onClick={(e) => handleMapClick(e, restaurant)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--accent)',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="View on map"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                      </button>
+                    )}
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
@@ -1355,6 +1191,333 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           </div>
         </div>
       </footer>
+
+      {/* Restaurant Detail Popup — Split Panel */}
+      {selectedRestaurant && (() => {
+        const restaurant = selectedRestaurant
+        const reviews = restaurant.reviews
+        const sortedReviews = reviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        const photosInReviews = reviews.filter(r => r.photo_url)
+        const avgRating = reviews.filter(r => r.rating !== null).length > 0
+          ? reviews.filter(r => r.rating !== null).reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.filter(r => r.rating !== null).length
+          : null
+        const reviewsPanelRef = { current: null as HTMLDivElement | null }
+
+        const selectedPhotoReview = selectedPhotoReviewId ? photosInReviews.find(r => r.id === selectedPhotoReviewId) : null
+
+        const handlePhotoClick = (reviewId: string) => {
+          setSelectedPhotoReviewId(selectedPhotoReviewId === reviewId ? null : reviewId)
+          // Scroll review into view
+          setTimeout(() => {
+            const el = reviewsPanelRef.current?.querySelector(`[data-review-id="${reviewId}"]`)
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }, 50)
+        }
+
+        return (
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closePopup() }}>
+            <div className={`restaurant-popup ${photosInReviews.length > 0 ? 'has-photos' : ''}`}>
+              {photosInReviews.length > 0 ? (
+                <div className="split-panel">
+                  {/* Left: photo gallery */}
+                  <div className="split-gallery">
+                    <div className="split-gallery-grid">
+                      {photosInReviews.map((review) => (
+                        <div
+                          key={review.id}
+                          className={`split-gallery-item ${selectedPhotoReviewId === review.id ? 'active' : ''}`}
+                          onClick={() => handlePhotoClick(review.id)}
+                        >
+                          <img src={review.photo_url!} alt={review.dish || 'Review photo'} />
+                          {review.rating && (
+                            <span className={`mini-score ${getRatingClass(review.rating)}`}>{review.rating}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right: info + reviews */}
+                  <div className="split-reviews" ref={(el) => { reviewsPanelRef.current = el }}>
+                    <div className="split-reviews-header">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                        <h2 style={{ fontSize: '24px' }}>{restaurant.name}</h2>
+                        <button
+                          onClick={closePopup}
+                          style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 16px' }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '10px' }}>
+                        {[restaurant.cuisine, restaurant.address].filter(Boolean).join(' · ')}
+                      </p>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {avgRating !== null && (
+                          <span className={`rating-badge ${getRatingClass(avgRating)}`} style={{ fontSize: '15px' }}>
+                            {avgRating.toFixed(1)} — {getRatingLabel(avgRating)}
+                          </span>
+                        )}
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                          {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="split-reviews-list">
+                      {sortedReviews.map((review) => {
+                        const canSee = isReviewVisible(review.user_id)
+                        const reviewer = users.find(u => u.id === review.user_id)
+                        const displayName = canSee ? (reviewer?.email || 'Anonymous') : 'Anonymous'
+                        const initial = canSee && reviewer?.email ? reviewer.email[0].toUpperCase() : '?'
+                        const avatarUrl = canSee ? reviewer?.avatarUrl : null
+                        const isHighlighted = selectedPhotoReviewId === review.id
+
+                        return (
+                          <div
+                            key={review.id}
+                            data-review-id={review.id}
+                            className={`popup-review-row ${isHighlighted ? 'highlighted' : ''}`}
+                          >
+                            <div className="review-avatar">
+                              {avatarUrl ? <img src={avatarUrl} alt={displayName} /> : <span>{initial}</span>}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '13px' }}>
+                                  {review.rating}/10
+                                </span>
+                                <span style={{ fontWeight: 500, fontSize: '12px' }}>{displayName}</span>
+                                {canSee && review.dish && (
+                                  <span className="dish-badge">{review.dish}</span>
+                                )}
+                              </div>
+                              {canSee && review.comment && (
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>{review.comment}</p>
+                              )}
+                              {canSee && review.tags && review.tags.length > 0 && (
+                                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
+                                  {review.tags.map(tag => (
+                                    <span key={tag.id} className="tag-small" style={{ fontSize: '10px' }}>{tag.name}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {reviews.length === 0 && (
+                        <p style={{ color: 'var(--text-muted)', padding: '8px 0' }}>No reviews yet</p>
+                      )}
+                    </div>
+
+                    {/* Collapsible add review section */}
+                    {user && (
+                      <>
+                        <div
+                          className="popup-add-review-header"
+                          onClick={() => setAddReviewOpen(!addReviewOpen)}
+                        >
+                          <span className="popup-add-review-label">
+                            {restaurant.reviews.find(r => r.user_id === user.id) ? 'Edit your review' : 'Add your review'}
+                          </span>
+                          <svg
+                            className={`popup-add-review-chevron ${addReviewOpen ? 'open' : ''}`}
+                            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          >
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                          </svg>
+                        </div>
+                        {addReviewOpen && (
+                          <div className="popup-add-review-body">
+                            <InlineReviewForm
+                              restaurantId={restaurant.id}
+                              userId={user.id}
+                              existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; dish?: string | null; photo_url?: string | null; tags?: Tag[] } | undefined}
+                              availableTags={availableTags}
+                              onSaved={() => {
+                                fetchData()
+                              }}
+                              onTagCreated={(tag) => setAvailableTags(prev => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* No photos: single-column layout */
+                <>
+                  <div className="popup-header">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                      <h2 style={{ fontSize: '24px' }}>{restaurant.name}</h2>
+                      <button
+                        onClick={closePopup}
+                        style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 16px' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '10px' }}>
+                      {[restaurant.cuisine, restaurant.address].filter(Boolean).join(' · ')}
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      {avgRating !== null && (
+                        <span className={`rating-badge ${getRatingClass(avgRating)}`} style={{ fontSize: '15px' }}>
+                          {avgRating.toFixed(1)} — {getRatingLabel(avgRating)}
+                        </span>
+                      )}
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                        {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0 24px 20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {sortedReviews.map((review) => {
+                        const canSee = isReviewVisible(review.user_id)
+                        const reviewer = users.find(u => u.id === review.user_id)
+                        const displayName = canSee ? (reviewer?.email || 'Anonymous') : 'Anonymous'
+                        const initial = canSee && reviewer?.email ? reviewer.email[0].toUpperCase() : '?'
+                        const avatarUrl = canSee ? reviewer?.avatarUrl : null
+
+                        return (
+                          <div key={review.id} className="popup-review-row">
+                            <div className="review-avatar">
+                              {avatarUrl ? <img src={avatarUrl} alt={displayName} /> : <span>{initial}</span>}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '13px' }}>
+                                  {review.rating}/10
+                                </span>
+                                <span style={{ fontWeight: 500, fontSize: '12px' }}>{displayName}</span>
+                                {canSee && review.dish && (
+                                  <span className="dish-badge">{review.dish}</span>
+                                )}
+                              </div>
+                              {canSee && review.comment && (
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>{review.comment}</p>
+                              )}
+                              {canSee && review.tags && review.tags.length > 0 && (
+                                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
+                                  {review.tags.map(tag => (
+                                    <span key={tag.id} className="tag-small" style={{ fontSize: '10px' }}>{tag.name}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {reviews.length === 0 && (
+                        <p style={{ color: 'var(--text-muted)', padding: '8px 0' }}>No reviews yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Collapsible add review section */}
+                  {user && (
+                    <>
+                      <div
+                        className="popup-add-review-header"
+                        onClick={() => setAddReviewOpen(!addReviewOpen)}
+                      >
+                        <span className="popup-add-review-label">
+                          {restaurant.reviews.find(r => r.user_id === user.id) ? 'Edit your review' : 'Add your review'}
+                        </span>
+                        <svg
+                          className={`popup-add-review-chevron ${addReviewOpen ? 'open' : ''}`}
+                          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        >
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </div>
+                      {addReviewOpen && (
+                        <div className="popup-add-review-body">
+                          <InlineReviewForm
+                            restaurantId={restaurant.id}
+                            userId={user.id}
+                            existingReview={restaurant.reviews.find(r => r.user_id === user.id) as { id: string; rating: number | null; comment: string | null; dish?: string | null; photo_url?: string | null; tags?: Tag[] } | undefined}
+                            availableTags={availableTags}
+                            onSaved={() => {
+                              fetchData()
+                            }}
+                            onTagCreated={(tag) => setAvailableTags(prev => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Photo Lightbox */}
+      {selectedPhotoReviewId && selectedRestaurant && (() => {
+        const review = selectedRestaurant.reviews.find(r => r.id === selectedPhotoReviewId)
+        if (!review?.photo_url) return null
+        const canSee = isReviewVisible(review.user_id)
+        const reviewer = users.find(u => u.id === review.user_id)
+        const displayName = canSee ? (reviewer?.email || 'Anonymous') : 'Anonymous'
+        const photosInReviews = selectedRestaurant.reviews.filter(r => r.photo_url)
+        const currentIdx = photosInReviews.findIndex(r => r.id === selectedPhotoReviewId)
+
+        return (
+          <div
+            className="photo-lightbox"
+            onClick={(e) => { if (e.target === e.currentTarget) setSelectedPhotoReviewId(null) }}
+          >
+            <button
+              className="photo-lightbox-close"
+              onClick={() => setSelectedPhotoReviewId(null)}
+            >
+              ×
+            </button>
+            {photosInReviews.length > 1 && currentIdx > 0 && (
+              <button
+                className="photo-lightbox-nav prev"
+                onClick={() => setSelectedPhotoReviewId(photosInReviews[currentIdx - 1].id)}
+              >
+                ‹
+              </button>
+            )}
+            <img src={review.photo_url} alt={review.dish || 'Review photo'} />
+            {photosInReviews.length > 1 && currentIdx < photosInReviews.length - 1 && (
+              <button
+                className="photo-lightbox-nav next"
+                onClick={() => setSelectedPhotoReviewId(photosInReviews[currentIdx + 1].id)}
+              >
+                ›
+              </button>
+            )}
+            <div className="photo-lightbox-info">
+              <span className={`mono ${getRatingClass(review.rating || 0)}`} style={{ fontSize: '16px' }}>
+                {review.rating}/10 — {getRatingLabel(review.rating || 0)}
+              </span>
+              <span style={{ marginLeft: '12px', fontSize: '14px' }}>{displayName}</span>
+              {canSee && review.dish && (
+                <span className="dish-badge" style={{ marginLeft: '12px', color: 'rgba(255,255,255,0.6)' }}>{review.dish}</span>
+              )}
+              {canSee && review.comment && (
+                <p style={{ margin: '8px 0 0', fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>{review.comment}</p>
+              )}
+              {canSee && review.tags && review.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {review.tags.map(tag => (
+                    <span key={tag.id} className="lightbox-tag">{tag.name}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

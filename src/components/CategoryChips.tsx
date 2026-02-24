@@ -33,7 +33,7 @@ export function CategoryChips({ selected, onChange, compact = false }: CategoryC
     <div className="category-chips">
       {/* All button */}
       <button
-        className={`default-chip accent ${isAllSelected ? 'active' : ''} ${compact ? 'small' : ''}`}
+        className={`chip ${isAllSelected ? 'active' : ''} ${compact ? 'sm' : ''}`}
         onClick={handleSelectAll}
       >
         All
@@ -45,7 +45,7 @@ export function CategoryChips({ selected, onChange, compact = false }: CategoryC
         return (
           <button
             key={category.value}
-            className={`default-chip accent ${isSelected ? 'active' : ''} ${compact ? 'small' : ''}`}
+            className={`chip ${isSelected ? 'active' : ''} ${compact ? 'sm' : ''}`}
             onClick={() => handleToggleCategory(category.value)}
           >
             {category.label}

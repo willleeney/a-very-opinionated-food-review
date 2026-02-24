@@ -168,7 +168,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             {availableCuisines.slice(0, 8).map((cuisine) => (
               <button
                 key={cuisine}
-                className={`social-tab ${selectedCuisines.includes(cuisine) ? 'active' : ''}`}
+                className={`chip ${selectedCuisines.includes(cuisine) ? 'active' : ''}`}
                 onClick={() => toggleCuisine(cuisine)}
               >
                 {cuisine}
@@ -186,7 +186,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             {socialOptions.map((option) => (
               <button
                 key={option.value}
-                className={`social-tab ${socialFilter === option.value && selectedUserIds.length === 0 ? 'active' : ''}`}
+                className={`chip ${socialFilter === option.value && selectedUserIds.length === 0 ? 'active' : ''}`}
                 onClick={() => {
                   setSocialFilter(option.value)
                   setSelectedUserIds([])
@@ -199,7 +199,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             {selectedUsers.map((user) => (
               <button
                 key={user.id}
-                className="social-tab active"
+                className="chip active"
                 onClick={() => handleRemoveUser(user.id)}
                 title="Click to remove"
               >
@@ -282,7 +282,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             {defaultTags.map((tag) => (
               <button
                 key={tag.id}
-                className={`social-tab ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
+                className={`chip ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
                 onClick={() => toggleTagId(tag.id)}
               >
                 {tag.name}
@@ -292,7 +292,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             {selectedTagsNotInDefault.map((tag) => (
               <button
                 key={tag.id}
-                className="social-tab active"
+                className="chip active"
                 onClick={() => toggleTagId(tag.id)}
               >
                 {tag.name}

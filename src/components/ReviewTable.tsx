@@ -181,11 +181,6 @@ export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
                             animate={{ opacity: 1 }}
                             className="p-4 bg-white/[0.02] border-t border-white/5"
                           >
-                            {restaurant.notes && (
-                              <p className="text-white/50 text-sm mb-3">
-                                <span className="text-white/70 font-medium">Notes:</span> {restaurant.notes}
-                              </p>
-                            )}
                             {restaurant.reviews.length > 0 ? (
                               <div>
                                 <span className="text-white/60 font-semibold text-xs uppercase tracking-wider">Reviews</span>

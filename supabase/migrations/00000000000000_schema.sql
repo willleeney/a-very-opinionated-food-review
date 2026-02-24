@@ -9,7 +9,6 @@ CREATE TABLE restaurants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   type TEXT NOT NULL,
-  notes TEXT,
   latitude NUMERIC,
   longitude NUMERIC,
   address TEXT,
