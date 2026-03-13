@@ -25,6 +25,7 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
     const [photoNaturalSize, setPhotoNaturalSize] = useState({ w: 0, h: 0 })
     const cropOverlayMouseDownTarget = useRef<EventTarget | null>(null)
     const photoContainerRef = useRef<HTMLDivElement>(null)
+    const previewContainerRef = useRef<HTMLDivElement>(null)
     const photoInputRef = useRef<HTMLInputElement>(null)
     const editorContainerWidthRef = useRef(368)
 
@@ -74,21 +75,21 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
       const container = photoContainerRef.current
       if (!container) return
       const containerSize = container.offsetWidth
+      editorContainerWidthRef.current = containerSize
       const nw = img.naturalWidth
       const nh = img.naturalHeight
-      const containZoom = Math.min(containerSize / nw, containerSize / nh)
+      // Cover zoom: fill the square crop area entirely (no black bars)
+      const coverZoom = Math.max(containerSize / nw, containerSize / nh)
       setPhotoNaturalSize({ w: nw, h: nh })
-      setMinZoom(containZoom)
-      // Only set default zoom/pan on first load
-      if (photoNaturalSize.w === 0) {
-        setPhotoZoom(containZoom)
-        const scaledW = nw * containZoom
-        const scaledH = nh * containZoom
-        setPhotoPan({
-          x: scaledW < containerSize ? (containerSize - scaledW) / 2 : 0,
-          y: scaledH < containerSize ? (containerSize - scaledH) / 2 : 0,
-        })
-      }
+      setMinZoom(coverZoom)
+      setPhotoZoom(coverZoom)
+      // Center the image within the crop area
+      const scaledW = nw * coverZoom
+      const scaledH = nh * coverZoom
+      setPhotoPan({
+        x: (containerSize - scaledW) / 2,
+        y: (containerSize - scaledH) / 2,
+      })
     }
 
     const clampPan = (pan: { x: number; y: number }, zoom: number) => {
@@ -221,25 +222,30 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
         />
         {photoPreview ? (
           <div
+            ref={previewContainerRef}
             className="receipt-photo-zone has-photo"
             onClick={() => { if (photoFile) setShowCropEditor(true) }}
             style={{ cursor: photoFile ? 'pointer' : 'default', background: '#000' }}
           >
-            {photoFile && photoNaturalSize.w > 0 ? (
-              <img
-                src={photoPreview}
-                alt="Preview"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: `${(photoNaturalSize.w * photoZoom / editorContainerWidthRef.current) * 100}%`,
-                  height: `${(photoNaturalSize.h * photoZoom / editorContainerWidthRef.current) * 100}%`,
-                  marginLeft: `${(photoPan.x / editorContainerWidthRef.current) * 100}%`,
-                  marginTop: `${(photoPan.y / editorContainerWidthRef.current) * 100}%`,
-                }}
-              />
-            ) : (
+            {photoFile && photoNaturalSize.w > 0 ? (() => {
+              const previewSize = previewContainerRef.current?.offsetWidth || 1
+              const ratio = previewSize / editorContainerWidthRef.current
+              return (
+                <img
+                  src={photoPreview}
+                  alt="Preview"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    transformOrigin: '0 0',
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    transform: `translate(${photoPan.x * ratio}px, ${photoPan.y * ratio}px) scale(${photoZoom * ratio})`,
+                  }}
+                />
+              )
+            })() : (
               <img src={photoPreview} alt="Preview" />
             )}
             <button
@@ -310,24 +316,32 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
                   alt="Crop preview"
                   onLoad={handlePhotoLoad}
                   style={{
-                    width: photoNaturalSize.w * photoZoom + 'px',
-                    height: photoNaturalSize.h * photoZoom + 'px',
-                    transform: `translate(${photoPan.x}px, ${photoPan.y}px)`,
+                    transform: `translate(${photoPan.x}px, ${photoPan.y}px) scale(${photoZoom})`,
+                    visibility: photoNaturalSize.w > 0 ? 'visible' : 'hidden',
                   }}
                   draggable={false}
                 />
               </div>
-              <div style={{ width: '100%', maxWidth: '368px', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Zoom</span>
-                <input
-                  type="range"
-                  min={minZoom}
-                  max={minZoom * 2.5}
-                  step={0.01}
-                  value={photoZoom}
-                  onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
-                  style={{ flex: 1, accentColor: 'var(--accent)' }}
-                />
+              <div style={{ width: '100%', maxWidth: '368px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  className="crop-zoom-btn"
+                  onClick={() => handleZoomChange(Math.max(minZoom, photoZoom / 1.25))}
+                  disabled={photoZoom <= minZoom}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#999', minWidth: '36px', textAlign: 'center' }}>
+                  {Math.round((photoZoom / minZoom) * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="crop-zoom-btn"
+                  onClick={() => handleZoomChange(Math.min(minZoom * 3, photoZoom * 1.25))}
+                  disabled={photoZoom >= minZoom * 3}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                 <button

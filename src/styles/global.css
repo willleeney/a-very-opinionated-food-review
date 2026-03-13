@@ -2224,6 +2224,20 @@ nav.scrolled {
   font-size: 11px;
 }
 
+.receipt-map {
+  aspect-ratio: 1;
+  width: 50%;
+  max-width: 200px;
+  margin: 10px auto;
+  overflow: hidden;
+  border: 1px dashed #999;
+  position: relative;
+}
+
+.receipt-map .leaflet-container {
+  background: var(--paper);
+}
+
 .receipt-dashes {
   border-bottom: 1px dashed #999;
   margin: 14px 0;
@@ -2432,36 +2446,35 @@ nav.scrolled {
   top: 0;
   left: 0;
   transform-origin: 0 0;
+  max-width: none;
+  max-height: none;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-.receipt-zoom-slider {
-  width: 100%;
-  padding: 6px 8px 4px;
-  background: var(--paper);
+.crop-zoom-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  border: 1px solid #555;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
-.receipt-zoom-slider input[type="range"] {
-  flex: 1;
-  height: 2px;
-  border: none;
-  border-bottom: none;
-  padding: 0;
-  accent-color: var(--accent);
+.crop-zoom-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
-.receipt-zoom-slider .zoom-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
+.crop-zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .receipt-btns {
