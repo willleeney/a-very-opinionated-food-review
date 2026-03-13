@@ -383,7 +383,7 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
 
   return (
     <>
-      <button onClick={() => setIsOpen(true)} className="btn btn-accent">
+      <button onClick={() => setIsOpen(true)} className="btn btn-accent" data-testid="add-place-btn">
         Add Place
       </button>
 
@@ -391,7 +391,7 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsOpen(false)}>
           <div className="receipt-wrap">
             <div className="torn-top" />
-            <div className="receipt" ref={receiptRef}>
+            <div className="receipt" ref={receiptRef} data-testid="add-place-form">
               <form id="receipt-form" className="receipt-body" onSubmit={handleSubmit} noValidate>
 
                 {/* Place name */}

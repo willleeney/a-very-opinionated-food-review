@@ -1030,11 +1030,11 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
       {/* Stats - compact inline */}
       <div className="container" style={{ paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid var(--border)' }}>
-        <div className="stats-row" style={{ display: 'flex', gap: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>
-          <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.total}</strong> places</span>
-          <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.reviews}</strong> reviews</span>
-          <span><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '—'}</strong> avg rating</span>
-          <span><strong style={{ color: 'var(--great)', fontWeight: 500 }}>{stats.topRated}</strong> top rated</span>
+        <div className="stats-row" data-testid="stats-row" style={{ display: 'flex', gap: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>
+          <span data-testid="stat-places"><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.total}</strong> places</span>
+          <span data-testid="stat-reviews"><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.reviews}</strong> reviews</span>
+          <span data-testid="stat-avg-rating"><strong style={{ color: 'var(--text)', fontWeight: 500 }}>{stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '—'}</strong> avg rating</span>
+          <span data-testid="stat-top-rated"><strong style={{ color: 'var(--great)', fontWeight: 500 }}>{stats.topRated}</strong> top rated</span>
         </div>
       </div>
 
@@ -1089,7 +1089,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
       </section>
 
       {/* Restaurant List */}
-      <section style={{ padding: '40px 0 80px' }}>
+      <section data-testid="restaurant-list" style={{ padding: '40px 0 80px' }}>
         <div className="container">
           <table>
             <thead>
@@ -1106,6 +1106,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
               {filteredRestaurants.map((restaurant) => (
                 <tr
                   key={restaurant.id}
+                  data-testid={`restaurant-row-${restaurant.name.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={() => handleRowClick(restaurant)}
                   style={{ cursor: 'pointer' }}
                 >
@@ -1216,7 +1217,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
 
         return (
           <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closePopup() }}>
-            <div className={`restaurant-popup ${photosInReviews.length > 0 ? 'has-photos' : ''}`}>
+            <div className={`restaurant-popup ${photosInReviews.length > 0 ? 'has-photos' : ''}`} data-testid="restaurant-popup">
               {photosInReviews.length > 0 ? (
                 <div className="split-panel">
                   {/* Left: photo gallery */}
@@ -1318,7 +1319,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
                           className="popup-add-review-header"
                           onClick={() => setAddReviewOpen(!addReviewOpen)}
                         >
-                          <span className="popup-add-review-label">
+                          <span className="popup-add-review-label" data-testid="toggle-review-form">
                             {restaurant.reviews.find(r => r.user_id === user.id) ? 'Edit your review' : 'Add your review'}
                           </span>
                           <svg

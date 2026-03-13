@@ -25,6 +25,11 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
+# playwright
+playwright-report/
+test-results/
+blob-report/
+
 # supabase local dev - keep migrations but ignore local state
 supabase/.branches/
 supabase/.temp/

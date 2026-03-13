@@ -25,7 +25,7 @@ export function TopNav({ user, currentOrgSlug, userOrgs }: TopNavProps): JSX.Ele
   const showOrgLink = adminOrgs.length > 0
 
   return (
-    <nav className="top-nav">
+    <nav className="top-nav" data-testid="top-nav">
       <div className="container">
         <div className="top-nav-inner">
           <a href="/" className="top-nav-logo">
@@ -77,7 +77,7 @@ export function TopNav({ user, currentOrgSlug, userOrgs }: TopNavProps): JSX.Ele
 
               <span className="top-nav-divider"></span>
 
-              <button onClick={handleSignOut} className="top-nav-signout" title="Sign out">
+              <button onClick={handleSignOut} className="top-nav-signout" title="Sign out" data-testid="sign-out-btn">
                 <svg className="top-nav-icon" viewBox="0 0 24 24">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                   <polyline points="16 17 21 12 16 7"></polyline>

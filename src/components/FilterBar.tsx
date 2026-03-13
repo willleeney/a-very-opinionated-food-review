@@ -127,7 +127,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
   )
 
   return (
-    <div className="filter-bar">
+    <div className="filter-bar" data-testid="filter-bar">
       {/* Mobile: Add place at top */}
       {rightActions && (
         <div className="filter-row show-mobile" style={{ justifyContent: 'center' }}>
@@ -365,6 +365,7 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
               className="filter-clear-btn hide-mobile"
               onClick={clearFilters}
               style={{ marginLeft: 'auto' }}
+              data-testid="clear-filters"
             >
               Clear all filters
             </button>

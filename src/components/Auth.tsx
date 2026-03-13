@@ -94,6 +94,7 @@ export function Auth(): JSX.Element {
                   required
                   placeholder="you@company.com"
                   style={{ width: '100%' }}
+                  data-testid="auth-email"
                 />
               </div>
             )}
@@ -111,6 +112,7 @@ export function Auth(): JSX.Element {
                   minLength={6}
                   placeholder="••••••••"
                   style={{ width: '100%' }}
+                  data-testid="auth-password"
                 />
               </div>
             )}
@@ -124,7 +126,7 @@ export function Auth(): JSX.Element {
               </p>
             )}
 
-            <button type="submit" disabled={loading} className="btn btn-accent" style={{ width: '100%' }}>
+            <button type="submit" disabled={loading} className="btn btn-accent" style={{ width: '100%' }} data-testid="auth-submit">
               {loading ? 'Loading...' : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : mode === 'reset' ? 'Update Password' : 'Send Reset Link'}
             </button>
 

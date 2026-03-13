@@ -20,15 +20,15 @@ export function HomePage(): JSX.Element {
 
   if (viewState === 'loading') {
     return (
-      <div className="loading">
+      <div className="loading" data-testid="app-loading">
         <div className="spinner" />
       </div>
     )
   }
 
   if (viewState === 'dashboard') {
-    return <Dashboard />
+    return <div data-testid="dashboard-view"><Dashboard /></div>
   }
 
-  return <LandingPage />
+  return <div data-testid="landing-view"><LandingPage /></div>
 }
