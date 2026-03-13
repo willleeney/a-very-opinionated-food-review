@@ -1,8 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, Marker } from 'react-leaflet'
+import L from 'leaflet'
 import { supabase } from '../lib/supabase'
 import type { RestaurantCategory, Tag } from '../lib/database.types'
 import { PhotoUpload } from './PhotoUpload'
 import type { PhotoUploadHandle } from './PhotoUpload'
+
+const pinIcon = L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="
+    width: 12px;
+    height: 12px;
+    background: #c45d3e;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  "></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+})
 
 const ALL_CATEGORIES: { value: RestaurantCategory; label: string }[] = [
   { value: 'lunch', label: 'Lunch' },
@@ -422,6 +438,23 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                     </div>
                   )}
                 </div>
+
+                {/* Mini map preview */}
+                {latitude !== null && longitude !== null && (
+                  <div className="receipt-map">
+                    <MapContainer
+                      key={`${latitude}-${longitude}`}
+                      center={[latitude, longitude]}
+                      zoom={16}
+                      scrollWheelZoom={true}
+                      attributionControl={false}
+                      style={{ height: '100%', width: '100%' }}
+                    >
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                      <Marker position={[latitude, longitude]} icon={pinIcon} />
+                    </MapContainer>
+                  </div>
+                )}
 
                 {/* Address row */}
                 <div className="receipt-row">
