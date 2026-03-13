@@ -4,7 +4,7 @@ import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { getRatingClass } from '../lib/ratings'
 import { useFilterStore } from '../lib/store'
-import type { RestaurantWithReviews, Tag, Profile } from '../lib/database.types'
+import type { Restaurant, Review, RestaurantWithReviews, Tag, ReviewTag, Profile } from '../lib/database.types'
 
 interface ReviewFlat {
   id: string
@@ -37,7 +37,7 @@ function timeAgo(dateStr: string): string {
   return `${weeks}w ago`
 }
 
-export function LandingPage(): JSX.Element {
+export function LandingPage() {
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [reviewTags, setReviewTags] = useState<Record<string, Tag[]>>({})
@@ -54,10 +54,10 @@ export function LandingPage(): JSX.Element {
         supabase.from('review_tags').select('*, tags(*)')
       ])
 
-      const rawRestaurants = (restResult.data || []) as any[]
+      const rawRestaurants = (restResult.data || []) as (Restaurant & { reviews: Review[] })[]
       const allProfiles = (profileResult.data || []) as Profile[]
       const allTags = (tagsResult.data || []) as Tag[]
-      const allReviewTags = (reviewTagsResult.data || []) as any[]
+      const allReviewTags = (reviewTagsResult.data || []) as (ReviewTag & { tags: Tag | null })[]
 
       const tagMap: Record<string, Tag[]> = {}
       for (const rt of allReviewTags) {
@@ -66,9 +66,9 @@ export function LandingPage(): JSX.Element {
       }
 
       const processed: RestaurantWithReviews[] = rawRestaurants.map(r => {
-        const reviews = (r.reviews || []).filter((rev: any) => rev.rating !== null)
+        const reviews = (r.reviews || []).filter((rev: Review) => rev.rating !== null)
         const avgRating = reviews.length > 0
-          ? reviews.reduce((sum: number, rev: any) => sum + rev.rating, 0) / reviews.length
+          ? reviews.reduce((sum: number, rev: Review) => sum + (rev.rating ?? 0), 0) / reviews.length
           : null
         return { ...r, avgRating, reviews: r.reviews || [] }
       })
@@ -314,7 +314,6 @@ export function LandingPage(): JSX.Element {
           <MapView
             restaurants={restaurants}
             officeLocation={null}
-            isSignedIn={false}
           />
         </div>
       </section>

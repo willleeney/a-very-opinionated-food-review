@@ -34,7 +34,7 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
       if (!photoFile) {
         setPhotoPreview(initialPreview)
       }
-    }, [initialPreview])
+    }, [initialPreview, photoFile])
 
     const removePhoto = () => {
       setPhotoFile(null)
@@ -144,6 +144,7 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
         document.removeEventListener('touchmove', onTouchMove)
         document.removeEventListener('touchend', onEnd)
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clampPan is stable when photoNaturalSize is stable
     }, [isDragging, dragStart, photoZoom, photoNaturalSize])
 
     const handleZoomChange = (newZoom: number) => {

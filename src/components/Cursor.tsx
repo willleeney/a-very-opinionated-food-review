@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-export function Cursor(): JSX.Element {
+export function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null)
   const dotRef = useRef<HTMLDivElement>(null)
 

@@ -26,7 +26,7 @@ function getRatingColor(rating: number | null): [number, number, number] {
   return [1, 0.35, 0.35] // soft red
 }
 
-export function GlobeView({ restaurants }: GlobeViewProps): JSX.Element {
+export function GlobeView({ restaurants }: GlobeViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointerInteracting = useRef<number | null>(null)
   const pointerInteractionMovement = useRef(0)

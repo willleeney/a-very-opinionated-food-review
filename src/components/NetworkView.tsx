@@ -35,7 +35,7 @@ function getRatingClass(rating: number): string {
   return 'rating-poor'
 }
 
-export function NetworkView(): JSX.Element {
+export function NetworkView() {
   const [user, setUser] = useState<User | null>(null)
   const [userOrgs, setUserOrgs] = useState<OrganisationWithMembership[]>([])
   const [isPrivate, setIsPrivate] = useState(false)
@@ -49,9 +49,9 @@ export function NetworkView(): JSX.Element {
   const [pendingRequests, setPendingRequests] = useState<UserWithStats[]>([])
   const [allUsers, setAllUsers] = useState<UserWithStats[]>([])
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
-  const [followerIds, setFollowerIds] = useState<Set<string>>(new Set())
+  const [_followerIds, setFollowerIds] = useState<Set<string>>(new Set())
   const [outgoingRequestIds, setOutgoingRequestIds] = useState<Set<string>>(new Set())
-  const [incomingRequests, setIncomingRequests] = useState<FollowRequest[]>([])
+  const [_incomingRequests, setIncomingRequests] = useState<FollowRequest[]>([])
 
   // Fetch user stats (reviews, ratings)
   const fetchUserStats = useCallback(async (userIds: string[]): Promise<Map<string, { reviewCount: number; avgRating: number | null; lowestRating: number | null; highestRating: number | null }>> => {
@@ -208,7 +208,7 @@ export function NetworkView(): JSX.Element {
   }, [fetchUserStats])
 
   // Fetch outgoing requests (people I've requested to follow)
-  const fetchOutgoingRequests = useCallback(async (userId: string) => {
+  const _fetchOutgoingRequests = useCallback(async (userId: string) => {
     const { data: requests } = await supabase
       .from('follow_requests')
       .select('target_id')
@@ -512,24 +512,26 @@ export function NetworkView(): JSX.Element {
 
   // Update allUsers when followingIds/outgoingRequestIds changes
   useEffect(() => {
-    if (allUsers.length > 0) {
-      setAllUsers(prev => prev.map(u => ({
+    setAllUsers(prev => {
+      if (prev.length === 0) return prev
+      return prev.map(u => ({
         ...u,
         isFollowing: followingIds.has(u.id),
         hasRequestedToFollow: outgoingRequestIds.has(u.id),
-      })))
-    }
+      }))
+    })
   }, [followingIds, outgoingRequestIds])
 
   // Update followerUsers when followingIds changes
   useEffect(() => {
-    if (followerUsers.length > 0) {
-      setFollowerUsers(prev => prev.map(u => ({
+    setFollowerUsers(prev => {
+      if (prev.length === 0) return prev
+      return prev.map(u => ({
         ...u,
         isFollowing: followingIds.has(u.id),
         hasRequestedToFollow: outgoingRequestIds.has(u.id),
-      })))
-    }
+      }))
+    })
   }, [followingIds, outgoingRequestIds])
 
   if (loading) {

@@ -73,7 +73,7 @@ function InlineReviewForm({
     setSelectedTags(existingReview?.tags?.map(t => t.id) || [])
     setComment(existingReview?.comment || '')
     setDish(existingReview?.dish || '')
-  }, [existingReview?.id])
+  }, [existingReview?.id, existingReview?.rating, existingReview?.tags, existingReview?.comment, existingReview?.dish])
 
   // Resize textarea when comment changes or on mount
   useEffect(() => {
@@ -396,7 +396,7 @@ function InlineReviewForm({
   )
 }
 
-export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
+export function Dashboard({ organisationSlug }: DashboardProps) {
   const [user, setUser] = useState<User | null>(null)
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
   const [users, setUsers] = useState<ReviewUser[]>([])
@@ -1204,7 +1204,7 @@ export function Dashboard({ organisationSlug }: DashboardProps): JSX.Element {
           : null
         const reviewsPanelRef = { current: null as HTMLDivElement | null }
 
-        const selectedPhotoReview = selectedPhotoReviewId ? photosInReviews.find(r => r.id === selectedPhotoReviewId) : null
+        const _selectedPhotoReview = selectedPhotoReviewId ? photosInReviews.find(r => r.id === selectedPhotoReviewId) : null
 
         const handlePhotoClick = (reviewId: string) => {
           setSelectedPhotoReviewId(selectedPhotoReviewId === reviewId ? null : reviewId)

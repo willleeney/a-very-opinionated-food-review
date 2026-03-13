@@ -368,7 +368,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_follow_request: {
+        Args: { requester: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

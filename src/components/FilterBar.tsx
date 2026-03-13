@@ -27,7 +27,7 @@ const SOCIAL_OPTIONS: { value: SocialFilter; label: string }[] = [
   { value: 'just_me', label: 'Just Me' },
 ]
 
-export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, searchableUsers = [], availableTags = [], availableCuisines = [] }: FilterBarProps): JSX.Element {
+export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, searchableUsers = [], availableTags = [], availableCuisines = [] }: FilterBarProps) {
   const {
     selectedCategories,
     setSelectedCategories,
@@ -107,10 +107,6 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
 
   const handleRemoveUser = (userId: string) => {
     toggleSelectedUserId(userId)
-  }
-
-  const handleClearAllUsers = () => {
-    setSelectedUserIds([])
   }
 
   // Filter tags based on search query

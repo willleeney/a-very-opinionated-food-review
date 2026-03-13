@@ -27,7 +27,7 @@ interface UserOrg {
   role: 'admin' | 'member'
 }
 
-export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps): JSX.Element {
+export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) {
   const [user, setUser] = useState<User | null>(null)
   const [org, setOrg] = useState<Organisation | null>(null)
   const [members, setMembers] = useState<MemberWithProfile[]>([])

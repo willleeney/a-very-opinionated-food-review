@@ -12,7 +12,7 @@ interface InviteWithDetails extends OrganisationInvite {
   inviter?: Profile | null
 }
 
-export function AcceptInvite({ token }: AcceptInviteProps): JSX.Element {
+export function AcceptInvite({ token }: AcceptInviteProps) {
   const [user, setUser] = useState<User | null>(null)
   const [invite, setInvite] = useState<InviteWithDetails | null>(null)
   const [loading, setLoading] = useState(true)

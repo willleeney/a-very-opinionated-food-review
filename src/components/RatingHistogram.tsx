@@ -24,7 +24,7 @@ function getRatingColor(rating: number): string {
   return '#a64d4d'
 }
 
-export function RatingHistogram({ restaurants }: RatingHistogramProps): JSX.Element {
+export function RatingHistogram({ restaurants }: RatingHistogramProps) {
   const distribution = useMemo(() => {
     const counts: Record<number, number> = {}
     for (let i = 1; i <= 10; i++) counts[i] = 0

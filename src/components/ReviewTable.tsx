@@ -29,7 +29,7 @@ function getRatingClass(rating: number): string {
   return 'rating-poor'
 }
 
-export function ReviewTable({ restaurants }: ReviewTableProps): JSX.Element {
+export function ReviewTable({ restaurants }: ReviewTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('avgRating')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expandedId, setExpandedId] = useState<string | null>(null)

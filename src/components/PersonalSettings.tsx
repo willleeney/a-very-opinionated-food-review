@@ -18,7 +18,7 @@ interface RequestWithOrg extends OrganisationRequest {
   organisation?: Organisation | null
 }
 
-export function PersonalSettings(): JSX.Element {
+export function PersonalSettings() {
   const [user, setUser] = useState<User | null>(null)
   const [orgs, setOrgs] = useState<OrgWithRole[]>([])
   const [invites, setInvites] = useState<InviteWithOrg[]>([])
@@ -77,7 +77,7 @@ export function PersonalSettings(): JSX.Element {
     const { data: invitesData } = await supabase
       .from('organisation_invites')
       .select('*, organisations(*)')
-      .eq('email', user.email)
+      .eq('email', user.email ?? '')
 
     if (invitesData) {
       // Fetch inviter profiles
@@ -445,11 +445,6 @@ export function PersonalSettings(): JSX.Element {
     setNewOrgName('')
     setCreatingOrg(false)
     fetchData()
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/'
   }
 
   if (!user) {

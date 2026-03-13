@@ -5,7 +5,7 @@ interface OrganisationSelectorProps {
   userOrgs: OrganisationWithMembership[]
 }
 
-export function OrganisationSelector({ currentOrgSlug, userOrgs }: OrganisationSelectorProps): JSX.Element {
+export function OrganisationSelector({ currentOrgSlug, userOrgs }: OrganisationSelectorProps) {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value
     if (value === '') {

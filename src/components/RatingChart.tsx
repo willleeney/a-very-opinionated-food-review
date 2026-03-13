@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import type { TooltipItem } from 'chart.js'
 import type { RestaurantWithReviews } from '../lib/database.types'
 import { useFilterStore } from '../lib/store'
 
@@ -59,7 +60,7 @@ const ratingBorderColors = [
   'rgba(168, 85, 247, 1)',
 ]
 
-export function RatingChart({ restaurants }: RatingChartProps): JSX.Element {
+export function RatingChart({ restaurants }: RatingChartProps) {
   const { selectedUserIds, selectedBounds, selectedRating, setSelectedRating } = useFilterStore()
 
   const chartData = useMemo(() => {
@@ -135,11 +136,11 @@ export function RatingChart({ restaurants }: RatingChartProps): JSX.Element {
           size: 12,
         },
         callbacks: {
-          title: (items: any[]) => {
+          title: (items: TooltipItem<'bar'>[]) => {
             const idx = items[0].dataIndex + 1
             return `${idx}/10 - ${ratingLabels[idx]}`
           },
-          label: (item: any) => `${item.raw} restaurant${item.raw !== 1 ? 's' : ''}`,
+          label: (item: TooltipItem<'bar'>) => `${item.raw} restaurant${item.raw !== 1 ? 's' : ''}`,
         },
       },
     },

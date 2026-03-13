@@ -190,7 +190,7 @@ function RestaurantMarker({
   )
 }
 
-export function MapView({ restaurants, officeLocation, showOfficeMarker = false, orgName, onRestaurantClick }: MapViewProps): JSX.Element {
+export function MapView({ restaurants, officeLocation, showOfficeMarker = false, orgName, onRestaurantClick }: MapViewProps) {
   const { highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
 
   const mapCenter = officeLocation || DEFAULT_CENTER

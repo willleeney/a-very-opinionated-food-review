@@ -8,7 +8,7 @@ interface TopNavProps {
   userOrgs: OrganisationWithMembership[]
 }
 
-export function TopNav({ user, currentOrgSlug, userOrgs }: TopNavProps): JSX.Element {
+export function TopNav({ user, currentOrgSlug, userOrgs }: TopNavProps) {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'

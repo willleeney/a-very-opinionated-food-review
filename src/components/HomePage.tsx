@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Dashboard } from './Dashboard'
 import { LandingPage } from './LandingPage'
 
-export function HomePage(): JSX.Element {
+export function HomePage() {
   const [viewState, setViewState] = useState<'loading' | 'landing' | 'dashboard'>('loading')
 
   useEffect(() => {

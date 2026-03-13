@@ -9,7 +9,7 @@ interface BurgerMenuProps {
   userOrgs: OrganisationWithMembership[]
 }
 
-export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userOrgs }: BurgerMenuProps): JSX.Element {
+export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userOrgs }: BurgerMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 

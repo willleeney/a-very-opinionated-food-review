@@ -54,7 +54,7 @@ interface PlaceResult {
   lng?: number
 }
 
-export function AddReview({ userId, organisationId, availableCuisines = [], onAdded }: AddReviewProps): JSX.Element {
+export function AddReview({ userId, organisationId, availableCuisines = [], onAdded }: AddReviewProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [nameQuery, setNameQuery] = useState('')
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null)
