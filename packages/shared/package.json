@@ -1,0 +1,30 @@
+{
+  "name": "@tastefull/shared",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "exports": {
+    "./components/*": "./src/components/*",
+    "./lib/*": "./src/lib/*",
+    "./hooks/*": "./src/hooks/*",
+    "./styles/*": "./src/styles/*"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.91.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/leaflet": "^1.9.21",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "chart.js": "^4.5.1",
+    "cobe": "^0.6.5",
+    "framer-motion": "^12.28.2",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.3",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.3",
+    "react-leaflet": "^5.0.0",
+    "tailwindcss": "^4.1.18",
+    "three": "^0.182.0",
+    "zustand": "^5.0.10"
+  }
+}

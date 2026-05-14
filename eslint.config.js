@@ -73,6 +73,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', '.astro/', '*.config.js', '*.config.ts'],
+    ignores: ['dist/', 'node_modules/', '.astro/', '*.config.js', '*.config.ts', 'packages/web/.astro/'],
   },
 ];
