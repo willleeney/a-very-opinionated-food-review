@@ -14,6 +14,15 @@ export const onRequest = defineMiddleware(async (_context, next) => {
     'Strict-Transport-Security',
     'max-age=31536000; includeSubDomains'
   )
+
+  const isDev = import.meta.env.DEV
+  const connectSrc = isDev
+    ? "connect-src 'self' http://127.0.0.1:* http://localhost:* https://*.supabase.co https://nominatim.openstreetmap.org https://places.googleapis.com"
+    : "connect-src 'self' https://*.supabase.co https://nominatim.openstreetmap.org https://places.googleapis.com"
+  const imgSrc = isDev
+    ? "img-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https://*.basemaps.cartocdn.com https://*.supabase.co https://unpkg.com"
+    : "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.supabase.co https://unpkg.com"
+
   response.headers.set(
     'Content-Security-Policy',
     [
@@ -21,8 +30,8 @@ export const onRequest = defineMiddleware(async (_context, next) => {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.supabase.co https://unpkg.com",
-      "connect-src 'self' https://*.supabase.co https://nominatim.openstreetmap.org https://places.googleapis.com",
+      imgSrc,
+      connectSrc,
       "frame-ancestors 'none'",
     ].join('; ')
   )

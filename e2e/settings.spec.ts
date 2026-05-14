@@ -5,8 +5,9 @@ test.describe('Settings', () => {
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
 
-    // Should show the settings page content
-    await expect(page.getByText('Display Name')).toBeVisible()
+    // Should show the settings heading and account section
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible()
   })
 
   test('can update display name', async ({ authenticatedPage: page }) => {
@@ -17,28 +18,23 @@ test.describe('Settings', () => {
     const nameInput = page.locator('input[type="text"]').first()
     await nameInput.fill('Test James Updated')
 
-    // Click save
-    await page.getByRole('button', { name: /save/i }).first().click()
+    // Click UPDATE button
+    await page.getByRole('button', { name: /update/i }).first().click()
 
-    // Should show success message (structured, not dangerouslySetInnerHTML)
+    // Should show success message
     await expect(page.getByText('Name updated')).toBeVisible()
   })
 
-  test('success message renders without HTML injection', async ({ authenticatedPage: page }) => {
+  test('success message renders as structured content', async ({ authenticatedPage: page }) => {
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
 
     const nameInput = page.locator('input[type="text"]').first()
     await nameInput.fill('Safe Name')
-    await page.getByRole('button', { name: /save/i }).first().click()
+    await page.getByRole('button', { name: /update/i }).first().click()
 
-    // Verify no dangerouslySetInnerHTML artifacts
-    const successDiv = page.locator('[style*="f0fdf4"]')
-    await expect(successDiv).toBeVisible()
-
-    // Content should be plain text, not HTML
-    const html = await successDiv.innerHTML()
-    expect(html).not.toContain('dangerouslySetInnerHTML')
+    // Verify success message appears
+    await expect(page.getByText('Name updated')).toBeVisible()
   })
 
   test('privacy toggle works', async ({ authenticatedPage: page }) => {

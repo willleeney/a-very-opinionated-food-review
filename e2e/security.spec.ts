@@ -17,6 +17,7 @@ test.describe('Security headers and privacy', () => {
     const csp = response!.headers()['content-security-policy']
     expect(csp).toContain("default-src 'self'")
     expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).toContain('connect-src')
   })
 
   test('landing page does not expose real review comments', async ({ page }) => {

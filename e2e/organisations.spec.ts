@@ -14,24 +14,27 @@ test.describe('Organisations', () => {
     await expect(page.getByTestId('restaurant-list')).toBeVisible()
   })
 
-  test('org admin link visible for admin users', async ({ authenticatedPage: page }) => {
-    // james is admin of StackOne
-    await page.goto(`/org/${ORGS.stackone.slug}`)
-    await page.waitForLoadState('networkidle')
-
-    // Admin link should be accessible
-    const adminLink = page.getByRole('link', { name: /admin|manage/i })
-    await expect(adminLink).toBeVisible()
+  test('org page shows Organisation link in nav for admin', async ({ authenticatedPage: page }) => {
+    // james is admin of StackOne — nav should show Organisation link
+    const nav = page.getByTestId('top-nav')
+    await expect(nav.getByText('Organisation')).toBeVisible()
   })
 
-  test('non-admin cannot see admin link', async ({ page }) => {
+  test('non-admin does not see Organisation admin link', async ({ page }) => {
     // sarah is a member (not admin) of StackOne
+    await page.addInitScript(() => {
+      const hideToolbar = () => {
+        const style = document.createElement('style')
+        style.textContent = 'astro-dev-toolbar { display: none !important; }'
+        ;(document.head || document.documentElement).appendChild(style)
+      }
+      if (document.head) hideToolbar()
+      else document.addEventListener('DOMContentLoaded', hideToolbar)
+    })
     await loginAs(page, 'sarah')
-    await page.goto(`/org/${ORGS.stackone.slug}`)
-    await page.waitForLoadState('networkidle')
 
-    // Admin link should not be visible
-    const adminLink = page.getByRole('link', { name: /admin|manage/i })
-    await expect(adminLink).not.toBeVisible()
+    // sarah is a member, not admin — Organisation link should not appear
+    const nav = page.getByTestId('top-nav')
+    await expect(nav.getByText('Organisation')).not.toBeVisible()
   })
 })
