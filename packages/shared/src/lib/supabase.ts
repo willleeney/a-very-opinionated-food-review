@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
+import { getConfig } from './config'
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+const { supabaseUrl, supabaseAnonKey } = getConfig()
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
