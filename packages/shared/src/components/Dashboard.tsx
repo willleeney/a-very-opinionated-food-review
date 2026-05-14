@@ -1003,8 +1003,29 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
 
   if (loading) {
     return (
-      <div className="loading">
-        <div className="spinner" />
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+        {/* Skeleton hero */}
+        <div style={{ padding: '80px 0 40px', textAlign: 'center' }}>
+          <div style={{ width: '300px', height: '48px', background: 'var(--bg-warm)', margin: '0 auto 16px', borderRadius: '2px' }} />
+          <div style={{ width: '400px', height: '16px', background: 'var(--bg-warm)', margin: '0 auto', borderRadius: '2px' }} />
+        </div>
+        {/* Skeleton stats */}
+        <div style={{ display: 'flex', gap: '32px', justifyContent: 'center', padding: '24px 0', borderBottom: '1px solid var(--border)' }}>
+          {[1,2,3,4].map(i => (
+            <div key={i} style={{ width: '80px', height: '24px', background: 'var(--bg-warm)', borderRadius: '2px' }} />
+          ))}
+        </div>
+        {/* Skeleton map */}
+        <div style={{ height: '400px', background: 'var(--bg-warm)', margin: '40px 0', borderRadius: '2px' }} />
+        {/* Skeleton table rows */}
+        {[1,2,3,4,5].map(i => (
+          <div key={i} style={{ display: 'flex', gap: '16px', padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ width: '200px', height: '16px', background: 'var(--bg-warm)', borderRadius: '2px' }} />
+            <div style={{ width: '80px', height: '16px', background: 'var(--bg-warm)', borderRadius: '2px' }} />
+            <div style={{ flex: 1 }} />
+            <div style={{ width: '40px', height: '16px', background: 'var(--bg-warm)', borderRadius: '2px' }} />
+          </div>
+        ))}
       </div>
     )
   }
@@ -1304,6 +1325,33 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
                                 </div>
                               )}
                             </div>
+                            {user && review.user_id === user.id && (
+                              <button
+                                type="button"
+                                title="Delete review"
+                                onClick={async () => {
+                                  if (!confirm('Delete this review?')) return
+                                  await supabase.from('review_tags').delete().eq('review_id', review.id)
+                                  await supabase.from('reviews').delete().eq('id', review.id)
+                                  fetchData()
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  color: 'var(--text-muted)',
+                                  padding: '4px',
+                                  flexShrink: 0,
+                                  alignSelf: 'flex-start',
+                                  marginTop: '2px',
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         )
                       })}

@@ -119,10 +119,35 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
       setDragStart({ x: e.clientX - photoPan.x, y: e.clientY - photoPan.y })
     }
 
+    const pinchRef = useRef<{ dist: number; zoom: number } | null>(null)
+
     const handleCropTouchStart = (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+        // Pinch start
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        pinchRef.current = { dist: Math.hypot(dx, dy), zoom: photoZoom }
+        return
+      }
       const t = e.touches[0]
       setIsDragging(true)
       setDragStart({ x: t.clientX - photoPan.x, y: t.clientY - photoPan.y })
+    }
+
+    const handleCropTouchMove = (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault()
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const newDist = Math.hypot(dx, dy)
+        const scale = newDist / pinchRef.current.dist
+        const newZoom = Math.min(minZoom * 5, Math.max(minZoom, pinchRef.current.zoom * scale))
+        handleZoomChange(newZoom)
+      }
+    }
+
+    const handleCropTouchEnd = () => {
+      pinchRef.current = null
     }
 
     useEffect(() => {
@@ -311,6 +336,8 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
                 style={{ width: '100%', maxWidth: '368px', background: '#000' }}
                 onMouseDown={handleCropMouseDown}
                 onTouchStart={handleCropTouchStart}
+                onTouchMove={handleCropTouchMove}
+                onTouchEnd={handleCropTouchEnd}
               >
                 <img
                   src={photoPreview}
@@ -327,7 +354,7 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
                 <button
                   type="button"
                   className="crop-zoom-btn"
-                  onClick={() => handleZoomChange(Math.max(minZoom, photoZoom / 1.25))}
+                  onClick={() => handleZoomChange(Math.max(minZoom, photoZoom / 1.15))}
                   disabled={photoZoom <= minZoom}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -338,8 +365,8 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
                 <button
                   type="button"
                   className="crop-zoom-btn"
-                  onClick={() => handleZoomChange(Math.min(minZoom * 3, photoZoom * 1.25))}
-                  disabled={photoZoom >= minZoom * 3}
+                  onClick={() => handleZoomChange(Math.min(minZoom * 5, photoZoom * 1.15))}
+                  disabled={photoZoom >= minZoom * 5}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>

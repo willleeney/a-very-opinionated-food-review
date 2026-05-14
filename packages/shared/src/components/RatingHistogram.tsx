@@ -20,7 +20,7 @@ const ratingLabels: Record<number, string> = {
 
 function getRatingColor(rating: number): string {
   if (rating >= 8) return '#2d7a4f'
-  if (rating >= 6) return '#b8860b'
+  if (rating >= 6) return '#5a8a3c'
   return '#a64d4d'
 }
 
@@ -53,15 +53,11 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps) {
         </span>
       </div>
 
-      {/* Horizontal histogram - bars grow upward */}
+      {/* Histogram — bars + labels in unified columns for perfect alignment */}
       <div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        height: '120px',
-        gap: '4px',
-        paddingBottom: '8px',
-        borderBottom: '1px solid var(--border)'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(10, 1fr)',
+        gap: '3px',
       }}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => {
           const count = distribution[rating]
@@ -71,72 +67,60 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps) {
             <div
               key={rating}
               style={{
-                flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                height: '100%',
-                justifyContent: 'flex-end'
               }}
             >
-              {/* Count label above bar */}
-              {count > 0 && (
-                <span
-                  className="mono"
+              {/* Bar area */}
+              <div style={{
+                height: '100px',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+              }}>
+                {count > 0 && (
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: '10px',
+                      color: 'var(--text-muted)',
+                      marginBottom: '3px',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
+                <div
                   style={{
-                    fontSize: '11px',
-                    color: 'var(--text-muted)',
-                    marginBottom: '4px'
+                    width: '100%',
+                    maxWidth: '28px',
+                    height: `${percentage}%`,
+                    minHeight: count > 0 ? '4px' : '0',
+                    background: getRatingColor(rating),
+                    opacity: count > 0 ? 1 : 0.15,
+                    transition: 'height 0.5s ease',
+                    borderRadius: '2px 2px 0 0',
                   }}
-                >
-                  {count}
-                </span>
-              )}
+                />
+              </div>
 
-              {/* Bar */}
-              <div
-                style={{
-                  width: '100%',
-                  maxWidth: '32px',
-                  height: `${percentage}%`,
-                  minHeight: count > 0 ? '4px' : '0',
-                  background: getRatingColor(rating),
-                  opacity: count > 0 ? 1 : 0.15,
-                  transition: 'height 0.5s ease',
-                  borderRadius: '2px 2px 0 0'
-                }}
-              />
+              {/* Divider */}
+              <div style={{ width: '100%', height: '1px', background: 'var(--border)' }} />
+
+              {/* Label */}
+              <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500, marginTop: '6px', lineHeight: 1 }}>
+                {rating}
+              </span>
+              <span className="histogram-labels" style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '2px', lineHeight: 1, textAlign: 'center' }}>
+                {ratingLabels[rating]}
+              </span>
             </div>
           )
         })}
-      </div>
-
-      {/* Rating labels below */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '4px',
-        marginTop: '8px'
-      }}>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (
-          <div
-            key={rating}
-            style={{
-              flex: 1,
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '2px'
-            }}
-          >
-            <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500 }}>
-              {rating}
-            </span>
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-              {ratingLabels[rating]}
-            </span>
-          </div>
-        ))}
       </div>
     </div>
   )

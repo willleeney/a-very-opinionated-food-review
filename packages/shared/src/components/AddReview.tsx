@@ -219,6 +219,12 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
             body: JSON.stringify({
               input: nameQuery,
               includedPrimaryTypes: ['restaurant', 'cafe', 'bar', 'bakery', 'meal_takeaway'],
+              locationBias: {
+                circle: {
+                  center: { latitude: 51.5047, longitude: -0.0886 },
+                  radius: 2000.0,
+                },
+              },
             })
           }
         )
@@ -302,6 +308,19 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
     setError(null)
 
     try {
+      // Check for duplicate restaurant (case-insensitive name match)
+      const { data: existing } = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .ilike('name', name.trim())
+        .limit(1)
+
+      if (existing && existing.length > 0) {
+        setError(`"${existing[0].name}" already exists. Search for it in the list to add a review.`)
+        setLoading(false)
+        return
+      }
+
       const { data: restaurant, error: restaurantError } = await supabase
         .from('restaurants')
         .insert({
@@ -602,26 +621,39 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                                   />
                                 </div>
                                 <div className="dropdown-list">
-                                  {filteredCuisines.length === 0 ? (
+                                  {filteredCuisines.map((c) => (
+                                    <button
+                                      key={c}
+                                      type="button"
+                                      className={`dropdown-item ${cuisine === c ? 'selected' : ''}`}
+                                      onClick={() => {
+                                        setCuisine(cuisine === c ? '' : c)
+                                        setOpenDropdown(null)
+                                        setCuisineSearchQuery('')
+                                      }}
+                                    >
+                                      <span className="item-check">{cuisine === c ? '\u2713' : ''}</span>
+                                      <span className="item-label">{c}</span>
+                                    </button>
+                                  ))}
+                                  {cuisineSearchQuery.trim() && !availableCuisines.some(c => c.toLowerCase() === cuisineSearchQuery.trim().toLowerCase()) && (
+                                    <button
+                                      type="button"
+                                      className="dropdown-item"
+                                      onClick={() => {
+                                        setCuisine(cuisineSearchQuery.trim())
+                                        setOpenDropdown(null)
+                                        setCuisineSearchQuery('')
+                                      }}
+                                    >
+                                      <span className="item-check" style={{ color: 'var(--accent)' }}>+</span>
+                                      <span className="item-label">Use "{cuisineSearchQuery.trim()}"</span>
+                                    </button>
+                                  )}
+                                  {filteredCuisines.length === 0 && !cuisineSearchQuery.trim() && (
                                     <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                                      No results
+                                      Type to search or add
                                     </div>
-                                  ) : (
-                                    filteredCuisines.map((c) => (
-                                      <button
-                                        key={c}
-                                        type="button"
-                                        className={`dropdown-item ${cuisine === c ? 'selected' : ''}`}
-                                        onClick={() => {
-                                          setCuisine(cuisine === c ? '' : c)
-                                          setOpenDropdown(null)
-                                          setCuisineSearchQuery('')
-                                        }}
-                                      >
-                                        <span className="item-check">{cuisine === c ? '\u2713' : ''}</span>
-                                        <span className="item-label">{c}</span>
-                                      </button>
-                                    ))
                                   )}
                                 </div>
                               </div>

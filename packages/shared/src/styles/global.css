@@ -10,7 +10,7 @@
   --accent: #c45d3e;
   --accent-light: #e8d5ce;
   --great: #2d7a4f;
-  --good: #b8860b;
+  --good: #5a8a3c;
   --poor: #a64d4d;
   --paper: #f8e0c8;
 }
@@ -2981,5 +2981,214 @@ nav.scrolled {
 
   .popup-receipt-form {
     padding: 16px 20px 20px;
+  }
+}
+
+/* ===========================================
+   Mobile Touch & Usability Overhaul
+   =========================================== */
+
+@media (max-width: 768px) {
+  /* ── Touch Targets: minimum 44px ── */
+  .btn,
+  button,
+  .chip,
+  .network-tab,
+  .tag,
+  .tag-mini,
+  .tag-small,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .chip {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .tag-mini {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  .btn-accent {
+    padding: 14px 24px;
+  }
+
+  /* ── Slider: touch-friendly ── */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 44px;
+    padding: 0;
+    background: transparent;
+    touch-action: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+  }
+
+  .slider-container {
+    padding: 8px 0;
+  }
+
+  .slider-container.compact {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* ── Dropdowns: above keyboard ── */
+  .dropdown-menu,
+  .filter-dropdown,
+  .autocomplete-dropdown {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    max-height: 50vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    z-index: 9999;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Receipt dropdown override — stays positioned inside form */
+  .receipt-body .autocomplete-dropdown,
+  .receipt-body .dropdown-menu {
+    position: absolute !important;
+    bottom: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    border-radius: 0;
+    max-height: 240px;
+  }
+
+  /* ── Rating histogram alignment ── */
+  .histogram-row {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .histogram-row .mono {
+    min-width: 24px;
+    text-align: right;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .histogram-bar-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .histogram-count {
+    min-width: 20px;
+    text-align: right;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  /* ── Map in add place: bigger ── */
+  .receipt-map {
+    width: 100% !important;
+    max-width: none !important;
+    aspect-ratio: 4/3 !important;
+    min-height: 200px;
+    margin: 12px 0;
+  }
+
+  /* ── Photo crop editor: touch improvements ── */
+  .crop-editor {
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .crop-editor:active {
+    cursor: grabbing;
+  }
+
+  .crop-controls {
+    gap: 16px;
+  }
+
+  .crop-controls button {
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 20px;
+  }
+
+  /* ── General mobile spacing ── */
+  .container {
+    padding: 0 16px;
+  }
+
+  section {
+    padding: 32px 0;
+  }
+
+  /* Table rows need more breathing room */
+  .restaurant-row td {
+    padding: 14px 8px 14px 0;
+  }
+
+  .restaurant-row td:first-child {
+    padding-left: 16px;
+  }
+
+  /* Make all form inputs touch-friendly */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    min-height: 44px;
+    font-size: 16px; /* prevents iOS zoom on focus */
+    padding: 10px 12px;
+  }
+
+  /* Prevent iOS auto-zoom on input focus */
+  @supports (-webkit-touch-callout: none) {
+    input, textarea, select {
+      font-size: 16px;
+    }
+  }
+
+  /* ── Safe area insets for notch devices ── */
+  .top-nav {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* ── Mobile shell wrapper ── */
+  .mobile-shell {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 }
