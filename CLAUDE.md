@@ -4,7 +4,20 @@
 
 A food review website for the team at Runway East, London Bridge. Honest, opinionated reviews of lunch spots in the neighbourhood.
 
-**Tech Stack:** Astro + React islands, Supabase (PostgreSQL + Auth), Cloudflare Workers, Leaflet maps
+**Tech Stack:** pnpm monorepo — Astro + React islands (web), Capacitor + Vite (mobile), shared component library. Supabase (PostgreSQL + Auth), Cloudflare Workers, Leaflet maps.
+
+**Monorepo Structure:**
+- `packages/web/` — Astro site deployed to Cloudflare Workers
+- `packages/shared/` — React components, utilities, styles (shared between web + mobile)
+- `packages/mobile/` — Capacitor + Vite for iOS/Android
+
+## App Store & Release Skills
+
+The following agent skills are installed for iOS release automation:
+
+- **ASO Skills** (`Eronred/aso-skills`) — App Store Optimization: keyword research, metadata optimization, competitor analysis, app icon optimization, creative testing
+- **App Store Preflight** (`truongduy2611/app-store-preflight-skills`) — Scan Xcode project for App Store rejection patterns before submission
+- **App Store Connect CLI** (`rorkai/app-store-connect-cli-skills`) — Automate TestFlight, builds, submissions, signing, analytics, screenshots via `asc` CLI (installed at `/opt/homebrew/bin/asc`)
 
 ## Design Philosophy
 
@@ -30,7 +43,7 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 
 ### Rating Colors
 - `--great: #2d7a4f` - Forest green for 8-10 ratings
-- `--good: #b8860b` - Golden amber for 6-7 ratings
+- `--good: #5a8a3c` - Olive green for 6-7 ratings
 - `--poor: #a64d4d` - Muted red for 1-5 ratings
 
 ## Typography

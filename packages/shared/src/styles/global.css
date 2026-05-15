@@ -3040,6 +3040,7 @@ nav.scrolled {
     border: 3px solid white;
     box-shadow: 0 1px 4px rgba(0,0,0,0.2);
     cursor: pointer;
+    margin-top: -11px;
   }
 
   input[type="range"]::-webkit-slider-runnable-track {
