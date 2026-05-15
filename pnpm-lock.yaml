@@ -65,9 +65,6 @@ importers:
       '@capacitor/core':
         specifier: ^7.2.0
         version: 7.6.5
-      '@capacitor/haptics':
-        specifier: ^7.0.1
-        version: 7.0.5(@capacitor/core@7.6.5)
       '@capacitor/ios':
         specifier: ^7.6.5
         version: 7.6.5(@capacitor/core@7.6.5)
@@ -83,9 +80,6 @@ importers:
       '@capacitor/push-notifications':
         specifier: ^7.0.1
         version: 7.0.6(@capacitor/core@7.6.5)
-      '@capacitor/share':
-        specifier: ^7.0.1
-        version: 7.0.4(@capacitor/core@7.6.5)
       '@capacitor/splash-screen':
         specifier: ^7.0.1
         version: 7.0.5(@capacitor/core@7.6.5)
@@ -391,11 +385,6 @@ packages:
   '@capacitor/core@7.6.5':
     resolution: {integrity: sha512-JWyxD9LaK1oY588B/khJIG3Ec4NHI/Ki4v1b4XzqPNt2a27au0F2AhLTwYexV4Bp3Ruxf+8oYqxFAC8/7sGBWA==}
 
-  '@capacitor/haptics@7.0.5':
-    resolution: {integrity: sha512-ujXuUkL8UG1YLhuJo/q+jiHr0K5JmclGZHmV1RttmiUBRG1XpC4Fc4gXUJyEX+6IoyfwWhgtPvJFRUB31HYnRQ==}
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
-
   '@capacitor/ios@7.6.5':
     resolution: {integrity: sha512-jJK3wW65GAsmzgaswoePWDQ7mADIwQNWqWGcOeZyrPP7+lzW5/8gGqu9ASFGbG+GplFfgwRWzd4oH/7xb+lYFw==}
     peerDependencies:
@@ -418,11 +407,6 @@ packages:
 
   '@capacitor/push-notifications@7.0.6':
     resolution: {integrity: sha512-zAhbHpdbc15ImuVGgoFwUZsKI+jjGxy/oO5mgfYKUx8Xl2OskndzhL79PYsCPjyGLbqUR9NRUZJthV9auVT3nw==}
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
-
-  '@capacitor/share@7.0.4':
-    resolution: {integrity: sha512-wNXxmXUcChrtbZ5jQv8scFIbIGKo3rk6B7qpWySxfUhYJP5NANgAqQ9Z69m0k/zYsucdh66SBU7XW1ykd9aUug==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -4819,10 +4803,6 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@capacitor/haptics@7.0.5(@capacitor/core@7.6.5)':
-    dependencies:
-      '@capacitor/core': 7.6.5
-
   '@capacitor/ios@7.6.5(@capacitor/core@7.6.5)':
     dependencies:
       '@capacitor/core': 7.6.5
@@ -4840,10 +4820,6 @@ snapshots:
       '@capacitor/core': 7.6.5
 
   '@capacitor/push-notifications@7.0.6(@capacitor/core@7.6.5)':
-    dependencies:
-      '@capacitor/core': 7.6.5
-
-  '@capacitor/share@7.0.4(@capacitor/core@7.6.5)':
     dependencies:
       '@capacitor/core': 7.6.5
 

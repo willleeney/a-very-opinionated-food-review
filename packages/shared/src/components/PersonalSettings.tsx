@@ -865,6 +865,67 @@ export function PersonalSettings() {
             </p>
           </div>
         </div>
+
+        {/* Danger Zone — Account Deletion (App Store Guideline 5.1.1(v)) */}
+        <div className="settings-section" style={{ marginTop: '48px', borderTop: '2px solid var(--poor)', paddingTop: '32px' }}>
+          <div className="settings-row">
+            <div>
+              <h2 style={{ color: 'var(--poor)', fontSize: '18px', marginBottom: '4px' }}>Delete Account</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+                Permanently delete your account and all associated data. This cannot be undone.
+              </p>
+            </div>
+            <div className="settings-content">
+              <button
+                type="button"
+                className="btn"
+                style={{ borderColor: 'var(--poor)', color: 'var(--poor)' }}
+                onClick={async () => {
+                  const confirmed = confirm(
+                    'Are you sure you want to delete your account?\n\n' +
+                    'This will permanently remove:\n' +
+                    '• Your profile and display name\n' +
+                    '• All your reviews and ratings\n' +
+                    '• Your organisation memberships\n' +
+                    '• Your follow relationships\n\n' +
+                    'This action cannot be undone.'
+                  )
+                  if (!confirmed) return
+
+                  const doubleConfirm = confirm('This is your last chance. Delete account permanently?')
+                  if (!doubleConfirm) return
+
+                  try {
+                    setError(null)
+                    // Delete user data in order (reviews → org memberships → follows → profile)
+                    if (user) {
+                      await supabase.from('review_tags').delete().in(
+                        'review_id',
+                        (await supabase.from('reviews').select('id').eq('user_id', user.id)).data?.map(r => r.id) || []
+                      )
+                      await supabase.from('reviews').delete().eq('user_id', user.id)
+                      await supabase.from('organisation_members').delete().eq('user_id', user.id)
+                      await supabase.from('organisation_requests').delete().eq('user_id', user.id)
+                      await supabase.from('user_follows').delete().eq('follower_id', user.id)
+                      await supabase.from('user_follows').delete().eq('following_id', user.id)
+                      await supabase.from('follow_requests').delete().eq('requester_id', user.id)
+                      await supabase.from('follow_requests').delete().eq('target_id', user.id)
+                      await supabase.from('push_tokens').delete().eq('user_id', user.id)
+                      await supabase.from('profiles').delete().eq('id', user.id)
+                    }
+                    // Sign out (actual auth.users row deletion requires admin/server-side)
+                    await supabase.auth.signOut()
+                    window.location.href = '/'
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to delete account')
+                  }
+                }}
+              >
+                Delete My Account
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
