@@ -35,15 +35,15 @@ The following agent skills are installed for iOS release automation:
 --bg-warm: #f5f2ed;      /* Slightly warmer for hover/expanded states */
 --text: #1a1a1a;         /* Near-black for primary text */
 --text-secondary: #666;  /* Body text, descriptions */
---text-muted: #999;      /* Labels, metadata */
+--text-muted: #6d6560;   /* Labels, metadata (WCAG AA compliant) */
 --border: #e8e4de;       /* Subtle warm grey borders */
---accent: #c45d3e;       /* Terracotta - CTAs, links, map markers */
---accent-light: #e8d5ce; /* Selection highlight */
+--accent: #a84e35;       /* Terracotta - CTAs, links, map markers (WCAG AA) */
+--accent-light: #faf0eb; /* Selection highlight */
 ```
 
 ### Rating Colors
 - `--great: #2d7a4f` - Forest green for 8-10 ratings
-- `--good: #5a8a3c` - Olive green for 6-7 ratings
+- `--good: #4d7a33` - Olive green for 6-7 ratings (WCAG AA)
 - `--poor: #a64d4d` - Muted red for 1-5 ratings
 
 ## Typography
