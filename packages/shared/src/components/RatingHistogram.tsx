@@ -117,7 +117,7 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps) {
               <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500, marginTop: '6px', lineHeight: 1 }}>
                 {rating}
               </span>
-              <span className="histogram-labels" style={{ fontSize: '7px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.01em', marginTop: '2px', lineHeight: 1, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="histogram-labels" style={{ fontSize: '7px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.01em', marginTop: '2px', lineHeight: 1, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', display: 'var(--histogram-label-display, block)' }}>
                 {ratingLabels[rating]}
               </span>
             </div>

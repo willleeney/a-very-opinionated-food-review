@@ -1296,13 +1296,9 @@ nav.scrolled {
     flex: 1 1 45%;
   }
 
-  /* Smaller histogram on mobile */
-  .histogram-labels {
-    font-size: 10px !important;
-  }
-
-  .histogram-labels span:last-child {
-    font-size: 7px !important;
+  /* Hide histogram text labels on mobile — just show numbers */
+  :root {
+    --histogram-label-display: none;
   }
 
   /* Reduce section padding */
