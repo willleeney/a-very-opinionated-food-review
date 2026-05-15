@@ -35,6 +35,7 @@ export function RatingSlider({ label, value, onChange, compact = false }: Rating
             value={sliderValue}
             onChange={handleChange}
             className="slider-input"
+            aria-label={label || 'Rating filter'}
           />
         </div>
         <span className="slider-value-inline">{getDisplayValue(value)}</span>
@@ -44,10 +45,11 @@ export function RatingSlider({ label, value, onChange, compact = false }: Rating
 
   return (
     <div className="slider-container">
-      <label className="slider-label">{label}</label>
+      <label className="slider-label" htmlFor="rating-slider">{label}</label>
       <div className="slider-wrapper">
         <div className="slider-fill-bg" style={{ left: `${fillPercent}%`, right: 0, width: 'auto' }} />
         <input
+          id="rating-slider"
           type="range"
           min="0"
           max="10"

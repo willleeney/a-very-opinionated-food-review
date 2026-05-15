@@ -7,7 +7,7 @@ test.describe('Settings', () => {
 
     // Should show the settings heading and account section
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible()
   })
 
   test('can update display name', async ({ authenticatedPage: page }) => {

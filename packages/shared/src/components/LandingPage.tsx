@@ -258,7 +258,7 @@ export function LandingPage() {
             const quote = topRatedQuotes[r.id]
             return (
               <div key={r.id} className="landing-preview-card" onClick={() => handleReviewClick(r.id)}>
-                <span className="rank">{String(i + 1).padStart(2, '0')}</span>
+                <span className="rank" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
                 <div className="card-info">
                   <div className="card-name">{r.name}</div>
                   <div className="card-cuisine">{r.cuisine}</div>

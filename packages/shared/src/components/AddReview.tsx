@@ -575,7 +575,7 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                       <div className="receipt-row" style={{ alignItems: 'flex-start' }}>
                         <span className="receipt-label" style={{ paddingTop: '4px' }}>Cuisine</span>
                         <div className="receipt-tags" style={{ justifyContent: 'flex-end', flex: 1 }}>
-                          {visibleCuisines.map((c) => (
+                          {visibleCuisines.filter(c => c && c.trim()).map((c) => (
                             <button
                               key={c}
                               type="button"

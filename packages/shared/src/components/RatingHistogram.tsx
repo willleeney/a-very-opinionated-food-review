@@ -45,7 +45,7 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps) {
   const totalReviewed = Object.values(distribution).reduce((a, b) => a + b, 0)
 
   return (
-    <div>
+    <div data-testid="rating-histogram">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
         <h3 style={{ margin: 0 }}>Rating Distribution</h3>
         <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -58,6 +58,8 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps) {
         display: 'grid',
         gridTemplateColumns: 'repeat(10, 1fr)',
         gap: '3px',
+        overflow: 'hidden',
+        padding: '0 2px',
       }}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => {
           const count = distribution[rating]
@@ -115,7 +117,7 @@ export function RatingHistogram({ restaurants }: RatingHistogramProps) {
               <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500, marginTop: '6px', lineHeight: 1 }}>
                 {rating}
               </span>
-              <span className="histogram-labels" style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '2px', lineHeight: 1, textAlign: 'center' }}>
+              <span className="histogram-labels" style={{ fontSize: '7px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.01em', marginTop: '2px', lineHeight: 1, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {ratingLabels[rating]}
               </span>
             </div>

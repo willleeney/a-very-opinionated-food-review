@@ -1250,7 +1250,26 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
                           className={`split-gallery-item ${selectedPhotoReviewId === review.id ? 'active' : ''}`}
                           onClick={() => handlePhotoClick(review.id)}
                         >
-                          <img src={review.photo_url!} alt={review.dish || 'Review photo'} />
+                          <img
+                            src={review.photo_url!}
+                            alt={review.dish || 'Review photo'}
+                            onError={(e) => {
+                              const item = (e.target as HTMLImageElement).closest('.split-gallery-item') as HTMLElement
+                              if (item) item.style.display = 'none'
+                              // If all gallery items hidden, collapse to non-photo layout
+                              const grid = item?.closest('.split-gallery-grid')
+                              if (grid && !grid.querySelector('.split-gallery-item:not([style*="display: none"])')) {
+                                const popup = grid.closest('.restaurant-popup')
+                                if (popup) popup.classList.remove('has-photos')
+                                const panel = grid.closest('.split-panel')
+                                if (panel) {
+                                  const gallery = panel.querySelector('.split-gallery') as HTMLElement
+                                  if (gallery) gallery.style.display = 'none'
+                                }
+                              }
+                            }}
+                            loading="lazy"
+                          />
                           {review.rating && (
                             <span className={`mini-score ${getRatingClass(review.rating)}`}>{review.rating}</span>
                           )}
@@ -1536,7 +1555,11 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
                 ‹
               </button>
             )}
-            <img src={review.photo_url} alt={review.dish || 'Review photo'} />
+            <img
+              src={review.photo_url}
+              alt={review.dish || 'Review photo'}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
             {photosInReviews.length > 1 && currentIdx < photosInReviews.length - 1 && (
               <button
                 className="photo-lightbox-nav next"

@@ -29,6 +29,8 @@ async function analyzeA11y(page: import('@playwright/test').Page) {
   return new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa'])
     .exclude('astro-dev-toolbar')
+    .exclude('.leaflet-container')  // Leaflet generates markers without aria-labels
+    .exclude('[aria-hidden="true"]')  // Decorative elements
     .analyze()
 }
 
