@@ -7,4 +7,8 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
+  server: {
+    host: '0.0.0.0', // Allow access from Android emulator (10.0.2.2)
+    port: 5173,
+  },
 })

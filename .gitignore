@@ -33,6 +33,7 @@ pnpm-debug.log*
 playwright-report/
 test-results/
 blob-report/
+e2e/screenshots/
 
 # supabase local dev - keep migrations but ignore local state
 supabase/.branches/

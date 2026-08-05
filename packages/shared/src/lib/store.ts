@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory, SocialFilter } from './database.types'
 
 export interface FilterState {
@@ -36,7 +37,7 @@ export interface FilterState {
   hasActiveFilters: () => boolean
 }
 
-export const useFilterStore = create<FilterState>((set, get) => ({
+export const useFilterStore = create<FilterState>()(persist((set, get) => ({
   // Initial state
   selectedUserIds: [],
   selectedRating: null,
@@ -104,6 +105,16 @@ export const useFilterStore = create<FilterState>((set, get) => ({
       state.selectedCuisines.length > 0
     )
   },
+}), {
+  name: 'tastefull-filters',
+  partialize: (state) => ({
+    selectedCategories: state.selectedCategories,
+    minOverallRating: state.minOverallRating,
+    socialFilter: state.socialFilter,
+    selectedTagIds: state.selectedTagIds,
+    selectedCuisines: state.selectedCuisines,
+    selectedUserIds: state.selectedUserIds,
+  }),
 }))
 
 // Organisation store for managing current org context

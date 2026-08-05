@@ -527,32 +527,35 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                   )}
                 </div>
 
-                <div className="receipt-dashes" />
-                <div className="receipt-section-label">Optional Details</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '18px 0' }}>
+                  <div style={{ flex: 1, height: '2px', backgroundImage: 'repeating-linear-gradient(to right, #999 0, #999 12px, transparent 12px, transparent 20px)' }} />
+                  <span className="receipt-section-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Optional</span>
+                  <div style={{ flex: 1, height: '2px', backgroundImage: 'repeating-linear-gradient(to right, #999 0, #999 12px, transparent 12px, transparent 20px)' }} />
+                </div>
 
                 {/* Photo zone */}
                 <PhotoUpload ref={photoRef} onError={setError} />
 
                 {/* Comment */}
-                <div className="receipt-row" style={{ alignItems: 'flex-start', marginBottom: '10px' }}>
-                  <span className="receipt-label" style={{ paddingTop: '8px', minWidth: '80px' }}>Comment</span>
+                <div className="receipt-row" style={{ alignItems: 'center', marginBottom: '10px' }}>
+                  <span className="receipt-label">Comment</span>
                   <textarea
                     className="receipt-textarea"
-                    style={{ flex: 1, maxWidth: '60%', textAlign: 'right' }}
+                    style={{ flex: 1, maxWidth: '65%', textAlign: 'right' }}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     onInput={autoResize}
-                    placeholder="comment..."
+                    placeholder="your thoughts..."
                     rows={1}
                   />
                 </div>
 
                 {/* Dish */}
-                <div className="receipt-row" style={{ alignItems: 'flex-start', marginBottom: '10px' }}>
-                  <span className="receipt-label" style={{ paddingTop: '8px', minWidth: '80px' }}>Dish</span>
+                <div className="receipt-row" style={{ alignItems: 'center', marginBottom: '10px' }}>
+                  <span className="receipt-label">Dish</span>
                   <textarea
                     className="receipt-textarea"
-                    style={{ flex: 1, maxWidth: '60%', textAlign: 'right' }}
+                    style={{ flex: 1, maxWidth: '65%', textAlign: 'right' }}
                     value={dish}
                     onChange={(e) => setDish(e.target.value)}
                     onInput={autoResize}
@@ -572,8 +575,8 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                     )
 
                     return (
-                      <div className="receipt-row" style={{ alignItems: 'flex-start' }}>
-                        <span className="receipt-label" style={{ paddingTop: '4px' }}>Cuisine</span>
+                      <div className="receipt-row" style={{ alignItems: 'center' }}>
+                        <span className="receipt-label">Cuisine</span>
                         <div className="receipt-tags" style={{ justifyContent: 'flex-end', flex: 1 }}>
                           {visibleCuisines.filter(c => c && c.trim()).map((c) => (
                             <button
@@ -600,13 +603,10 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                                   ? { bottom: 'calc(100% + 8px)', top: 'auto' }
                                   : { top: 'calc(100% + 8px)' })
                               }}>
-                                <div className="dropdown-header">
-                                  <span className="dropdown-title">Search cuisines</span>
-                                </div>
                                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
                                   <input
                                     type="text"
-                                    placeholder="Type to search..."
+                                    placeholder="Search or add cuisine..."
                                     value={cuisineSearchQuery}
                                     onChange={(e) => setCuisineSearchQuery(e.target.value)}
                                     style={{
@@ -667,8 +667,8 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
 
                 {/* Categories / Type */}
                 <div style={{ marginBottom: '10px' }}>
-                  <div className="receipt-row" style={{ alignItems: 'flex-start' }}>
-                    <span className="receipt-label" style={{ paddingTop: '4px' }}>Type</span>
+                  <div className="receipt-row" style={{ alignItems: 'center' }}>
+                    <span className="receipt-label">Type</span>
                     <div className="receipt-tags" style={{ justifyContent: 'flex-end', flex: 1 }}>
                       {ALL_CATEGORIES.map((cat) => (
                         <button
@@ -697,8 +697,8 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                     )
 
                     return (
-                      <div className="receipt-row" style={{ alignItems: 'flex-start' }}>
-                        <span className="receipt-label" style={{ paddingTop: '4px' }}>Tags</span>
+                      <div className="receipt-row" style={{ alignItems: 'center' }}>
+                        <span className="receipt-label">Tags</span>
                         <div className="receipt-tags" style={{ justifyContent: 'flex-end', flex: 1 }}>
                           {visibleTags.map((tag) => (
                             <button

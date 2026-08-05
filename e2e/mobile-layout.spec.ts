@@ -261,6 +261,123 @@ test.describe('Mobile layout - Add Place', () => {
   })
 })
 
+test.describe('Mobile layout - Filter bar', () => {
+  async function openSheetAndSelect(page: import('@playwright/test').Page, sectionIndex: number, labels: string[]) {
+    await page.click('.filter-trigger-btn')
+    await page.waitForTimeout(400)
+    const section = page.locator('.filter-sheet-section').nth(sectionIndex)
+    for (const label of labels) {
+      await section.locator('.chip', { hasText: label }).click()
+    }
+    await page.locator('.filter-sheet button[aria-label="Close filters"]').click()
+    await page.waitForTimeout(300)
+  }
+
+  /** Check that no element in the actions row overlaps another */
+  async function checkNoOverlaps(page: import('@playwright/test').Page) {
+    return page.evaluate(() => {
+      const row = document.querySelector('.filter-bar-actions-row')
+      if (!row) return []
+      const children = Array.from(row.children).filter(el => {
+        const r = (el as HTMLElement).getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+      })
+      const overlaps: Array<{ a: string; b: string; overlapPx: number }> = []
+      for (let i = 0; i < children.length; i++) {
+        for (let j = i + 1; j < children.length; j++) {
+          const rA = children[i].getBoundingClientRect()
+          const rB = children[j].getBoundingClientRect()
+          const overlapX = Math.max(0, Math.min(rA.right, rB.right) - Math.max(rA.left, rB.left))
+          if (overlapX > 2) {
+            overlaps.push({
+              a: (children[i] as HTMLElement).textContent?.trim().slice(0, 30) || children[i].className,
+              b: (children[j] as HTMLElement).textContent?.trim().slice(0, 30) || children[j].className,
+              overlapPx: Math.round(overlapX),
+            })
+          }
+        }
+      }
+      return overlaps
+    })
+  }
+
+  /** Check that the actions row doesn't overflow the viewport */
+  async function checkRowFitsViewport(page: import('@playwright/test').Page) {
+    return page.evaluate(() => {
+      const row = document.querySelector('.filter-bar-actions-row')
+      if (!row) return { fits: true, rowWidth: 0, viewportWidth: 0 }
+      return {
+        fits: row.scrollWidth <= row.clientWidth + 2,
+        rowWidth: row.scrollWidth,
+        viewportWidth: row.clientWidth,
+      }
+    })
+  }
+
+  test('filter bar stays single line with 2 filters', async ({ page }) => {
+    await hideToolbar(page)
+    await loginViaAPI(page, 'james')
+    await expect(page.getByTestId('dashboard-view')).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId('filter-bar').scrollIntoViewIfNeeded()
+
+    await openSheetAndSelect(page, 0, ['Lunch'])  // Type: Lunch
+    await openSheetAndSelect(page, 1, ['Italian']) // Cuisine: Italian
+
+    await page.getByTestId('filter-bar').scrollIntoViewIfNeeded()
+    await page.waitForTimeout(300)
+
+    const overlaps = await checkNoOverlaps(page)
+    expect(overlaps, `Overlapping elements:\n${JSON.stringify(overlaps, null, 2)}`).toEqual([])
+
+    const fit = await checkRowFitsViewport(page)
+    expect(fit.fits, `Row overflows: ${fit.rowWidth}px > ${fit.viewportWidth}px`).toBe(true)
+  })
+
+  test('filter bar stays single line with many filters', async ({ page }) => {
+    await hideToolbar(page)
+    await loginViaAPI(page, 'james')
+    await expect(page.getByTestId('dashboard-view')).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId('filter-bar').scrollIntoViewIfNeeded()
+
+    // Activate lots of filters across different groups
+    await openSheetAndSelect(page, 0, ['Lunch', 'Dinner', 'Coffee']) // 3 types
+    await openSheetAndSelect(page, 1, ['Italian', 'British', 'Cafe']) // 3 cuisines
+    await openSheetAndSelect(page, 2, ['Following'])                  // view
+    await openSheetAndSelect(page, 3, ['Good Value', 'Healthy', 'Quick']) // 3 tags
+
+    await page.getByTestId('filter-bar').scrollIntoViewIfNeeded()
+    await page.waitForTimeout(300)
+
+    // Verify count badge shows correct number
+    const countText = await page.locator('.filter-count').textContent()
+    expect(parseInt(countText || '0')).toBe(10)
+
+    const overlaps = await checkNoOverlaps(page)
+    expect(overlaps, `Overlapping elements:\n${JSON.stringify(overlaps, null, 2)}`).toEqual([])
+
+    const fit = await checkRowFitsViewport(page)
+    expect(fit.fits, `Row overflows: ${fit.rowWidth}px > ${fit.viewportWidth}px`).toBe(true)
+
+    // Verify no inline chips (clean collapsed bar)
+    const chipCount = await page.locator('.filter-active-chips').count()
+    expect(chipCount).toBe(0)
+  })
+
+  test('no horizontal overflow on dashboard with filters active', async ({ page }) => {
+    await hideToolbar(page)
+    await loginViaAPI(page, 'james')
+    await expect(page.getByTestId('dashboard-view')).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId('filter-bar').scrollIntoViewIfNeeded()
+
+    await openSheetAndSelect(page, 0, ['Lunch', 'Dinner', 'Coffee', 'Brunch'])
+    await openSheetAndSelect(page, 1, ['Italian', 'British'])
+
+    const overflows = await findOverflowingElements(page)
+    const significant = overflows.filter(o => parseInt(o.overflow) > 3)
+    expect(significant, `Overflowing elements:\n${JSON.stringify(significant, null, 2)}`).toEqual([])
+  })
+})
+
 test.describe('Mobile layout - Scrolled sections', () => {
   test('filters section has no overflow when scrolled', async ({ page }) => {
     await hideToolbar(page)

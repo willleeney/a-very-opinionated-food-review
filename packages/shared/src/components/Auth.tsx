@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getOrigin, openExternal, isNativePlatform } from '../lib/navigation'
 
 export function Auth() {
   const [email, setEmail] = useState('')
@@ -24,7 +25,7 @@ export function Auth() {
 
     if (mode === 'forgot') {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`
+        redirectTo: `${getOrigin()}/login`
       })
       if (error) {
         setError(error.message)
@@ -157,10 +158,17 @@ export function Auth() {
                 <button
                   type="button"
                   onClick={async () => {
-                    await supabase.auth.signInWithOAuth({
+                    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
                       provider: 'apple',
-                      options: { redirectTo: `${window.location.origin}/` }
+                      options: {
+                        redirectTo: `${getOrigin()}/`,
+                        skipBrowserRedirect: isNativePlatform(),
+                      }
                     })
+                    if (data?.url && isNativePlatform()) {
+                      await openExternal(data.url)
+                    }
+                    if (oauthError) setError(oauthError.message)
                   }}
                   className="btn"
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#000', color: '#fff', borderColor: '#000' }}
@@ -174,10 +182,17 @@ export function Auth() {
                 <button
                   type="button"
                   onClick={async () => {
-                    await supabase.auth.signInWithOAuth({
+                    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
                       provider: 'google',
-                      options: { redirectTo: `${window.location.origin}/` }
+                      options: {
+                        redirectTo: `${getOrigin()}/`,
+                        skipBrowserRedirect: isNativePlatform(),
+                      }
                     })
+                    if (data?.url && isNativePlatform()) {
+                      await openExternal(data.url)
+                    }
+                    if (oauthError) setError(oauthError.message)
                   }}
                   className="btn"
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}

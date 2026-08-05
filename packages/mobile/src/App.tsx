@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
-import { setNavigate, setGetOrigin } from '@tastefull/shared/lib/navigation'
+import { setNavigate, setGetOrigin, setOpenExternal } from '@tastefull/shared/lib/navigation'
 import { setPlatformInfo } from '@tastefull/shared/hooks/usePlatform'
 import { MobileShell } from './MobileShell'
 
@@ -53,6 +54,7 @@ export function App() {
     // On native, OAuth redirects should use the custom URL scheme
     if (Capacitor.isNativePlatform()) {
       setGetOrigin(() => 'com.tastefull.app:/')
+      setOpenExternal((url: string) => Browser.open({ url }))
     }
 
     // Native-only setup
@@ -62,10 +64,35 @@ export function App() {
       SplashScreen.hide().catch(() => {})
 
       // Handle deep links (OAuth callback, etc.)
-      CapApp.addListener('appUrlOpen', ({ url }) => {
-        if (url.includes('callback')) {
-          window.location.href = '/'
+      CapApp.addListener('appUrlOpen', async ({ url }) => {
+        // OAuth callback: extract tokens from URL fragment and set session
+        // URL looks like: com.tastefull.app:/#access_token=...&refresh_token=...
+        // or: com.tastefull.app:/callback#access_token=...&refresh_token=...
+        const hashIndex = url.indexOf('#')
+        if (hashIndex !== -1) {
+          const fragment = url.substring(hashIndex + 1)
+          const params = new URLSearchParams(fragment)
+          const accessToken = params.get('access_token')
+          const refreshToken = params.get('refresh_token')
+
+          if (accessToken && refreshToken) {
+            // Close the external browser
+            Browser.close().catch(() => {})
+
+            // Import supabase and set the session
+            const { supabase } = await import('@tastefull/shared/lib/supabase')
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            window.location.href = '/'
+            return
+          }
         }
+
+        // Fallback: just navigate home and close browser
+        Browser.close().catch(() => {})
+        window.location.href = '/'
       })
 
       // Handle Android back button

@@ -10,6 +10,7 @@ import { TopNav } from './TopNav'
 import { FilterBar } from './FilterBar'
 import { useFilterStore } from '../lib/store'
 import { getRatingClass, getRatingLabel } from '../lib/ratings'
+import { getDashboardCache, setDashboardCache, clearDashboardCache } from '../lib/cache'
 import type { User } from '@supabase/supabase-js'
 
 interface DashboardProps {
@@ -263,7 +264,12 @@ function InlineReviewForm({
         )}
       </div>
 
-      <div className="receipt-dashes" />
+      {/* Optional divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '18px 0' }}>
+        <div style={{ flex: 1, height: '2px', backgroundImage: 'repeating-linear-gradient(to right, #999 0, #999 12px, transparent 12px, transparent 20px)' }} />
+        <span className="receipt-section-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Optional</span>
+        <div style={{ flex: 1, height: '2px', backgroundImage: 'repeating-linear-gradient(to right, #999 0, #999 12px, transparent 12px, transparent 20px)' }} />
+      </div>
 
       {/* Photo */}
       <PhotoUpload
@@ -274,8 +280,8 @@ function InlineReviewForm({
       />
 
       {/* Dish */}
-      <div className="receipt-row" style={{ alignItems: 'flex-start', marginTop: '10px' }}>
-        <span className="receipt-label" style={{ paddingTop: '8px', minWidth: '70px' }}>Dish</span>
+      <div className="receipt-row" style={{ alignItems: 'center', marginTop: '10px' }}>
+        <span className="receipt-label">Dish</span>
         <input
           className="receipt-input"
           type="text"
@@ -287,22 +293,22 @@ function InlineReviewForm({
       </div>
 
       {/* Comment */}
-      <div className="receipt-row" style={{ alignItems: 'flex-start', marginBottom: '10px' }}>
-        <span className="receipt-label" style={{ paddingTop: '8px', minWidth: '70px' }}>Comment</span>
+      <div className="receipt-row" style={{ alignItems: 'center', marginBottom: '10px' }}>
+        <span className="receipt-label">Comment</span>
         <textarea
           ref={textareaRef}
           className="receipt-textarea"
           style={{ flex: 1, textAlign: 'right' }}
           value={comment}
           onChange={(e) => { setComment(e.target.value); resizeTextarea() }}
-          placeholder="Your thoughts..."
+          placeholder="your thoughts..."
           rows={1}
         />
       </div>
 
       {/* Tags */}
-      <div className="receipt-row" style={{ alignItems: 'flex-start' }}>
-        <span className="receipt-label" style={{ paddingTop: '4px' }}>Tags</span>
+      <div className="receipt-row" style={{ alignItems: 'center' }}>
+        <span className="receipt-label">Tags</span>
         <div className="receipt-tags" style={{ justifyContent: 'flex-end', flex: 1 }}>
           {visibleTags.map((tag) => (
             <button
@@ -398,10 +404,18 @@ function InlineReviewForm({
 
 export function Dashboard({ organisationSlug }: DashboardProps) {
   const [user, setUser] = useState<User | null>(null)
-  const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>([])
-  const [users, setUsers] = useState<ReviewUser[]>([])
-  const [availableTags, setAvailableTags] = useState<Tag[]>([])
-  const [loading, setLoading] = useState(true)
+  // Load cached data for instant first paint
+  const cached = useRef(getDashboardCache())
+  const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>(
+    (cached.current?.restaurants as RestaurantWithReviews[]) || []
+  )
+  const [users, setUsers] = useState<ReviewUser[]>(
+    (cached.current?.users as ReviewUser[]) || []
+  )
+  const [availableTags, setAvailableTags] = useState<Tag[]>(
+    (cached.current?.tags as Tag[]) || []
+  )
+  const [loading, setLoading] = useState(!cached.current)
   const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantWithReviews | null>(null)
   const [selectedPhotoReviewId, setSelectedPhotoReviewId] = useState<string | null>(null)
   const [addReviewOpen, setAddReviewOpen] = useState(false)
@@ -708,6 +722,13 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
     setLoading(false)
   }, [organisationSlug])
 
+  // Save to cache whenever restaurants/users/tags update (after fresh fetch)
+  useEffect(() => {
+    if (restaurants.length > 0) {
+      setDashboardCache(restaurants, users, availableTags)
+    }
+  }, [restaurants, users, availableTags])
+
   useEffect(() => {
     let isMounted = true
 
@@ -734,6 +755,7 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
           fetchFollowers(session.user.id)
           fetchData(session.user.id)
         } else {
+          clearDashboardCache()
           setUserOrgs([])
           setUserOrgIds(new Set())
           setIsAdmin(false)
@@ -1201,15 +1223,11 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid var(--border)', padding: '40px 0' }}>
+      <footer className="dashboard-footer">
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Built with questionable taste
-            </p>
-            <p className="mono" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Rating: 1 (never again) → 10 (perfect)
-            </p>
+          <div className="dashboard-footer-inner">
+            <p>Built with questionable taste</p>
+            <p className="mono">Rating: 1 (never again) → 10 (perfect)</p>
           </div>
         </div>
       </footer>
@@ -1281,11 +1299,12 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
                   {/* Right: info + reviews */}
                   <div className="split-reviews" ref={(el) => { reviewsPanelRef.current = el }}>
                     <div className="split-reviews-header">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                      <div style={{ position: 'relative', marginBottom: '4px', paddingRight: '40px' }}>
                         <h2 style={{ fontSize: '24px' }}>{restaurant.name}</h2>
                         <button
                           onClick={closePopup}
-                          style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 16px' }}
+                          aria-label="Close"
+                          className="popup-close-btn"
                         >
                           ×
                         </button>
@@ -1418,11 +1437,12 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
                 /* No photos: single-column layout */
                 <>
                   <div className="popup-header">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                    <div style={{ position: 'relative', marginBottom: '4px', paddingRight: '40px' }}>
                       <h2 style={{ fontSize: '24px' }}>{restaurant.name}</h2>
                       <button
                         onClick={closePopup}
-                        style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 16px' }}
+                        aria-label="Close"
+                        className="popup-close-btn"
                       >
                         ×
                       </button>

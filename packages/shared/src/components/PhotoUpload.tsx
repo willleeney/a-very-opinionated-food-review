@@ -284,11 +284,11 @@ export const PhotoUpload = forwardRef<PhotoUploadHandle, PhotoUploadProps>(
                 background: 'rgba(0,0,0,0.5)',
                 color: 'white',
                 border: 'none',
-                width: '18px',
-                height: '18px',
+                width: '14px',
+                height: '14px',
                 cursor: 'pointer',
-                fontSize: '12px',
-                lineHeight: '18px',
+                fontSize: '9px',
+                lineHeight: '14px',
                 textAlign: 'center',
                 padding: 0
               }}

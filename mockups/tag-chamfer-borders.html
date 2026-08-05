@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chamfered Tag Border Variations</title>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-warm: #f5f2ed;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --border: #e8e4de;
+    --accent: #c45d3e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px;
+    line-height: 1.6;
+  }
+
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  p.subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 40px; }
+
+  .section {
+    margin-bottom: 36px;
+    padding: 20px 24px;
+    background: white;
+    border: 1px solid var(--border);
+  }
+  .section h2 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .section .desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 12px;
+  }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* =============================================
+     ALL variations have chamfered/clipped corners
+     ============================================= */
+
+  /* --- A: Original two-layer pseudo-elements, inset 1px, chamfer 5/4 --- */
+  .tagA {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: transparent; border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px; isolation: isolate;
+  }
+  .tagA::before {
+    content: ''; position: absolute; inset: 0; background: var(--border); z-index: -2;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .tagA::after {
+    content: ''; position: absolute; inset: 1px; background: var(--bg-warm); z-index: -1;
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+  }
+
+  /* --- B: Two-layer, inset 1.5px, chamfer 5/3.5 --- */
+  .tagB {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: transparent; border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px; isolation: isolate;
+  }
+  .tagB::before {
+    content: ''; position: absolute; inset: 0; background: var(--border); z-index: -2;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .tagB::after {
+    content: ''; position: absolute; inset: 1.5px; background: var(--bg-warm); z-index: -1;
+    clip-path: polygon(3.5px 0%, calc(100% - 3.5px) 0%, 100% 3.5px, 100% calc(100% - 3.5px), calc(100% - 3.5px) 100%, 3.5px 100%, 0% calc(100% - 3.5px), 0% 3.5px);
+  }
+
+  /* --- C: Two-layer, inset 1px, corrected inner chamfer 3.59px (math: 5 - sqrt(2)) --- */
+  .tagC {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: transparent; border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px; isolation: isolate;
+  }
+  .tagC::before {
+    content: ''; position: absolute; inset: 0; background: var(--border); z-index: -2;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .tagC::after {
+    content: ''; position: absolute; inset: 1px; background: var(--bg-warm); z-index: -1;
+    clip-path: polygon(3.59px 0%, calc(100% - 3.59px) 0%, 100% 3.59px, 100% calc(100% - 3.59px), calc(100% - 3.59px) 100%, 3.59px 100%, 0% calc(100% - 3.59px), 0% 3.59px);
+  }
+
+  /* --- D: background-clip + clip-path on element, 1px border --- */
+  .tagD {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box, linear-gradient(var(--border), var(--border)) border-box;
+    border: 1px solid transparent;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- E: background-clip + clip-path, 1.5px border --- */
+  .tagE {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box, linear-gradient(var(--border), var(--border)) border-box;
+    border: 1.5px solid transparent;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- F: background-clip + clip-path, 2px border --- */
+  .tagF {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 3px 7px; font-size: 11px;
+    background: linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box, linear-gradient(var(--border), var(--border)) border-box;
+    border: 2px solid transparent;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- G: box-shadow inset + clip-path on element --- */
+  .tagG {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm); border: none;
+    box-shadow: inset 0 0 0 1px var(--border);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- H: box-shadow inset 1.5px + clip-path --- */
+  .tagH {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm); border: none;
+    box-shadow: inset 0 0 0 1.5px var(--border);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- I: outline + clip-path --- */
+  .tagI {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm); border: none;
+    outline: 1px solid var(--border); outline-offset: -1px;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- J: border: 1px solid + clip-path (no pseudo-elements) --- */
+  .tagJ {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- K: Two-layer, same chamfer on both (5/5), inset 1px --- */
+  .tagK {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: transparent; border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px; isolation: isolate;
+  }
+  .tagK::before {
+    content: ''; position: absolute; inset: 0; background: var(--border); z-index: -2;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .tagK::after {
+    content: ''; position: absolute; inset: 1px; background: var(--bg-warm); z-index: -1;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- L: Single ::before border + clip-path --- */
+  .tagL {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: var(--bg-warm); border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .tagL::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    border: 1px solid var(--border);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- M: SVG inline border via background-image + clip-path --- */
+  .tagM {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm); border: none;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    box-shadow: inset 0 0 0 2px var(--border);
+  }
+
+  /* --- N: Smaller chamfer 3px, two-layer inset 1px, chamfer 3/2 --- */
+  .tagN {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: transparent; border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px; isolation: isolate;
+  }
+  .tagN::before {
+    content: ''; position: absolute; inset: 0; background: var(--border); z-index: -2;
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+  }
+  .tagN::after {
+    content: ''; position: absolute; inset: 1px; background: var(--bg-warm); z-index: -1;
+    clip-path: polygon(2px 0%, calc(100% - 2px) 0%, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0% calc(100% - 2px), 0% 2px);
+  }
+
+  /* --- O: No chamfer at all, just rounded corners 3px --- */
+  .tagO {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  /* --- P: Solid fill, no border, chamfer clip-path --- */
+  .tagP {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--border); border: none;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* --- Q: background-clip + clip-path, smaller chamfer 3px --- */
+  .tagQ {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box, linear-gradient(var(--border), var(--border)) border-box;
+    border: 1px solid transparent;
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+  }
+
+  /* --- R: Two-layer, inset 1.21px (sqrt(2)/2 + 0.5), chamfer 5/3.79 --- */
+  .tagR {
+    position: relative; display: inline-flex; flex-direction: row-reverse;
+    align-items: center; gap: 4px; background: transparent; border: none;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px; isolation: isolate;
+  }
+  .tagR::before {
+    content: ''; position: absolute; inset: 0; background: var(--border); z-index: -2;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .tagR::after {
+    content: ''; position: absolute; inset: 1.21px; background: var(--bg-warm); z-index: -1;
+    clip-path: polygon(3.79px 0%, calc(100% - 3.79px) 0%, 100% 3.79px, 100% calc(100% - 3.79px), calc(100% - 3.79px) 100%, 3.79px 100%, 0% calc(100% - 3.79px), 0% 3.79px);
+  }
+
+  /* --- S: background-clip, 1px border, larger chamfer 8px --- */
+  .tagS {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 10px; font-size: 11px;
+    background: linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box, linear-gradient(var(--border), var(--border)) border-box;
+    border: 1px solid transparent;
+    clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+  }
+
+  /* --- T: No border, subtle inner shadow for depth --- */
+  .tagT {
+    display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+    color: var(--text-secondary); padding: 4px 8px; font-size: 11px;
+    background: var(--bg-warm); border: none;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+</style>
+</head>
+<body>
+  <h1>Chamfered Tag Border Variations</h1>
+  <p class="subtitle">All have clipped/chamfered corners. Pick the one with even borders on all edges including the diagonal chamfer.</p>
+
+  <div class="section">
+    <h2>A — Two-layer ::before/::after, inset 1px, chamfer 5/4</h2>
+    <div class="desc">Original approach. ::before inset:0 chamfer:5px, ::after inset:1px chamfer:4px</div>
+    <div class="tags">
+      <span class="tagA">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagA">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagA">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagA">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagA">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>B — Two-layer, inset 1.5px, chamfer 5/3.5</h2>
+    <div class="desc">::after inset:1.5px chamfer:3.5px (thicker border)</div>
+    <div class="tags">
+      <span class="tagB">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagB">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagB">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagB">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagB">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>C — Two-layer, inset 1px, math-corrected inner chamfer 3.59px</h2>
+    <div class="desc">Inner chamfer = 5 - sqrt(2) ≈ 3.59px for equal perpendicular distance on diagonal</div>
+    <div class="tags">
+      <span class="tagC">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagC">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagC">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagC">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagC">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>D — background-clip padding/border-box + clip-path, 1px border</h2>
+    <div class="desc">No pseudo-elements. border: 1px solid transparent + background-clip + clip-path on element</div>
+    <div class="tags">
+      <span class="tagD">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagD">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagD">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagD">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagD">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>E — background-clip + clip-path, 1.5px border</h2>
+    <div class="desc">Same as D but border: 1.5px</div>
+    <div class="tags">
+      <span class="tagE">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagE">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagE">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagE">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagE">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>F — background-clip + clip-path, 2px border</h2>
+    <div class="desc">Same as D but border: 2px</div>
+    <div class="tags">
+      <span class="tagF">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagF">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagF">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagF">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagF">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>G — box-shadow inset 1px + clip-path</h2>
+    <div class="desc">box-shadow: inset 0 0 0 1px + clip-path on element</div>
+    <div class="tags">
+      <span class="tagG">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagG">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagG">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagG">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagG">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>H — box-shadow inset 1.5px + clip-path</h2>
+    <div class="desc">box-shadow: inset 0 0 0 1.5px + clip-path on element</div>
+    <div class="tags">
+      <span class="tagH">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagH">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagH">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagH">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagH">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>I — outline 1px, offset -1px + clip-path</h2>
+    <div class="desc">outline: 1px solid; outline-offset: -1px + clip-path on element</div>
+    <div class="tags">
+      <span class="tagI">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagI">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagI">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagI">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagI">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>J — border: 1px solid + clip-path (simplest)</h2>
+    <div class="desc">Plain border: 1px solid var(--border) + clip-path on element</div>
+    <div class="tags">
+      <span class="tagJ">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagJ">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagJ">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagJ">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagJ">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>K — Two-layer, same chamfer 5/5 on both, inset 1px</h2>
+    <div class="desc">Both layers use 5px chamfer. Inner just shifted by inset.</div>
+    <div class="tags">
+      <span class="tagK">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagK">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagK">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagK">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagK">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>L — Single ::before with border + clip-path on both</h2>
+    <div class="desc">::before { border: 1px solid; clip-path } + clip-path on element</div>
+    <div class="tags">
+      <span class="tagL">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagL">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagL">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagL">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagL">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>M — box-shadow inset 2px + clip-path (chunky)</h2>
+    <div class="desc">box-shadow: inset 0 0 0 2px + clip-path on element</div>
+    <div class="tags">
+      <span class="tagM">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagM">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagM">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagM">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagM">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>N — Smaller chamfer 3px, two-layer inset 1px, chamfer 3/2</h2>
+    <div class="desc">Smaller chamfer. ::before chamfer:3px, ::after chamfer:2px</div>
+    <div class="tags">
+      <span class="tagN">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagN">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagN">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagN">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagN">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>O — Rounded corners 3px instead of chamfer</h2>
+    <div class="desc">border-radius: 3px, no clip-path</div>
+    <div class="tags">
+      <span class="tagO">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagO">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagO">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagO">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagO">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>P — Solid fill, no border, chamfer clip-path</h2>
+    <div class="desc">background: var(--border), no border at all</div>
+    <div class="tags">
+      <span class="tagP">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagP">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagP">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagP">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagP">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Q — background-clip + smaller chamfer 3px, 1px border</h2>
+    <div class="desc">Same as D but chamfer: 3px instead of 5px</div>
+    <div class="tags">
+      <span class="tagQ">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagQ">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagQ">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagQ">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagQ">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>R — Two-layer, inset 1.21px, chamfer 5/3.79 (geometric correction)</h2>
+    <div class="desc">inset = (1 + sqrt(2))/2 ≈ 1.21px, inner chamfer = 5 - 1.21 = 3.79px</div>
+    <div class="tags">
+      <span class="tagR">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagR">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagR">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagR">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagR">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>S — background-clip + larger chamfer 8px, 1px border</h2>
+    <div class="desc">Same as D but bigger chamfer: 8px</div>
+    <div class="tags">
+      <span class="tagS">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagS">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagS">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagS">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagS">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>T — No border, just chamfered bg-warm shape</h2>
+    <div class="desc">background: var(--bg-warm) + clip-path, no border at all</div>
+    <div class="tags">
+      <span class="tagT">High Protein <span style="font-size:11px">💪</span></span>
+      <span class="tagT">Quick <span style="font-size:11px">⚡</span></span>
+      <span class="tagT">Good Value <span style="font-size:11px">💰</span></span>
+      <span class="tagT">Healthy <span style="font-size:11px">🥗</span></span>
+      <span class="tagT">Vegan Options <span style="font-size:11px">🌱</span></span>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -21,7 +21,7 @@ const ratingLabels: Record<number, string> = {
 function getRatingColor(rating: number): string {
   if (rating >= 8) return '#2d7a4f'
   if (rating >= 6) return '#5a8a3c'
-  return '#a64d4d'
+  return '#c4723a'
 }
 
 export function RatingHistogram({ restaurants }: RatingHistogramProps) {

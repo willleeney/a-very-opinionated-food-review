@@ -18,11 +18,12 @@ const config: CapacitorConfig = {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
   },
-  server: {
-    // Use this during development to proxy to Vite dev server
-    // url: 'http://localhost:5173',
-    // cleartext: true,
-  },
+  // server: {
+  //   // Live reload: point to Vite dev server on host machine
+  //   // Android emulator uses 10.0.2.2 to reach host; iOS simulator uses localhost
+  //   url: 'http://10.0.2.2:5174',
+  //   cleartext: true,
+  // },
 }
 
 export default config

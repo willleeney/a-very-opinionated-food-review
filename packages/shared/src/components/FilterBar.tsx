@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useFilterStore } from '../lib/store'
 import { CategoryChips } from './CategoryChips'
 import { RatingSlider } from './RatingSlider'
@@ -27,6 +27,12 @@ const SOCIAL_OPTIONS: { value: SocialFilter; label: string }[] = [
   { value: 'just_me', label: 'Just Me' },
 ]
 
+interface ActiveFilter {
+  key: string
+  label: string
+  remove: () => void
+}
+
 export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, searchableUsers = [], availableTags = [], availableCuisines = [] }: FilterBarProps) {
   const {
     selectedCategories,
@@ -46,93 +52,98 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
     hasActiveFilters,
   } = useFilterStore()
 
-  const [openDropdown, setOpenDropdown] = useState<'user' | 'tag' | null>(null)
-  const [userSearchQuery, setUserSearchQuery] = useState('')
-  const [tagSearchQuery, setTagSearchQuery] = useState('')
-  const userDropdownRef = useRef<HTMLDivElement>(null)
-  const tagDropdownRef = useRef<HTMLDivElement>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
-  // Close dropdowns when clicking outside
+  // Lock body scroll when sheet is open
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
-        if (openDropdown === 'user') {
-          setOpenDropdown(null)
-          setUserSearchQuery('')
-        }
-      }
-      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
-        if (openDropdown === 'tag') {
-          setOpenDropdown(null)
-          setTagSearchQuery('')
-        }
-      }
+    if (sheetOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [openDropdown])
+  }, [sheetOpen])
 
-  const handleUserDropdownToggle = (open: boolean) => {
-    setOpenDropdown(open ? 'user' : null)
-    if (!open) setUserSearchQuery('')
-  }
-
-  const handleTagDropdownToggle = (open: boolean) => {
-    setOpenDropdown(open ? 'tag' : null)
-    if (!open) setTagSearchQuery('')
-  }
+  // Close on Escape
+  useEffect(() => {
+    if (!sheetOpen) return
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSheetOpen(false)
+    }
+    document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [sheetOpen])
 
   const isActive = hasActiveFilters()
 
   // Build social options with user's orgs
-  const socialOptions = [...SOCIAL_OPTIONS]
-  if (userOrgs.length > 0) {
+  const socialOptions = useMemo(() => {
+    const opts = [...SOCIAL_OPTIONS]
     userOrgs.forEach((org) => {
-      socialOptions.push({ value: org.slug, label: org.name })
+      opts.push({ value: org.slug, label: org.name })
     })
-  }
+    return opts
+  }, [userOrgs])
 
-  // Filter searchable users based on query
-  const filteredUsers = searchableUsers.filter(u =>
-    u.name.toLowerCase().includes(userSearchQuery.toLowerCase())
-  )
+  // Compute active filter chips (excluding rating — it has its own visible row)
+  const activeFilters = useMemo<ActiveFilter[]>(() => {
+    const filters: ActiveFilter[] = []
 
-  // Get selected users
-  const selectedUsers = searchableUsers.filter(u => selectedUserIds.includes(u.id))
+    selectedCategories.forEach((cat) => {
+      const label = cat.charAt(0).toUpperCase() + cat.slice(1)
+      filters.push({
+        key: `cat-${cat}`,
+        label,
+        remove: () => setSelectedCategories(selectedCategories.filter(c => c !== cat)),
+      })
+    })
 
-  const handleSelectUser = (userId: string) => {
-    toggleSelectedUserId(userId)
-    setSocialFilter('everyone') // Clear social filter when selecting specific user
-  }
+    selectedCuisines.forEach((cuisine) => {
+      filters.push({
+        key: `cuisine-${cuisine}`,
+        label: cuisine,
+        remove: () => toggleCuisine(cuisine),
+      })
+    })
 
-  const handleRemoveUser = (userId: string) => {
-    toggleSelectedUserId(userId)
-  }
+    if (socialFilter !== 'everyone') {
+      const opt = socialOptions.find(o => o.value === socialFilter)
+      filters.push({
+        key: `social-${socialFilter}`,
+        label: opt?.label || socialFilter,
+        remove: () => { setSocialFilter('everyone'); setSelectedUserIds([]) },
+      })
+    }
 
-  // Filter tags based on search query
-  const filteredTags = availableTags.filter(t =>
-    t.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
-  )
+    selectedUserIds.forEach((uid) => {
+      const user = searchableUsers.find(u => u.id === uid)
+      if (user) {
+        filters.push({
+          key: `user-${uid}`,
+          label: user.name,
+          remove: () => toggleSelectedUserId(uid),
+        })
+      }
+    })
 
-  // Default tags to show (first 5)
-  const defaultTags = availableTags.slice(0, 5)
+    selectedTagIds.forEach((tid) => {
+      const tag = availableTags.find(t => t.id === tid)
+      if (tag) {
+        filters.push({
+          key: `tag-${tid}`,
+          label: tag.name,
+          remove: () => toggleTagId(tid),
+        })
+      }
+    })
 
-  // Get selected tags that aren't in default
-  const selectedTagsNotInDefault = availableTags.filter(
-    t => selectedTagIds.includes(t.id) && !defaultTags.some(dt => dt.id === t.id)
-  )
+    return filters
+  }, [selectedCategories, selectedCuisines, socialFilter, selectedUserIds, selectedTagIds, socialOptions, searchableUsers, availableTags, setSelectedCategories, toggleCuisine, setSocialFilter, setSelectedUserIds, toggleSelectedUserId, toggleTagId])
+
+  const activeCount = activeFilters.length
 
   return (
-    <div className="filter-bar" data-testid="filter-bar">
-      {/* Mobile: Add place at top */}
-      {rightActions && (
-        <div className="filter-row show-mobile" style={{ justifyContent: 'center' }}>
-          {rightActions}
-        </div>
-      )}
-
-      {/* Rating filter row - at top with Add Place */}
-      <div className="filter-row">
+    <div data-testid="filter-bar">
+      {/* Row 1: Rating slider */}
+      <div className="filter-bar-rating">
         <span className="filter-row-label">Rating</span>
         <div className="rating-filters">
           <RatingSlider
@@ -142,244 +153,249 @@ export function FilterBar({ userOrgs = [], isSignedIn = false, rightActions, sea
             compact
           />
         </div>
-        <div className="filter-row-actions hide-mobile">
-          {rightActions}
-        </div>
       </div>
 
-      {/* Type filter row */}
-      <div className="filter-row">
-        <span className="filter-row-label">Type</span>
-        <CategoryChips
-          selected={selectedCategories}
-          onChange={setSelectedCategories}
-        />
-      </div>
-
-      {/* Cuisine filter row */}
-      {availableCuisines.length > 0 && (
-        <div className="filter-row">
-          <span className="filter-row-label">Cuisine</span>
-          <div className="social-tabs">
-            {availableCuisines.slice(0, 8).map((cuisine) => (
-              <button
-                key={cuisine}
-                className={`chip ${selectedCuisines.includes(cuisine) ? 'active' : ''}`}
-                onClick={() => toggleCuisine(cuisine)}
-              >
-                {cuisine}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Show filter row - only if signed in */}
-      {isSignedIn && (
-        <div className="filter-row">
-          <span className="filter-row-label">View</span>
-          <div className="social-tabs">
-            {socialOptions.map((option) => (
-              <button
-                key={option.value}
-                className={`chip ${socialFilter === option.value && selectedUserIds.length === 0 ? 'active' : ''}`}
-                onClick={() => {
-                  setSocialFilter(option.value)
-                  setSelectedUserIds([])
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-            {/* Selected user chips */}
-            {selectedUsers.map((user) => (
-              <button
-                key={user.id}
-                className="chip active"
-                onClick={() => handleRemoveUser(user.id)}
-                title="Click to remove"
-              >
-                {user.name} ×
-              </button>
-            ))}
-            {/* Search dropdown */}
-            {searchableUsers.length > 0 && (
-              <div className="category-dropdown-wrapper" ref={userDropdownRef}>
-                <button
-                  type="button"
-                  className={`add-chip ${openDropdown === 'user' ? 'has-selection' : ''}`}
-                  onClick={() => handleUserDropdownToggle(openDropdown !== 'user')}
-                  onMouseEnter={() => handleUserDropdownToggle(true)}
-                >
-                  +
-                </button>
-                {openDropdown === 'user' && (
-                  <div className="category-dropdown wide">
-                    <div className="dropdown-header">
-                      <span className="dropdown-title">Search people</span>
-                    </div>
-                    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-                      <input
-                        type="text"
-                        placeholder="Type to search..."
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          borderBottom: 'none',
-                          padding: '4px 0',
-                          fontSize: '13px',
-                          background: 'transparent',
-                          outline: 'none'
-                        }}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="dropdown-list">
-                      {filteredUsers.length === 0 ? (
-                        <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                          No results
-                        </div>
-                      ) : (
-                        filteredUsers.slice(0, 10).map((user) => {
-                          const isSelected = selectedUserIds.includes(user.id)
-                          return (
-                            <button
-                              key={user.id}
-                              type="button"
-                              className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                              onClick={() => handleSelectUser(user.id)}
-                            >
-                              <span className="item-check">{isSelected ? '✓' : ''}</span>
-                              <span className="item-label">{user.name}</span>
-                              <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                                {user.source === 'following' ? 'Following' : 'Org'}
-                              </span>
-                            </button>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Tags filter row */}
-      {availableTags.length > 0 && (
-        <div className="filter-row">
-          <span className="filter-row-label">Tags</span>
-          <div className="social-tabs">
-            {/* Show first 5 default tags */}
-            {defaultTags.map((tag) => (
-              <button
-                key={tag.id}
-                className={`chip ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
-                onClick={() => toggleTagId(tag.id)}
-              >
-                {tag.name}
-              </button>
-            ))}
-            {/* Show selected tags that aren't in default */}
-            {selectedTagsNotInDefault.map((tag) => (
-              <button
-                key={tag.id}
-                className="chip active"
-                onClick={() => toggleTagId(tag.id)}
-              >
-                {tag.name}
-              </button>
-            ))}
-            {/* Search dropdown for more tags */}
-            {availableTags.length > 5 && (
-              <div className="category-dropdown-wrapper" ref={tagDropdownRef}>
-                <button
-                  type="button"
-                  className={`add-chip ${openDropdown === 'tag' ? 'has-selection' : ''}`}
-                  onClick={() => handleTagDropdownToggle(openDropdown !== 'tag')}
-                  onMouseEnter={() => handleTagDropdownToggle(true)}
-                >
-                  +
-                </button>
-
-                {openDropdown === 'tag' && (
-                  <div className="category-dropdown wide">
-                    <div className="dropdown-header">
-                      <span className="dropdown-title">Search tags</span>
-                    </div>
-                    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-                      <input
-                        type="text"
-                        placeholder="Type to search..."
-                        value={tagSearchQuery}
-                        onChange={(e) => setTagSearchQuery(e.target.value)}
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          borderBottom: 'none',
-                          padding: '4px 0',
-                          fontSize: '13px',
-                          background: 'transparent',
-                          outline: 'none'
-                        }}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="dropdown-list">
-                      {filteredTags.length === 0 ? (
-                        <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                          No results
-                        </div>
-                      ) : (
-                        filteredTags.map((tag) => {
-                          const isSelected = selectedTagIds.includes(tag.id)
-                          return (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                              onClick={() => toggleTagId(tag.id)}
-                            >
-                              <span className="item-check">{isSelected ? '✓' : ''}</span>
-                              <span className="item-label">{tag.name}</span>
-                            </button>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          {isActive && (
-            <button
-              className="filter-clear-btn hide-mobile"
-              onClick={clearFilters}
-              style={{ marginLeft: 'auto' }}
-              data-testid="clear-filters"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Mobile: Clear filters at bottom */}
-      {isSignedIn && isActive && (
-        <div className="filter-row show-mobile" style={{ justifyContent: 'center', paddingTop: '8px' }}>
+      {/* Row 2: Clear + Filters + Add Place */}
+      <div className="filter-bar-actions-row">
+        {isActive && (
           <button
             className="filter-clear-btn"
             onClick={clearFilters}
+            data-testid="clear-filters"
           >
-            Clear all filters
+            Clear
           </button>
+        )}
+        <button
+          className={`filter-trigger-btn${activeCount > 0 ? ' has-active' : ''}`}
+          onClick={() => setSheetOpen(true)}
+        >
+          Filters{activeCount > 0 && <span className="filter-count">{activeCount}</span>}
+        </button>
+        {rightActions && (
+          <div className="filter-bar-actions">
+            {rightActions}
+          </div>
+        )}
+      </div>
+
+      {/* Filter Sheet */}
+      {sheetOpen && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setSheetOpen(false) }}
+        >
+          <div className="filter-sheet">
+            {/* Header */}
+            <div className="filter-sheet-header">
+              <h2 style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: '22px',
+                fontWeight: 400,
+                margin: 0,
+                flex: 1,
+              }}>
+                Filters
+              </h2>
+              {isActive && (
+                <button
+                  className="filter-clear-btn"
+                  onClick={clearFilters}
+                  data-testid="clear-filters"
+                  style={{ marginRight: '8px' }}
+                >
+                  Clear all
+                </button>
+              )}
+              <button
+                className="filter-trigger-btn has-active"
+                onClick={() => setSheetOpen(false)}
+                aria-label="Close filters"
+              >
+                Search
+              </button>
+            </div>
+
+            {/* Sections */}
+            <div className="filter-sheet-body">
+              {/* Type */}
+              <div className="filter-sheet-section">
+                <div className="filter-sheet-label">Type</div>
+                <CategoryChips
+                  selected={selectedCategories}
+                  onChange={setSelectedCategories}
+                />
+              </div>
+
+              {/* Cuisine */}
+              {availableCuisines.length > 0 && (
+                <div className="filter-sheet-section">
+                  <div className="filter-sheet-label">Cuisine</div>
+                  <div className="filter-sheet-chips">
+                    {availableCuisines.map((cuisine) => (
+                      <button
+                        key={cuisine}
+                        className={`chip ${selectedCuisines.includes(cuisine) ? 'active' : ''}`}
+                        onClick={() => toggleCuisine(cuisine)}
+                      >
+                        {cuisine}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* View */}
+              {isSignedIn && (
+                <div className="filter-sheet-section">
+                  <div className="filter-sheet-label">View</div>
+                  <div className="filter-sheet-chips">
+                    {socialOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        className={`chip ${socialFilter === option.value && selectedUserIds.length === 0 ? 'active' : ''}`}
+                        onClick={() => {
+                          setSocialFilter(option.value)
+                          setSelectedUserIds([])
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                    {/* Selected user chips */}
+                    {searchableUsers
+                      .filter(u => selectedUserIds.includes(u.id))
+                      .map((user) => (
+                        <button
+                          key={user.id}
+                          className="chip active"
+                          onClick={() => toggleSelectedUserId(user.id)}
+                        >
+                          {user.name} ×
+                        </button>
+                      ))}
+                  </div>
+                  {/* Person search */}
+                  {searchableUsers.length > 0 && (
+                    <PersonSearch
+                      users={searchableUsers}
+                      selectedUserIds={selectedUserIds}
+                      onToggle={(uid) => {
+                        toggleSelectedUserId(uid)
+                        setSocialFilter('everyone')
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Tags */}
+              {availableTags.length > 0 && (
+                <div className="filter-sheet-section" style={{ borderBottom: 'none' }}>
+                  <div className="filter-sheet-label">Tags</div>
+                  <div className="filter-sheet-chips">
+                    {availableTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        className={`chip ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
+                        onClick={() => toggleTagId(tag.id)}
+                      >
+                        {tag.icon} {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Inline person search within the sheet
+function PersonSearch({
+  users,
+  selectedUserIds,
+  onToggle,
+}: {
+  users: SearchableUser[]
+  selectedUserIds: string[]
+  onToggle: (uid: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const filtered = users.filter(u =>
+    u.name.toLowerCase().includes(query.toLowerCase())
+  )
+
+  if (!open) {
+    return (
+      <button
+        className="filter-person-search-trigger"
+        onClick={() => setOpen(true)}
+        style={{
+          marginTop: '12px',
+          background: 'none',
+          border: 'none',
+          color: 'var(--accent)',
+          cursor: 'pointer',
+          fontSize: '12px',
+          padding: 0,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}
+      >
+        + Add person
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: '12px' }}>
+      <input
+        type="text"
+        placeholder="Search people..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        autoFocus
+        style={{
+          width: '100%',
+          border: 'none',
+          borderBottom: '1px solid var(--border)',
+          padding: '8px 0',
+          fontSize: '13px',
+          background: 'transparent',
+          outline: 'none',
+          color: 'var(--text)',
+        }}
+      />
+      <div style={{ maxHeight: '150px', overflowY: 'auto', marginTop: '4px' }}>
+        {filtered.slice(0, 10).map((user) => {
+          const isSelected = selectedUserIds.includes(user.id)
+          return (
+            <button
+              key={user.id}
+              className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+              onClick={() => onToggle(user.id)}
+              style={{ width: '100%' }}
+            >
+              <span className="item-check">{isSelected ? '✓' : ''}</span>
+              <span className="item-label">{user.name}</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                {user.source === 'following' ? 'Following' : 'Org'}
+              </span>
+            </button>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div style={{ padding: '12px 0', color: 'var(--text-muted)', fontSize: '12px' }}>
+            No results
+          </div>
+        )}
+      </div>
     </div>
   )
 }

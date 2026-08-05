@@ -51,7 +51,7 @@ function getRatingColor(rating: number | null): string {
   if (rating === null) return '#999'
   if (rating >= 8) return '#2d7a4f'
   if (rating >= 6) return '#b8860b'
-  return '#a64d4d'
+  return '#c4723a'
 }
 
 function getRatingClass(rating: number): string {

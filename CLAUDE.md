@@ -11,6 +11,10 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 - `packages/shared/` — React components, utilities, styles (shared between web + mobile)
 - `packages/mobile/` — Capacitor + Vite for iOS/Android
 
+## Visual QA
+
+Run `/visual-qa` to capture 57 screenshots of every screen state and do a thorough visual inspection. The capture script lives at `e2e/capture-screens.ts` and outputs to `e2e/screenshots/`. See `~/.claude/skills/visual-qa/SKILL.md` for the full checklist.
+
 ## App Store & Release Skills
 
 The following agent skills are installed for iOS release automation:

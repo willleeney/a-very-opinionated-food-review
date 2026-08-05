@@ -12,6 +12,11 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "supabase": "supabase start --exclude studio,edge-runtime,logflare,vector,imgproxy,realtime,storage-api,supavisor",
+    "supabase:full": "supabase start",
+    "supabase:reset": "supabase db reset",
+    "supabase:stop": "supabase stop",
+    "screenshots": "tsx e2e/capture-screens.ts",
     "lint": "eslint packages --ext .ts,.tsx",
     "typecheck": "pnpm --filter @tastefull/web typecheck"
   },
