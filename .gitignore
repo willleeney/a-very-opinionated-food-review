@@ -38,3 +38,7 @@ e2e/screenshots/
 # supabase local dev - keep migrations but ignore local state
 supabase/.branches/
 supabase/.temp/
+
+# Cloudflare Worker local bindings (contains secrets)
+.dev.vars
+.dev.vars.*

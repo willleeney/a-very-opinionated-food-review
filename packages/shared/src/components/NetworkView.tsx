@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
-import type { User } from '@supabase/supabase-js'
+import { getUser, type AuthUser } from '../lib/auth-client'
+import * as api from '../lib/api'
 import type { OrganisationWithMembership, Organisation } from '../lib/database.types'
 import { TopNav } from './TopNav'
 
@@ -36,7 +36,7 @@ function getRatingClass(rating: number): string {
 }
 
 export function NetworkView() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [userOrgs, setUserOrgs] = useState<OrganisationWithMembership[]>([])
   const [isPrivate, setIsPrivate] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -59,16 +59,13 @@ export function NetworkView() {
 
     if (userIds.length === 0) return stats
 
-    const { data: reviews } = await supabase
-      .from('reviews')
-      .select('user_id, rating')
-      .in('user_id', userIds)
+    try {
+      const reviews = await api.getReviewsByUserIds(userIds)
 
-    if (reviews) {
       // Group reviews by user
       const reviewsByUser = new Map<string, number[]>()
       for (const review of reviews) {
-        if (!review.user_id || review.rating === null) continue
+        if (!review.user_id || review.rating == null) continue
         if (!reviewsByUser.has(review.user_id)) {
           reviewsByUser.set(review.user_id, [])
         }
@@ -85,6 +82,8 @@ export function NetworkView() {
           highestRating: ratings.length > 0 ? Math.max(...ratings) : null,
         })
       }
+    } catch (err) {
+      console.error('Failed to fetch user stats:', err)
     }
 
     return stats
@@ -92,22 +91,15 @@ export function NetworkView() {
 
   // Fetch following list
   const fetchFollowing = useCallback(async (userId: string) => {
-    const { data: follows } = await supabase
-      .from('user_follows')
-      .select('following_id')
-      .eq('follower_id', userId)
+    try {
+      const follows = await api.getFollowing(userId)
 
-    if (follows && follows.length > 0) {
-      const ids = follows.map(f => f.following_id)
-      setFollowingIds(new Set(ids))
+      if (follows.length > 0) {
+        const ids = follows.map(f => f.following_id)
+        setFollowingIds(new Set(ids))
 
-      // Fetch profiles
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, is_private, avatar_url')
-        .in('id', ids)
-
-      if (profiles) {
+        // Fetch profiles
+        const profiles = await api.getProfiles(ids)
         const stats = await fetchUserStats(ids)
         const users: UserWithStats[] = profiles.map(p => ({
           id: p.id,
@@ -122,31 +114,26 @@ export function NetworkView() {
           hasPendingRequest: false,
         }))
         setFollowingUsers(users)
+      } else {
+        setFollowingIds(new Set())
+        setFollowingUsers([])
       }
-    } else {
-      setFollowingIds(new Set())
-      setFollowingUsers([])
+    } catch (err) {
+      console.error('Failed to fetch following:', err)
     }
   }, [fetchUserStats])
 
   // Fetch followers list (needs followingIds to check if we follow them back)
   const fetchFollowers = useCallback(async (userId: string, currentFollowingIds: Set<string>, currentOutgoingRequestIds: Set<string>) => {
-    const { data: follows } = await supabase
-      .from('user_follows')
-      .select('follower_id')
-      .eq('following_id', userId)
+    try {
+      const follows = await api.getFollowers(userId)
 
-    if (follows && follows.length > 0) {
-      const ids = follows.map(f => f.follower_id)
-      setFollowerIds(new Set(ids))
+      if (follows.length > 0) {
+        const ids = follows.map(f => f.follower_id)
+        setFollowerIds(new Set(ids))
 
-      // Fetch profiles
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, is_private, avatar_url')
-        .in('id', ids)
-
-      if (profiles) {
+        // Fetch profiles
+        const profiles = await api.getProfiles(ids)
         const stats = await fetchUserStats(ids)
         const users: UserWithStats[] = profiles.map(p => ({
           id: p.id,
@@ -161,31 +148,26 @@ export function NetworkView() {
           hasPendingRequest: false,
         }))
         setFollowerUsers(users)
+      } else {
+        setFollowerIds(new Set())
+        setFollowerUsers([])
       }
-    } else {
-      setFollowerIds(new Set())
-      setFollowerUsers([])
+    } catch (err) {
+      console.error('Failed to fetch followers:', err)
     }
   }, [fetchUserStats])
 
   // Fetch pending follow requests (people who want to follow me)
   const fetchIncomingRequests = useCallback(async (userId: string) => {
-    const { data: requests } = await supabase
-      .from('follow_requests')
-      .select('*')
-      .eq('target_id', userId)
+    try {
+      const requests = await api.getIncomingFollowRequests(userId)
 
-    if (requests && requests.length > 0) {
-      setIncomingRequests(requests)
-      const ids = requests.map(r => r.requester_id)
+      if (requests.length > 0) {
+        setIncomingRequests(requests)
+        const ids = requests.map(r => r.requester_id)
 
-      // Fetch profiles
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, is_private, avatar_url')
-        .in('id', ids)
-
-      if (profiles) {
+        // Fetch profiles
+        const profiles = await api.getProfiles(ids)
         const stats = await fetchUserStats(ids)
         const users: UserWithStats[] = profiles.map(p => ({
           id: p.id,
@@ -200,34 +182,39 @@ export function NetworkView() {
           hasPendingRequest: true,
         }))
         setPendingRequests(users)
+      } else {
+        setIncomingRequests([])
+        setPendingRequests([])
       }
-    } else {
-      setIncomingRequests([])
-      setPendingRequests([])
+    } catch (err) {
+      console.error('Failed to fetch follow requests:', err)
     }
   }, [fetchUserStats])
 
   // Fetch outgoing requests (people I've requested to follow)
   const _fetchOutgoingRequests = useCallback(async (userId: string) => {
-    const { data: requests } = await supabase
-      .from('follow_requests')
-      .select('target_id')
-      .eq('requester_id', userId)
+    try {
+      const requests = await api.getOutgoingFollowRequests(userId)
 
-    if (requests && requests.length > 0) {
-      setOutgoingRequestIds(new Set(requests.map(r => r.target_id)))
-    } else {
-      setOutgoingRequestIds(new Set())
+      if (requests.length > 0) {
+        setOutgoingRequestIds(new Set(requests.map(r => r.target_id)))
+      } else {
+        setOutgoingRequestIds(new Set())
+      }
+    } catch (err) {
+      console.error('Failed to fetch outgoing requests:', err)
     }
   }, [])
 
   // Fetch all users for "Find" tab
-  const fetchAllUsers = useCallback(async (currentUserId: string, followingSet: Set<string>, outgoingSet: Set<string>) => {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, display_name, email, is_private, avatar_url')
-      .neq('id', currentUserId)
-      .limit(100)
+  const fetchAllUsers = useCallback(async (followingSet: Set<string>, outgoingSet: Set<string>) => {
+    // The endpoint excludes the caller based on their session.
+    let profiles: api.Profile[] | null = null
+    try {
+      profiles = await api.listProfiles(100)
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+    }
 
     if (profiles) {
       const ids = profiles.map(p => p.id)
@@ -255,11 +242,7 @@ export function NetworkView() {
     try {
       if (targetIsPrivate) {
         // Send follow request for private accounts
-        const { error } = await supabase
-          .from('follow_requests')
-          .insert({ requester_id: user.id, target_id: targetUserId })
-
-        if (error) throw error
+        await api.sendFollowRequest(targetUserId, user.id)
 
         // Update local state
         setOutgoingRequestIds(prev => new Set([...prev, targetUserId]))
@@ -271,11 +254,7 @@ export function NetworkView() {
         ))
       } else {
         // Direct follow for open accounts
-        const { error } = await supabase
-          .from('user_follows')
-          .insert({ follower_id: user.id, following_id: targetUserId })
-
-        if (error) throw error
+        await api.follow(targetUserId, user.id)
 
         // Update local state
         setFollowingIds(prev => new Set([...prev, targetUserId]))
@@ -302,13 +281,7 @@ export function NetworkView() {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('follow_requests')
-        .delete()
-        .eq('requester_id', user.id)
-        .eq('target_id', targetUserId)
-
-      if (error) throw error
+      await api.deleteFollowRequest(user.id, targetUserId)
 
       // Update local state
       setOutgoingRequestIds(prev => {
@@ -332,13 +305,7 @@ export function NetworkView() {
     if (!user) return
 
     try {
-      // Use the database function to accept (bypasses RLS)
-      const { data, error } = await supabase.rpc('accept_follow_request', {
-        requester: requesterId
-      })
-
-      if (error) throw error
-      if (!data) throw new Error('Request not found')
+      await api.acceptFollowRequest(requesterId)
 
       // Update local state
       setIncomingRequests(prev => prev.filter(r => r.requester_id !== requesterId))
@@ -360,13 +327,7 @@ export function NetworkView() {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('follow_requests')
-        .delete()
-        .eq('requester_id', requesterId)
-        .eq('target_id', user.id)
-
-      if (error) throw error
+      await api.deleteFollowRequest(requesterId, user.id)
 
       // Update local state
       setIncomingRequests(prev => prev.filter(r => r.requester_id !== requesterId))
@@ -381,13 +342,7 @@ export function NetworkView() {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('user_follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', targetUserId)
-
-      if (error) throw error
+      await api.unfollow(user.id, targetUserId)
 
       // Update local state
       setFollowingIds(prev => {
@@ -414,13 +369,7 @@ export function NetworkView() {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('user_follows')
-        .delete()
-        .eq('follower_id', followerId)
-        .eq('following_id', user.id)
-
-      if (error) throw error
+      await api.unfollow(followerId, user.id)
 
       // Update local state
       setFollowerIds(prev => {
@@ -440,35 +389,33 @@ export function NetworkView() {
     let isMounted = true
 
     const init = async () => {
-      const { data } = await supabase.auth.getUser()
+      const user = await getUser()
       if (!isMounted) return
 
-      if (data.user) {
-        setUser(data.user)
+      if (user) {
+        setUser(user)
 
-        // Fetch user's privacy setting
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_private')
-          .eq('id', data.user.id)
-          .single()
-
-        if (profile) {
+        try {
+          // Fetch user's privacy setting
+          const profile = await api.getProfile(user.id)
           setIsPrivate(profile.is_private || false)
+        } catch (err) {
+          console.error('Failed to fetch profile:', err)
         }
 
         // First fetch following and outgoing requests (needed for followers)
-        const [followingResult, outgoingResult] = await Promise.all([
-          supabase.from('user_follows').select('following_id').eq('follower_id', data.user.id),
-          supabase.from('follow_requests').select('target_id').eq('requester_id', data.user.id),
-        ])
-
-        const currentFollowingIds = new Set<string>(
-          followingResult.data?.map(f => f.following_id) || []
-        )
-        const currentOutgoingRequestIds = new Set<string>(
-          outgoingResult.data?.map(r => r.target_id) || []
-        )
+        let currentFollowingIds = new Set<string>()
+        let currentOutgoingRequestIds = new Set<string>()
+        try {
+          const [following, outgoing] = await Promise.all([
+            api.getFollowing(user.id),
+            api.getOutgoingFollowRequests(user.id),
+          ])
+          currentFollowingIds = new Set<string>(following.map(f => f.following_id))
+          currentOutgoingRequestIds = new Set<string>(outgoing.map(r => r.target_id))
+        } catch (err) {
+          console.error('Failed to fetch follow state:', err)
+        }
 
         // Update state
         setFollowingIds(currentFollowingIds)
@@ -476,23 +423,21 @@ export function NetworkView() {
 
         // Now fetch all lists (fetchFollowing will re-fetch but that's ok for now)
         await Promise.all([
-          fetchFollowing(data.user.id),
-          fetchFollowers(data.user.id, currentFollowingIds, currentOutgoingRequestIds),
-          fetchIncomingRequests(data.user.id),
+          fetchFollowing(user.id),
+          fetchFollowers(user.id, currentFollowingIds, currentOutgoingRequestIds),
+          fetchIncomingRequests(user.id),
         ])
 
-        // Fetch user's orgs for TopNav
-        const { data: memberships } = await supabase
-          .from('organisation_members')
-          .select('role, organisations(*)')
-          .eq('user_id', data.user.id)
-
-        if (memberships) {
+        try {
+          // Fetch user's orgs for TopNav
+          const memberships = await api.getUserMemberships(user.id, true)
           const orgs: OrganisationWithMembership[] = memberships.map((m) => ({
-            ...(m.organisations as Organisation),
+            ...(m.organisation as Organisation),
             role: m.role as 'admin' | 'member',
           }))
           setUserOrgs(orgs)
+        } catch (err) {
+          console.error('Failed to fetch memberships:', err)
         }
       }
       setLoading(false)
@@ -506,7 +451,7 @@ export function NetworkView() {
   // Fetch all users when switching to Find tab
   useEffect(() => {
     if (activeTab === 'find' && user && allUsers.length === 0) {
-      fetchAllUsers(user.id, followingIds, outgoingRequestIds)
+      fetchAllUsers(followingIds, outgoingRequestIds)
     }
   }, [activeTab, user, allUsers.length, followingIds, outgoingRequestIds, fetchAllUsers])
 

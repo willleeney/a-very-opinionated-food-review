@@ -6,6 +6,7 @@ import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { setNavigate, setGetOrigin, setOpenExternal } from '@tastefull/shared/lib/navigation'
+import { authClient } from '@tastefull/shared/lib/auth-client'
 import { setPlatformInfo } from '@tastefull/shared/hooks/usePlatform'
 import { MobileShell } from './MobileShell'
 
@@ -64,34 +65,19 @@ export function App() {
       SplashScreen.hide().catch(() => {})
 
       // Handle deep links (OAuth callback, etc.)
-      CapApp.addListener('appUrlOpen', async ({ url }) => {
-        // OAuth callback: extract tokens from URL fragment and set session
-        // URL looks like: com.tastefull.app:/#access_token=...&refresh_token=...
-        // or: com.tastefull.app:/callback#access_token=...&refresh_token=...
-        const hashIndex = url.indexOf('#')
-        if (hashIndex !== -1) {
-          const fragment = url.substring(hashIndex + 1)
-          const params = new URLSearchParams(fragment)
-          const accessToken = params.get('access_token')
-          const refreshToken = params.get('refresh_token')
-
-          if (accessToken && refreshToken) {
-            // Close the external browser
-            Browser.close().catch(() => {})
-
-            // Import supabase and set the session
-            const { supabase } = await import('@tastefull/shared/lib/supabase')
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            })
-            window.location.href = '/'
-            return
-          }
-        }
-
-        // Fallback: just navigate home and close browser
+      // Better Auth uses httpOnly cookie sessions — there are no access/refresh
+      // tokens to install client-side. The session cookie is already set by the
+      // server during the OAuth round-trip, so all we do here is close the
+      // in-app browser, re-read the session, and navigate into the app.
+      //
+      // TODO: Native OAuth on Capacitor should use Better Auth's ID-token
+      // sign-in (`signIn.social({ provider, idToken: { token } })`) with a token
+      // obtained from the native Google/Apple SDKs. That native SDK integration
+      // is out of scope here, so the current flow relies on the system browser
+      // round-trip and the cookie it sets.
+      CapApp.addListener('appUrlOpen', async () => {
         Browser.close().catch(() => {})
+        await authClient.getSession({ query: { disableCookieCache: true } }).catch(() => {})
         window.location.href = '/'
       })
 

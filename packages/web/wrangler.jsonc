@@ -10,6 +10,12 @@
 		"binding": "ASSETS",
 		"directory": "./dist"
 	},
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "tastefull-media"
+    }
+  ],
 	"observability": {
     "enabled": true
   }

@@ -390,7 +390,13 @@ export type Restaurant = Database['public']['Tables']['restaurants']['Row']
 export type Review = Database['public']['Tables']['reviews']['Row']
 export type Organisation = Database['public']['Tables']['organisations']['Row']
 export type OrganisationMember = Database['public']['Tables']['organisation_members']['Row']
-export type OrganisationInvite = Database['public']['Tables']['organisation_invites']['Row']
+// `token` is the join secret: the API returns it only when creating an invite or
+// looking one up by token, and withholds it from the listing endpoints — so it is
+// optional here even though the column itself is NOT NULL.
+export type OrganisationInvite =
+  Omit<Database['public']['Tables']['organisation_invites']['Row'], 'token'> & {
+    token?: string
+  }
 export type OrganisationRequest = Database['public']['Tables']['organisation_requests']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserFollow = Database['public']['Tables']['user_follows']['Row']

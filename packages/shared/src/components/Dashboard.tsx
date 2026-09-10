@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import * as api from '../lib/api'
+import { uploadReviewPhoto } from '../lib/storage'
+import { useSession, type AuthUser } from '../lib/auth-client'
 import type { RestaurantWithReviews, Organisation, OrganisationWithMembership, OfficeLocation, RestaurantCategory, Tag } from '../lib/database.types'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
@@ -11,7 +13,6 @@ import { FilterBar } from './FilterBar'
 import { useFilterStore } from '../lib/store'
 import { getRatingClass, getRatingLabel } from '../lib/ratings'
 import { getDashboardCache, setDashboardCache, clearDashboardCache } from '../lib/cache'
-import type { User } from '@supabase/supabase-js'
 
 interface DashboardProps {
   organisationSlug?: string | null
@@ -27,7 +28,7 @@ interface ReviewUser {
 // Inline review form component - simplified, visibility is derived from org membership
 function InlineReviewForm({
   restaurantId,
-  userId,
+  userId: _userId,
   existingReview,
   availableTags,
   onSaved,
@@ -106,13 +107,7 @@ function InlineReviewForm({
     if (!name.trim()) return
     setCreatingTag(true)
     try {
-      const { data: newTag, error: createError } = await supabase
-        .from('tags')
-        .insert({ name: name.trim() })
-        .select()
-        .single()
-
-      if (createError) throw createError
+      const newTag = await api.createTag(name.trim())
 
       // Add to local tags, selected tags, and notify parent
       setLocalTags(prev => [...prev, newTag])
@@ -148,27 +143,17 @@ function InlineReviewForm({
 
       if (existingReview) {
         // Update existing review
-        const { error } = await supabase
-          .from('reviews')
-          .update(reviewData)
-          .eq('id', existingReview.id)
-        if (error) throw error
+        await api.updateReview({ id: existingReview.id, ...reviewData })
         reviewId = existingReview.id
 
         // Remove old tags
-        await supabase.from('review_tags').delete().eq('review_id', reviewId)
+        await api.deleteReviewTags(reviewId)
       } else {
         // Insert new review
-        const { data: newReview, error } = await supabase
-          .from('reviews')
-          .insert({
-            restaurant_id: restaurantId,
-            user_id: userId,
-            ...reviewData,
-          })
-          .select()
-          .single()
-        if (error) throw error
+        const newReview = await api.createReview({
+          restaurant_id: restaurantId,
+          ...reviewData,
+        })
         reviewId = newReview.id
       }
 
@@ -176,18 +161,10 @@ function InlineReviewForm({
       if (photoRef.current?.hasNewPhoto) {
         const croppedBlob = await photoRef.current.getCroppedBlob()
         if (croppedBlob) {
-          const filePath = `${userId}/${reviewId}.jpg`
-          const { error: uploadError } = await supabase.storage
-            .from('review-photos')
-            .upload(filePath, croppedBlob, { upsert: true, contentType: 'image/jpeg' })
-          if (uploadError) throw uploadError
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('review-photos')
-            .getPublicUrl(filePath)
+          const publicUrl = await uploadReviewPhoto(reviewId, croppedBlob)
 
           const photoUrlWithCache = `${publicUrl}?t=${Date.now()}`
-          await supabase.from('reviews').update({ photo_url: photoUrlWithCache }).eq('id', reviewId)
+          await api.updateReviewPhoto(reviewId, photoUrlWithCache)
         }
       }
 
@@ -197,8 +174,7 @@ function InlineReviewForm({
           review_id: reviewId,
           tag_id: tagId,
         }))
-        const { error: tagError } = await supabase.from('review_tags').insert(tagInserts)
-        if (tagError) throw tagError
+        await api.createReviewTags(tagInserts)
       }
 
       onSaved()
@@ -403,7 +379,13 @@ function InlineReviewForm({
 }
 
 export function Dashboard({ organisationSlug }: DashboardProps) {
-  const [user, setUser] = useState<User | null>(null)
+  const { data: session, isPending: sessionPending } = useSession()
+  const user: AuthUser | null = session?.user ? {
+    id: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    image: session.user.image,
+  } : null
   // Load cached data for instant first paint
   const cached = useRef(getDashboardCache())
   const [restaurants, setRestaurants] = useState<RestaurantWithReviews[]>(
@@ -448,27 +430,27 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
 
   // Fetch user's following list with names
   const fetchFollowing = useCallback(async (userId: string) => {
-    const { data: follows } = await supabase
-      .from('user_follows')
-      .select('following_id')
-      .eq('follower_id', userId)
+    try {
+      const follows = await api.getFollowing(userId)
 
-    if (follows && follows.length > 0) {
-      setFollowingIds(new Set(follows.map(f => f.following_id)))
+      if (follows && follows.length > 0) {
+        setFollowingIds(new Set(follows.map(f => f.following_id)))
 
-      // Fetch profile names for followed users
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .in('id', follows.map(f => f.following_id))
+        // Fetch profile names for followed users
+        const profiles = await api.getProfiles(follows.map(f => f.following_id))
 
-      if (profiles) {
-        setFollowingUsers(profiles.map(p => ({
-          id: p.id,
-          name: p.display_name || p.id.slice(0, 8)
-        })))
+        if (profiles) {
+          setFollowingUsers(profiles.map(p => ({
+            id: p.id,
+            name: p.display_name || p.id.slice(0, 8)
+          })))
+        }
+      } else {
+        setFollowingIds(new Set())
+        setFollowingUsers([])
       }
-    } else {
+    } catch (err) {
+      console.error('Failed to fetch following:', err)
       setFollowingIds(new Set())
       setFollowingUsers([])
     }
@@ -476,50 +458,41 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
 
   // Fetch user's followers list
   const fetchFollowers = useCallback(async (userId: string) => {
-    const { data: follows } = await supabase
-      .from('user_follows')
-      .select('follower_id')
-      .eq('following_id', userId)
+    try {
+      const follows = await api.getFollowers(userId)
 
-    if (follows && follows.length > 0) {
-      setFollowerIds(new Set(follows.map(f => f.follower_id)))
-    } else {
+      if (follows && follows.length > 0) {
+        setFollowerIds(new Set(follows.map(f => f.follower_id)))
+      } else {
+        setFollowerIds(new Set())
+      }
+    } catch (err) {
+      console.error('Failed to fetch followers:', err)
       setFollowerIds(new Set())
     }
   }, [])
 
   // Fetch user's organisations
   const fetchUserOrgs = useCallback(async (userId: string) => {
-    // First get memberships
-    const { data: memberships, error: memberError } = await supabase
-      .from('organisation_members')
-      .select('organisation_id, role')
-      .eq('user_id', userId)
+    try {
+      // First get memberships with orgs included
+      const membershipsWithOrgs = await api.getUserMemberships(userId, true)
 
-    if (memberError || !memberships || memberships.length === 0) {
-      setUserOrgs([])
-      setUserOrgIds(new Set())
-      setIsAdmin(false)
-      setOrgMembers([])
-      return
-    }
+      if (!membershipsWithOrgs || membershipsWithOrgs.length === 0) {
+        setUserOrgs([])
+        setUserOrgIds(new Set())
+        setIsAdmin(false)
+        setOrgMembers([])
+        return
+      }
 
-    // Then fetch the organisations
-    const orgIds = memberships.map(m => m.organisation_id)
-    const { data: orgsData } = await supabase
-      .from('organisations')
-      .select('*')
-      .in('id', orgIds)
-
-    if (orgsData) {
-      const orgs: OrganisationWithMembership[] = orgsData.map((org) => {
-        const membership = memberships.find(m => m.organisation_id === org.id)
-        return {
-          ...org,
-          role: (membership?.role || 'member') as 'admin' | 'member',
-        }
-      })
-      setUserOrgs(orgs)
+      const orgs = membershipsWithOrgs
+        .filter(m => m.organisation)
+        .map((m) => ({
+          ...m.organisation!,
+          role: (m.role || 'member') as 'admin' | 'member',
+        }))
+      setUserOrgs(orgs as OrganisationWithMembership[])
       setUserOrgIds(new Set(orgs.map(o => o.id)))
 
       // Check if user is admin of current org
@@ -529,12 +502,11 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
       }
 
       // Fetch all members of user's orgs with their names and org mapping
-      const { data: allMembers } = await supabase
-        .from('organisation_members')
-        .select('user_id, organisation_id')
-        .in('organisation_id', orgIds)
+      const orgIds = orgs.map(o => o.id)
+      const allMembersArrays = await Promise.all(orgIds.map(id => api.getOrgMembers(id)))
+      const allMembers = allMembersArrays.flat()
 
-      if (allMembers && allMembers.length > 0) {
+      if (allMembers.length > 0) {
         // Build org -> members map
         const membersByOrg = new Map<string, Set<string>>()
         for (const m of allMembers) {
@@ -547,179 +519,183 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
 
         // Get unique member IDs (excluding self) for the search dropdown
         const memberIds = [...new Set(allMembers.filter(m => m.user_id !== userId).map(m => m.user_id))]
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, display_name')
-          .in('id', memberIds)
+        if (memberIds.length > 0) {
+          const profiles = await api.getProfiles(memberIds)
 
-        if (profiles) {
-          setOrgMembers(profiles.map(p => ({
-            id: p.id,
-            name: p.display_name || p.id.slice(0, 8)
-          })))
+          if (profiles) {
+            setOrgMembers(profiles.map(p => ({
+              id: p.id,
+              name: p.display_name || p.id.slice(0, 8)
+            })))
+          }
+        } else {
+          setOrgMembers([])
         }
       } else {
         setOrgMembers([])
       }
+    } catch (err) {
+      console.error('Failed to fetch user orgs:', err)
+      setUserOrgs([])
+      setUserOrgIds(new Set())
+      setIsAdmin(false)
+      setOrgMembers([])
     }
   }, [organisationSlug])
 
   const fetchData = useCallback(async (currentUserId?: string | null) => {
-    // Fetch current organisation if slug is provided
-    let office: OfficeLocation | null = null
-    let visibleReviewerIds = new Set<string>()
+    try {
+      // Fetch current organisation if slug is provided
+      let office: OfficeLocation | null = null
+      let visibleReviewerIds = new Set<string>()
 
-    if (organisationSlug) {
-      // Org view: show reviews from members of this specific org
-      const { data: orgData } = await supabase
-        .from('organisations')
-        .select('*')
-        .eq('slug', organisationSlug)
-        .single()
+      if (organisationSlug) {
+        // Org view: show reviews from members of this specific org
+        try {
+          const orgData = await api.getOrgBySlug(organisationSlug)
 
-      if (orgData) {
-        setCurrentOrg(orgData)
-        office = orgData.office_location as OfficeLocation | null
-        setOfficeLocation(office)
+          if (orgData) {
+            setCurrentOrg(orgData as Organisation)
+            office = orgData.office_location as OfficeLocation | null
+            setOfficeLocation(office)
 
-        // Fetch members of this org - their reviews will be visible
-        const { data: members } = await supabase
-          .from('organisation_members')
-          .select('user_id')
-          .eq('organisation_id', orgData.id)
+            // Fetch members of this org - their reviews will be visible
+            const members = await api.getOrgMembers(orgData.id)
 
-        if (members) {
-          visibleReviewerIds = new Set(members.map(m => m.user_id))
-        }
-      }
-    } else {
-      // Global view - show reviews from all orgs the user is a member of
-      setCurrentOrg(null)
-      setOfficeLocation(null)
-
-      if (currentUserId) {
-        // Get all orgs the user is in
-        const { data: userMemberships } = await supabase
-          .from('organisation_members')
-          .select('organisation_id')
-          .eq('user_id', currentUserId)
-
-        if (userMemberships && userMemberships.length > 0) {
-          const userOrgIdsList = userMemberships.map(m => m.organisation_id)
-
-          // Get all members of those orgs
-          const { data: allOrgMembers } = await supabase
-            .from('organisation_members')
-            .select('user_id')
-            .in('organisation_id', userOrgIdsList)
-
-          if (allOrgMembers) {
-            visibleReviewerIds = new Set(allOrgMembers.map(m => m.user_id))
+            if (members) {
+              visibleReviewerIds = new Set(members.map(m => m.user_id))
+            }
           }
+        } catch {
+          // Org not found or error — continue with empty org state
         }
-      }
-    }
-    setCurrentOrgMemberIds(visibleReviewerIds)
+      } else {
+        // Global view - show reviews from all orgs the user is a member of
+        setCurrentOrg(null)
+        setOfficeLocation(null)
 
-    // Fetch all tags
-    const { data: tagsData } = await supabase.from('tags').select('*').order('name')
-    if (tagsData) setAvailableTags(tagsData)
+        if (currentUserId) {
+          // Get all orgs the user is in
+          const userMemberships = await api.getUserMemberships(currentUserId)
 
-    // Fetch all restaurants with reviews
-    const { data: restaurantsData } = await supabase
-      .from('restaurants')
-      .select('*, reviews(*)')
-      .order('name')
+          if (userMemberships && userMemberships.length > 0) {
+            const userOrgIdsList = userMemberships.map(m => m.organisation_id)
 
-    // Fetch all review_tags with tag details
-    const { data: reviewTagsData } = await supabase
-      .from('review_tags')
-      .select('review_id, tag_id, tags(*)')
+            // Get all members of those orgs
+            const allOrgMembersArrays = await Promise.all(userOrgIdsList.map(id => api.getOrgMembers(id)))
+            const allOrgMembers = allOrgMembersArrays.flat()
 
-    // Build a map of review_id -> tags
-    const reviewTagsMap = new Map<string, Tag[]>()
-    if (reviewTagsData) {
-      for (const rt of reviewTagsData) {
-        if (!reviewTagsMap.has(rt.review_id)) {
-          reviewTagsMap.set(rt.review_id, [])
-        }
-        if (rt.tags) {
-          reviewTagsMap.get(rt.review_id)!.push(rt.tags as Tag)
-        }
-      }
-    }
-
-    if (restaurantsData) {
-      const withCalculations = restaurantsData.map((r) => {
-        // Mark each review with whether the reviewer is an org member (for visibility)
-        // and attach their tags
-        const reviews = (r.reviews || []).map(rev => ({
-          ...rev,
-          isOrgMember: rev.user_id ? visibleReviewerIds.has(rev.user_id) : false,
-          tags: reviewTagsMap.get(rev.id) || []
-        }))
-
-        // Calculate average rating
-        const ratings = reviews
-          .filter((rev) => rev.rating !== null)
-          .map((rev) => rev.rating as number)
-        const avgRating = ratings.length > 0
-          ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-          : null
-
-        // Calculate top tags (by frequency across all reviews)
-        const tagCounts = new Map<string, { tag: Tag; count: number }>()
-        for (const rev of reviews) {
-          for (const tag of rev.tags || []) {
-            const existing = tagCounts.get(tag.id)
-            if (existing) {
-              existing.count++
-            } else {
-              tagCounts.set(tag.id, { tag, count: 1 })
+            if (allOrgMembers) {
+              visibleReviewerIds = new Set(allOrgMembers.map(m => m.user_id))
             }
           }
         }
-        const topTags = Array.from(tagCounts.values())
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 2)
+      }
+      setCurrentOrgMemberIds(visibleReviewerIds)
 
-        return {
-          ...r,
-          reviews,
-          avgRating,
-          topTags,
+      // Fetch all tags
+      const tagsData = await api.getTags()
+      if (tagsData) setAvailableTags(tagsData)
+
+      // Fetch all restaurants with reviews
+      const restaurantsData = await api.getRestaurants()
+
+      // Fetch all review_tags
+      const reviewTagsData = await api.getReviewTags()
+
+      // Build a map of review_id -> tags (reviewTagsData has tag_name but we need Tag objects)
+      // We can build Tag-like objects from the reviewTags + tagsData
+      const tagsById = new Map<string, Tag>()
+      if (tagsData) {
+        for (const t of tagsData) {
+          tagsById.set(t.id, t)
         }
-      })
-      setRestaurants(withCalculations)
+      }
 
-      // Fetch profiles to get display names
-      const userIds = new Set<string>()
-      for (const restaurant of withCalculations) {
-        for (const review of restaurant.reviews) {
-          if (review.user_id) {
-            userIds.add(review.user_id)
+      const reviewTagsMap = new Map<string, Tag[]>()
+      if (reviewTagsData) {
+        for (const rt of reviewTagsData) {
+          if (!reviewTagsMap.has(rt.review_id)) {
+            reviewTagsMap.set(rt.review_id, [])
+          }
+          const tag = tagsById.get(rt.tag_id)
+          if (tag) {
+            reviewTagsMap.get(rt.review_id)!.push(tag)
           }
         }
       }
 
-      if (userIds.size > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, display_name, is_private, avatar_url')
-          .in('id', Array.from(userIds))
+      if (restaurantsData) {
+        const withCalculations = restaurantsData.map((r) => {
+          // Mark each review with whether the reviewer is an org member (for visibility)
+          // and attach their tags
+          const reviews = (r.reviews || []).map(rev => ({
+            ...rev,
+            isOrgMember: rev.user_id ? visibleReviewerIds.has(rev.user_id) : false,
+            tags: reviewTagsMap.get(rev.id) || []
+          }))
 
-        if (profiles) {
-          setUsers(profiles.map(p => ({
-            id: p.id,
-            email: p.display_name || p.id.slice(0, 8),
-            isPrivate: p.is_private || false,
-            avatarUrl: p.avatar_url || null
-          })))
+          // Calculate average rating
+          const ratings = reviews
+            .filter((rev) => rev.rating !== null)
+            .map((rev) => rev.rating as number)
+          const avgRating = ratings.length > 0
+            ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+            : null
+
+          // Calculate top tags (by frequency across all reviews)
+          const tagCounts = new Map<string, { tag: Tag; count: number }>()
+          for (const rev of reviews) {
+            for (const tag of rev.tags || []) {
+              const existing = tagCounts.get(tag.id)
+              if (existing) {
+                existing.count++
+              } else {
+                tagCounts.set(tag.id, { tag, count: 1 })
+              }
+            }
+          }
+          const topTags = Array.from(tagCounts.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 2)
+
+          return {
+            ...r,
+            reviews,
+            avgRating,
+            topTags,
+          }
+        })
+        setRestaurants(withCalculations as unknown as RestaurantWithReviews[])
+
+        // Fetch profiles to get display names
+        const userIds = new Set<string>()
+        for (const restaurant of withCalculations) {
+          for (const review of restaurant.reviews) {
+            if (review.user_id) {
+              userIds.add(review.user_id)
+            }
+          }
+        }
+
+        if (userIds.size > 0) {
+          const profiles = await api.getProfiles(Array.from(userIds))
+
+          if (profiles) {
+            setUsers(profiles.map(p => ({
+              id: p.id,
+              email: p.display_name || p.id.slice(0, 8),
+              isPrivate: p.is_private || false,
+              avatarUrl: p.avatar_url || null
+            })))
+          }
         }
       }
+    } catch (err) {
+      console.error('Failed to fetch data:', err)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [organisationSlug])
 
   // Save to cache whenever restaurants/users/tags update (after fresh fetch)
@@ -729,48 +705,39 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
     }
   }, [restaurants, users, availableTags])
 
+  // Track previous user id to detect auth changes
+  const prevUserIdRef = useRef<string | null | undefined>(undefined)
+
   useEffect(() => {
-    let isMounted = true
+    // Wait for session to resolve
+    if (sessionPending) return
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (!isMounted) return
-      setUser(data.user)
-      if (data.user) {
-        fetchUserOrgs(data.user.id)
-        fetchFollowing(data.user.id)
-        fetchFollowers(data.user.id)
-      }
-      // Fetch data after auth check completes (whether logged in or not)
-      fetchData(data.user?.id)
-    })
+    const currentUserId = session?.user?.id ?? null
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) return
-      // Only handle sign in/out events, not initial session
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          fetchUserOrgs(session.user.id)
-          fetchFollowing(session.user.id)
-          fetchFollowers(session.user.id)
-          fetchData(session.user.id)
-        } else {
-          clearDashboardCache()
-          setUserOrgs([])
-          setUserOrgIds(new Set())
-          setIsAdmin(false)
-          setFollowingIds(new Set())
-          setFollowerIds(new Set())
-          fetchData(null)
-        }
-      }
-    })
+    // Skip if user hasn't changed
+    if (prevUserIdRef.current === currentUserId) return
+    const isInitial = prevUserIdRef.current === undefined
+    prevUserIdRef.current = currentUserId
 
-    return () => {
-      isMounted = false
-      subscription.unsubscribe()
+    if (currentUserId) {
+      fetchUserOrgs(currentUserId)
+      fetchFollowing(currentUserId)
+      fetchFollowers(currentUserId)
+      fetchData(currentUserId)
+    } else if (!isInitial) {
+      // User signed out (not initial load with no session)
+      clearDashboardCache()
+      setUserOrgs([])
+      setUserOrgIds(new Set())
+      setIsAdmin(false)
+      setFollowingIds(new Set())
+      setFollowerIds(new Set())
+      fetchData(null)
+    } else {
+      // Initial load, no session
+      fetchData(null)
     }
-  }, [fetchData, fetchUserOrgs, fetchFollowing, fetchFollowers])
+  }, [session, sessionPending, fetchData, fetchUserOrgs, fetchFollowing, fetchFollowers])
 
   // Keyboard navigation for photo lightbox
   useEffect(() => {
@@ -1369,9 +1336,13 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
                                 title="Delete review"
                                 onClick={async () => {
                                   if (!confirm('Delete this review?')) return
-                                  await supabase.from('review_tags').delete().eq('review_id', review.id)
-                                  await supabase.from('reviews').delete().eq('id', review.id)
-                                  fetchData()
+                                  try {
+                                    await api.deleteReviewTags(review.id)
+                                    await api.deleteReview(review.id)
+                                    fetchData()
+                                  } catch (err) {
+                                    console.error('Failed to delete review:', err)
+                                  }
                                 }}
                                 style={{
                                   background: 'none',

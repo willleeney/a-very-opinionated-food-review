@@ -1,25 +1,39 @@
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import type { FullConfig } from '@playwright/test'
+import { requireDatabaseUrl } from './helpers/env'
+import { closePool, createTestUser, query } from './helpers/db'
+import { TEST_USERS } from './helpers/auth'
+
+/** Users this run created, so teardown removes only those. */
+export const CREATED_USERS_FILE = path.join(os.tmpdir(), 'tastefull-e2e-created-users.json')
 
 /**
- * Global setup: verify local Supabase is running before tests start.
- * All e2e tests run against LOCAL Supabase only — never production.
+ * Global setup: verify Neon is reachable, then create the test users in the
+ * Better Auth tables (`user` + `account` with providerId='credential') along
+ * with their `profiles` rows.
  */
 export default async function globalSetup(_config: FullConfig) {
-  const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
-  const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || ''
+  const host = new URL(requireDatabaseUrl().replace(/^postgres(ql)?:/, 'http:')).host
 
-  // Health check: verify Supabase is reachable
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
-      headers: { apikey: supabaseAnonKey },
-    })
-    if (!response.ok) {
-      throw new Error(`Supabase returned ${response.status}`)
-    }
-    console.log('[e2e setup] Supabase is healthy')
+    await query('SELECT 1 FROM "user" LIMIT 1')
+    console.log(`[e2e setup] Neon is reachable (${host})`)
   } catch (error) {
-    console.error('[e2e setup] Supabase is not reachable at', supabaseUrl)
-    console.error('[e2e setup] Run: supabase start && supabase db reset')
+    console.error('[e2e setup] Cannot query Neon at', host)
+    console.error('[e2e setup] Check DATABASE_URL and that migrations have been applied.')
+    await closePool()
     throw error
   }
+
+  const created: string[] = []
+  for (const user of Object.values(TEST_USERS)) {
+    const { id, created: isNew } = await createTestUser(user)
+    if (isNew) created.push(id)
+    console.log(`[e2e setup] ${isNew ? 'created' : 'reusing'} ${user.email}`)
+  }
+
+  fs.writeFileSync(CREATED_USERS_FILE, JSON.stringify(created))
+  await closePool()
 }

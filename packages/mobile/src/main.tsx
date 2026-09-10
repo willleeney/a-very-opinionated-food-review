@@ -7,8 +7,7 @@ import '@tastefull/shared/styles/global.css'
 
 // Initialize config with Vite env vars
 initConfig({
-  supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
-  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+  authUrl: import.meta.env.VITE_AUTH_URL || '',
   googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
 })
 

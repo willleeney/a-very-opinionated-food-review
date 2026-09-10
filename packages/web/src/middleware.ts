@@ -16,12 +16,13 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   )
 
   const isDev = import.meta.env.DEV
+  // Media is served same-origin from R2 via /api/media/<key>, so 'self' covers it.
   const connectSrc = isDev
-    ? "connect-src 'self' http://127.0.0.1:* http://localhost:* https://*.supabase.co https://nominatim.openstreetmap.org https://places.googleapis.com"
-    : "connect-src 'self' https://*.supabase.co https://nominatim.openstreetmap.org https://places.googleapis.com"
+    ? "connect-src 'self' http://127.0.0.1:* http://localhost:* https://nominatim.openstreetmap.org https://places.googleapis.com"
+    : "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com"
   const imgSrc = isDev
-    ? "img-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https://*.basemaps.cartocdn.com https://*.supabase.co https://unpkg.com"
-    : "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.supabase.co https://unpkg.com"
+    ? "img-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https://tiles.stadiamaps.com https://unpkg.com"
+    : "img-src 'self' data: blob: https://tiles.stadiamaps.com https://unpkg.com"
 
   response.headers.set(
     'Content-Security-Policy',
