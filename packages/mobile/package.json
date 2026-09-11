@@ -22,7 +22,7 @@
     "@capacitor/network": "^7.0.1",
     "@capacitor/preferences": "^7.0.1",
     "@capacitor/push-notifications": "^7.0.1",
-    "@capacitor/splash-screen": "^7.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^7.0.1",
     "@tastefull/shared": "workspace:*",
     "react": "^19.2.3",
