@@ -290,20 +290,24 @@ at `/api/media/<key>`, e.g. `/api/media/review-photos/<userId>/<reviewId>.jpg` a
 
 ### Recreating the Database Schema
 
-The live schema is not maintained in this repo. SQL migrations live in
-`/Users/will/Documents/personal/tastefull/migrations/` and are applied to Neon with `psql`:
-
-- `001_schema.sql` — app tables (restaurants, reviews, tags, review_tags, settings, profiles,
-  organisations + members/invites/requests, user_follows, follow_requests) and indexes
-- `002_better_auth.sql` — the Better Auth tables (user, session, account, verification)
+SQL migrations live in `migrations/` and are applied by hand with `psql`, in filename
+order. There is no migration runner — that directory is the record of what has been run.
+See `migrations/README.md` for what each one does and why.
 
 ```bash
-psql "$DATABASE_URL" -f /Users/will/Documents/personal/tastefull/migrations/001_schema.sql
-psql "$DATABASE_URL" -f /Users/will/Documents/personal/tastefull/migrations/002_better_auth.sql
+psql "$DATABASE_URL" -f migrations/001_schema.sql
+psql "$DATABASE_URL" -f migrations/002_better_auth.sql
 ```
 
-Later numbered files in that directory are follow-up migrations and one-off Node data/storage
-migration scripts.
+Use the **unpooled** Neon connection string for DDL; the pooled `-pooler` host is for
+the app. Applying a migration does not touch the Neon `dev` branch — run it there too.
+
+`migrations/one-off/` holds the Node scripts that moved data off Supabase. They are
+archival: they read from a now-dormant Supabase project and are not expected to run
+again.
+
+Credentials for these scripts live outside the repo, in
+`/Users/will/Documents/personal/tastefull/.env`.
 
 The `supabase/` directory is retained as a historical record of the pre-migration schema and the
 `notify-new-review` edge function. Nothing reads it and it is not applied to anything — the hosted
