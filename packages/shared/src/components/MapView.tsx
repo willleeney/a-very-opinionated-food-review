@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, AttributionControl } fr
 import L from 'leaflet'
 import type { RestaurantWithReviews } from '../lib/database.types'
 import { useFilterStore } from '../lib/store'
+import { getMapView, setMapView } from '../lib/cache'
 
 interface MapViewProps {
   restaurants: RestaurantWithReviews[]
@@ -10,6 +11,8 @@ interface MapViewProps {
   showOfficeMarker?: boolean
   orgName?: string | null
   onRestaurantClick?: (restaurant: RestaurantWithReviews) => void
+  /** Whose remembered map position to restore. Omit to always open at the default. */
+  userId?: string | null
 }
 
 // Default center (London Bridge area) when no office location
@@ -190,10 +193,37 @@ function RestaurantMarker({
   )
 }
 
-export function MapView({ restaurants, officeLocation, showOfficeMarker = false, orgName, onRestaurantClick }: MapViewProps) {
+/** Records the viewport as the user pans and zooms, so it survives a reload. */
+function MapViewPersistence({ userId }: { userId: string | null }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!userId) return
+
+    const save = () => {
+      const c = map.getCenter()
+      setMapView(userId, { lat: c.lat, lng: c.lng, zoom: map.getZoom() })
+    }
+
+    map.on('moveend', save)
+    map.on('zoomend', save)
+    return () => {
+      map.off('moveend', save)
+      map.off('zoomend', save)
+    }
+  }, [map, userId])
+
+  return null
+}
+
+export function MapView({ restaurants, officeLocation, showOfficeMarker = false, orgName, onRestaurantClick, userId = null }: MapViewProps) {
   const { highlightedRestaurantId, setHighlightedRestaurantId } = useFilterStore()
 
-  const mapCenter = officeLocation || DEFAULT_CENTER
+  // Read once on mount: MapContainer only honours center/zoom on first render,
+  // and re-reading would fight the user's own panning.
+  const savedView = useRef(getMapView(userId)).current
+  const mapCenter = savedView ?? officeLocation ?? DEFAULT_CENTER
+  const initialZoom = savedView?.zoom ?? 15
 
   const validRestaurants = useMemo(() =>
     restaurants.filter(r => r.latitude !== null && r.longitude !== null),
@@ -204,7 +234,7 @@ export function MapView({ restaurants, officeLocation, showOfficeMarker = false,
     <div className="map-container">
       <MapContainer
         center={[mapCenter.lat, mapCenter.lng]}
-        zoom={15}
+        zoom={initialZoom}
         scrollWheelZoom={true}
         wheelPxPerZoomLevel={150}
         style={{ height: '100%', width: '100%' }}
@@ -217,6 +247,7 @@ export function MapView({ restaurants, officeLocation, showOfficeMarker = false,
         />
 
         <MapController highlightedId={highlightedRestaurantId} restaurants={restaurants} />
+        <MapViewPersistence userId={userId} />
 
         {/* Office marker - only show when in org context */}
         {showOfficeMarker && officeLocation && (

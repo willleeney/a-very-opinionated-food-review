@@ -1063,6 +1063,7 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
             showOfficeMarker={showOffice}
             orgName={activeOrgName}
             onRestaurantClick={handleRowClick}
+            userId={user?.id ?? null}
           />
         </div>
       </section>
