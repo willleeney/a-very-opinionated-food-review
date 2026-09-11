@@ -12,22 +12,15 @@ type AuthEnv = {
   GOOGLE_CLIENT_SECRET?: string
 }
 
-// Every request resolves a session, so building a fresh betterAuth instance (and
-// with it a fresh, never-closed Neon Pool) per request leaked connections.
-// Memoised on the isolate, keyed by the settings that affect the instance.
-const cache = new Map<string, ReturnType<typeof buildAuth>>()
-
+/**
+ * Build a Better Auth instance for the current request.
+ *
+ * Must NOT be memoised across requests. The instance owns a Neon pool, and a
+ * Workers isolate is reused between requests while its connections are not —
+ * sharing one throws "Cannot perform I/O on behalf of a different request"
+ * (Cloudflare error 1101). See the note in ./db.ts.
+ */
 export function createAuth(env: AuthEnv) {
-  const key = [env.DATABASE_URL, env.BETTER_AUTH_URL, env.GOOGLE_CLIENT_ID ?? '', env.APPLE_CLIENT_ID ?? ''].join('|')
-  let instance = cache.get(key)
-  if (!instance) {
-    instance = buildAuth(env)
-    cache.set(key, instance)
-  }
-  return instance
-}
-
-function buildAuth(env: AuthEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
