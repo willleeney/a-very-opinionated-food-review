@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import * as api from '../lib/api'
-import type { OrganisationMember, OrganisationInvite, OrganisationRequest, OrganisationWithMembership } from '../lib/database.types'
+import type { OrganisationMember, OrganisationInvite, OrganisationRequest, OrganisationWithMembership, OfficeLocation } from '../lib/database.types'
 import { getUser, type AuthUser } from '../lib/auth-client'
 import { TopNav } from './TopNav'
 
 interface OrganisationAdminProps {
   organisationSlug: string
+}
+
+interface HomebaseResult {
+  placeId: string
+  name: string
+  address: string
 }
 
 interface MemberWithProfile extends OrganisationMember {
@@ -39,6 +45,13 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
 
   // Form states
   const [orgName, setOrgName] = useState('')
+  // Homebase: the org's base address. Distances in the table are measured from
+  // here, so it is stored as coordinates, looked up via Google Places.
+  const [homebaseQuery, setHomebaseQuery] = useState('')
+  const [homebaseResults, setHomebaseResults] = useState<HomebaseResult[]>([])
+  const [homebaseLookup, setHomebaseLookup] = useState(false)
+  const [homebase, setHomebase] = useState<OfficeLocation | null>(null)
+  const [savingHomebase, setSavingHomebase] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [transferTo, setTransferTo] = useState('')
   const [saving, setSaving] = useState(false)
@@ -62,6 +75,7 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
 
     setOrg(orgData)
     setOrgName(orgData.name)
+    setHomebase((orgData.office_location as OfficeLocation | null) ?? null)
 
     // Fetch members with profiles
     try {
@@ -157,6 +171,99 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
       fetchUserOrgs(user.id)
     }
   }, [user, fetchData, fetchUserOrgs])
+
+  // Debounced address lookup. Unlike Add Place this is not restricted to food
+  // venues — a homebase is usually an office or a street address.
+  useEffect(() => {
+    if (!homebaseQuery.trim() || homebaseQuery.trim().length < 3) {
+      setHomebaseResults([])
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      const apiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY
+      if (!apiKey) return
+
+      setHomebaseLookup(true)
+      try {
+        const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
+          body: JSON.stringify({ input: homebaseQuery }),
+        })
+        if (!res.ok) { setHomebaseResults([]); return }
+        const data = await res.json()
+        setHomebaseResults(
+          (data.suggestions ?? [])
+            .filter((s: { placePrediction?: unknown }) => s.placePrediction)
+            .slice(0, 5)
+            .map((s: { placePrediction: { placeId: string; structuredFormat?: { mainText?: { text?: string }, secondaryText?: { text?: string } }, text?: { text?: string } } }) => ({
+              placeId: s.placePrediction.placeId,
+              name: s.placePrediction.structuredFormat?.mainText?.text ?? s.placePrediction.text?.text ?? '',
+              address: s.placePrediction.structuredFormat?.secondaryText?.text ?? '',
+            }))
+        )
+      } catch {
+        setHomebaseResults([])
+      } finally {
+        setHomebaseLookup(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [homebaseQuery])
+
+  const selectHomebase = async (result: HomebaseResult) => {
+    if (!org) return
+    const apiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY
+
+    setSavingHomebase(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${result.placeId}?fields=location`,
+        { headers: { 'X-Goog-Api-Key': apiKey } }
+      )
+      if (!res.ok) throw new Error('Could not look up that address')
+      const data = await res.json()
+      if (!data.location) throw new Error('That place has no location')
+
+      const loc: OfficeLocation = {
+        lat: data.location.latitude,
+        lng: data.location.longitude,
+        name: result.name,
+        address: result.address,
+      }
+      await api.updateOrg(org.id, {
+        office_location: { lat: loc.lat, lng: loc.lng, name: result.name, address: result.address },
+      })
+      setHomebase(loc)
+      setHomebaseQuery('')
+      setHomebaseResults([])
+      setSuccess(`Homebase set to ${result.name}`)
+      fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to set homebase')
+    }
+    setSavingHomebase(false)
+  }
+
+  const clearHomebase = async () => {
+    if (!org) return
+    setSavingHomebase(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      await api.updateOrg(org.id, { office_location: null })
+      setHomebase(null)
+      setSuccess('Homebase cleared')
+      fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear homebase')
+    }
+    setSavingHomebase(false)
+  }
 
   const handleUpdateDetails = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -455,6 +562,74 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
                 </button>
               </div>
             </form>
+
+            {/* Homebase — distances in the table are measured from here */}
+            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Homebase
+              </label>
+
+              {homebase ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '14px' }}>
+                    {homebase.name || 'Set'}
+                    {homebase.address && (
+                      <span style={{ color: 'var(--text-muted)' }}> · {homebase.address}</span>
+                    )}
+                    <span className="mono" style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {homebase.lat.toFixed(6)}, {homebase.lng.toFixed(6)}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearHomebase}
+                    disabled={savingHomebase}
+                    className="btn"
+                    style={{ fontSize: '11px', padding: '4px 10px' }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                  Not set — walking distances are hidden until you choose one.
+                </p>
+              )}
+
+              <div style={{ position: 'relative', maxWidth: '280px' }}>
+                <input
+                  type="text"
+                  value={homebaseQuery}
+                  onChange={(e) => setHomebaseQuery(e.target.value)}
+                  placeholder={homebase ? 'Search to change…' : 'Search for an address…'}
+                  disabled={savingHomebase}
+                  style={{ width: '100%' }}
+                  data-testid="homebase-search"
+                />
+
+                {(homebaseLookup || homebaseResults.length > 0) && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--bg-warm)', border: '1px solid var(--border)', marginTop: '4px' }}>
+                    {homebaseLookup && homebaseResults.length === 0 ? (
+                      <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>Searching…</div>
+                    ) : (
+                      homebaseResults.map((r) => (
+                        <button
+                          key={r.placeId}
+                          type="button"
+                          onClick={() => selectHomebase(r)}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                        >
+                          <div style={{ fontSize: '14px' }}>{r.name}</div>
+                          {r.address && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.address}</div>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Transfer admin */}
             {members.filter(m => m.user_id !== user?.id).length > 0 && (

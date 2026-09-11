@@ -36,18 +36,19 @@ const createIcon = (color: string, size: number = 10) => {
   })
 }
 
+// A teardrop pin, so the homebase reads as a place rather than as another
+// rating dot. Anchored at the tip so the point sits on the coordinate.
 const officeIcon = L.divIcon({
   className: 'custom-marker',
-  html: `<div style="
-    width: 14px;
-    height: 14px;
-    background: #c45d3e;
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-  "></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
+  html: `<svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg"
+              style="display:block;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">
+    <path d="M12 0.75C5.92 0.75 1 5.67 1 11.75c0 7.9 9.65 18.3 10.06 18.74a1.3 1.3 0 0 0 1.88 0C13.35 30.05 23 19.65 23 11.75 23 5.67 18.08 0.75 12 0.75z"
+          fill="#c45d3e" stroke="white" stroke-width="1.5"/>
+    <circle cx="12" cy="11.5" r="4" fill="white"/>
+  </svg>`,
+  iconSize: [24, 32],
+  iconAnchor: [12, 32],
+  popupAnchor: [0, -30],
 })
 
 function getRatingColor(rating: number | null): string {
@@ -127,12 +128,15 @@ function MapController({ highlightedId, restaurants }: { highlightedId: string |
 }
 
 // Office marker component
-function OfficeMarker({ name, lat, lng }: { name: string; lat: number; lng: number }) {
+function OfficeMarker({ name, address, lat, lng }: { name: string; address?: string | null; lat: number; lng: number }) {
   return (
     <Marker position={[lat, lng]} icon={officeIcon}>
       <Popup>
         <div style={{ fontFamily: 'Inter, sans-serif', padding: '4px 0', minWidth: '200px' }}>
           <strong style={{ fontSize: '14px' }}>{name}</strong>
+          {address && (
+            <div style={{ fontSize: '12px', color: '#6d6560', marginTop: '2px' }}>{address}</div>
+          )}
         </div>
       </Popup>
     </Marker>
@@ -193,6 +197,27 @@ function RestaurantMarker({
   )
 }
 
+/**
+ * Recentres once when the homebase arrives.
+ *
+ * MapContainer only reads `center` on its first render, but the org (and so the
+ * homebase) is fetched after mount — so the map would open on the default and
+ * stay there. Only runs when the user has no remembered position, and only
+ * once, so it can never yank the map out from under someone panning.
+ */
+function MapAutoCentre({ target, enabled }: { target: { lat: number; lng: number } | null; enabled: boolean }) {
+  const map = useMap()
+  const done = useRef(false)
+
+  useEffect(() => {
+    if (!enabled || done.current || !target) return
+    done.current = true
+    map.setView([target.lat, target.lng], map.getZoom())
+  }, [map, target, enabled])
+
+  return null
+}
+
 /** Records the viewport as the user pans and zooms, so it survives a reload. */
 function MapViewPersistence({ userId }: { userId: string | null }) {
   const map = useMap()
@@ -248,11 +273,15 @@ export function MapView({ restaurants, officeLocation, showOfficeMarker = false,
 
         <MapController highlightedId={highlightedRestaurantId} restaurants={restaurants} />
         <MapViewPersistence userId={userId} />
+        <MapAutoCentre target={officeLocation ?? null} enabled={!savedView} />
 
-        {/* Office marker - only show when in org context */}
+        {/* Homebase marker */}
         {showOfficeMarker && officeLocation && (
           <OfficeMarker
-            name={orgName || 'Office'}
+            // The saved homebase carries its own label (e.g. "Techspace Goswell
+            // Road"), which is more useful than the org name.
+            name={officeLocation.name || orgName || 'Homebase'}
+            address={officeLocation.address ?? null}
             lat={officeLocation.lat}
             lng={officeLocation.lng}
           />

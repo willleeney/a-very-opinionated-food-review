@@ -327,9 +327,13 @@ export function createOrg(data: {
   return post<Organisation>('/api/data/organisations', data)
 }
 
+/** Partial update — omitted fields are left alone. Pass office_location: null to clear the homebase. */
 export function updateOrg(
   id: string,
-  data: { name: string },
+  data: {
+    name?: string
+    office_location?: { lat: number; lng: number; name?: string; address?: string } | null
+  },
 ): Promise<void> {
   return put<void>('/api/data/organisations', { id, ...data })
 }

@@ -12,6 +12,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "seed:users": "node scripts/seed-users.mjs",
+    "seed:dev": "node scripts/seed-dev.mjs",
     "screenshots": "tsx e2e/capture-screens.ts",
     "lint": "eslint packages --ext .ts,.tsx",
     "typecheck": "pnpm --filter @tastefull/web typecheck"
