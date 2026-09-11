@@ -44,3 +44,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: packages/web
+          # Must match the wrangler devDependency in packages/web/package.json.
+          # Otherwise the action decides the local copy is the wrong version and
+          # runs `npm i wrangler` inside the workspace package, which fails:
+          # npm cannot parse pnpm's `workspace:*` protocol (EUNSUPPORTEDPROTOCOL).
+          wranglerVersion: '4.59.2'
+          packageManager: pnpm
