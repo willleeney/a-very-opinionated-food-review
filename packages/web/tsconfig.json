@@ -1,0 +1,16 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    // The shared package exports extensionless subpaths (./components/* ->
+    // ./src/components/*), which the bundler resolves but tsc does not, so
+    // astro check reported "Cannot find module '@tastefull/shared/components/X'"
+    // for every island. Map the subpaths to source so types resolve.
+    "paths": {
+      "@tastefull/shared/*": ["../shared/src/*"]
+    }
+  }
+}

@@ -4,7 +4,24 @@
 
 A food review website for the team at Runway East, London Bridge. Honest, opinionated reviews of lunch spots in the neighbourhood.
 
-**Tech Stack:** Astro + React islands, Supabase (PostgreSQL + Auth), Cloudflare Workers, Leaflet maps
+**Tech Stack:** pnpm monorepo — Astro + React islands (web), Capacitor + Vite (mobile), shared component library. Neon Postgres + Better Auth, Cloudflare Workers (R2 for media), Leaflet maps.
+
+**Monorepo Structure:**
+- `packages/web/` — Astro site deployed to Cloudflare Workers
+- `packages/shared/` — React components, utilities, styles (shared between web + mobile)
+- `packages/mobile/` — Capacitor + Vite for iOS/Android
+
+## Visual QA
+
+Run `/visual-qa` to capture 57 screenshots of every screen state and do a thorough visual inspection. The capture script lives at `e2e/capture-screens.ts` and outputs to `e2e/screenshots/`. See `~/.claude/skills/visual-qa/SKILL.md` for the full checklist.
+
+## App Store & Release Skills
+
+The following agent skills are installed for iOS release automation:
+
+- **ASO Skills** (`Eronred/aso-skills`) — App Store Optimization: keyword research, metadata optimization, competitor analysis, app icon optimization, creative testing
+- **App Store Preflight** (`truongduy2611/app-store-preflight-skills`) — Scan Xcode project for App Store rejection patterns before submission
+- **App Store Connect CLI** (`rorkai/app-store-connect-cli-skills`) — Automate TestFlight, builds, submissions, signing, analytics, screenshots via `asc` CLI (installed at `/opt/homebrew/bin/asc`)
 
 ## Design Philosophy
 
@@ -22,15 +39,15 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 --bg-warm: #f5f2ed;      /* Slightly warmer for hover/expanded states */
 --text: #1a1a1a;         /* Near-black for primary text */
 --text-secondary: #666;  /* Body text, descriptions */
---text-muted: #999;      /* Labels, metadata */
+--text-muted: #6d6560;   /* Labels, metadata (WCAG AA compliant) */
 --border: #e8e4de;       /* Subtle warm grey borders */
---accent: #c45d3e;       /* Terracotta - CTAs, links, map markers */
---accent-light: #e8d5ce; /* Selection highlight */
+--accent: #a84e35;       /* Terracotta - CTAs, links, map markers (WCAG AA) */
+--accent-light: #faf0eb; /* Selection highlight */
 ```
 
 ### Rating Colors
 - `--great: #2d7a4f` - Forest green for 8-10 ratings
-- `--good: #b8860b` - Golden amber for 6-7 ratings
+- `--good: #4d7a33` - Olive green for 6-7 ratings (WCAG AA)
 - `--poor: #a64d4d` - Muted red for 1-5 ratings
 
 ## Typography
@@ -143,7 +160,7 @@ A food review website for the team at Runway East, London Bridge. Honest, opinio
 
 ### Auth Gate (`HomePage.tsx`)
 - `src/pages/index.astro` renders `<HomePage>` (not Dashboard directly)
-- HomePage checks Supabase session client-side
+- HomePage checks the session client-side via Better Auth's `useSession()`
 - Authenticated → `<Dashboard />`
 - Unauthenticated → `<LandingPage />`
 - No guest browsing — auth is required for the full dashboard
@@ -246,249 +263,64 @@ Reviews automatically become visible - no migration needed:
 - `user_follows` - follower/following relationships between users
 - `follow_requests` - pending follow requests for private accounts
 
-### RLS Policies
-- Anyone can read restaurants and reviews (all fields - visibility enforced in app layer)
-- Review comment/reviewer visibility derived from org membership (see Visibility Logic above)
-- Authenticated users can insert restaurants
-- Users can only modify their own reviews
-- Org members can view other members of their orgs
-- Org admins can manage members, invites, and requests
-- Settings readable by all, writable by authenticated
+### Access Control (no RLS)
+
+Row Level Security is gone — the app no longer talks to Postgres from the browser. All reads and
+writes go through typed functions in `packages/shared/src/lib/api.ts`, which call the API routes in
+`packages/web/src/pages/api/data/*.ts`. Those routes use the `withApi` helper
+(`packages/web/src/lib/api-helpers.ts`), which supplies `{ pool, user, params, body }` and resolves
+`user` from the Better Auth session. Access control is therefore enforced in the route handlers:
+
+- Restaurants and reviews are readable by anyone (field-level visibility is applied in the app layer)
+- Review comment/reviewer visibility is derived from org membership (see Visibility Logic above)
+- Mutating routes require a session; users can only modify their own reviews
+- Org-scoped routes check membership, and admin actions (members, invites, requests) check the admin role
+
+Every server route must include `export const prerender = false` after the imports — the site is
+built with static output.
+
+### Media
+
+Avatars and review photos live in the private R2 bucket `tastefull-media`, bound as `MEDIA` in
+`packages/web/wrangler.jsonc`. There is no public bucket or custom domain — the Worker serves objects
+at `/api/media/<key>`, e.g. `/api/media/review-photos/<userId>/<reviewId>.jpg` and
+`/api/media/avatars/<userId>/avatar.<ext>`.
 
 ### Recreating the Database Schema
 
-To set up the database from scratch, run these SQL commands in Supabase SQL Editor:
+The live schema is not maintained in this repo. SQL migrations live in
+`/Users/will/Documents/personal/tastefull/migrations/` and are applied to Neon with `psql`:
 
-```sql
--- 1. Base schema (profiles trigger)
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email)
-  VALUES (new.id, new.email);
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  email TEXT,
-  display_name TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 2. Organisations
-CREATE TABLE organisations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  office_location JSONB DEFAULT NULL,
-  tagline TEXT DEFAULT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE organisation_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(organisation_id, user_id)
-);
-
-CREATE TABLE organisation_invites (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
-  token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
-  invited_by UUID NOT NULL REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  expires_at TIMESTAMPTZ DEFAULT (now() + interval '7 days'),
-  UNIQUE(organisation_id, email)
-);
-
-ALTER TABLE organisations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organisation_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organisation_invites ENABLE ROW LEVEL SECURITY;
-
--- Organisation policies
-CREATE POLICY "Anyone can view organisations" ON organisations FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create organisations" ON organisations FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Admins can update their organisations" ON organisations FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisations.id AND user_id = auth.uid() AND role = 'admin'));
-
--- Helper function to avoid RLS recursion
-CREATE OR REPLACE FUNCTION user_org_ids(user_uuid UUID) RETURNS SETOF UUID LANGUAGE SQL SECURITY DEFINER STABLE AS $$
-  SELECT organisation_id FROM organisation_members WHERE user_id = user_uuid
-$$;
-
--- Member policies
-CREATE POLICY "Members can view organisation members" ON organisation_members FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR organisation_id IN (SELECT user_org_ids(auth.uid())));
-CREATE POLICY "Admins can add members" ON organisation_members FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_members.organisation_id AND user_id = auth.uid() AND role = 'admin')
-    OR NOT EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_members.organisation_id));
-CREATE POLICY "Admins can remove members" ON organisation_members FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members om WHERE om.organisation_id = organisation_members.organisation_id AND om.user_id = auth.uid() AND om.role = 'admin') OR user_id = auth.uid());
-CREATE POLICY "Admins can update member roles" ON organisation_members FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members om WHERE om.organisation_id = organisation_members.organisation_id AND om.user_id = auth.uid() AND om.role = 'admin'));
-
--- Invite policies
-CREATE POLICY "Members can view their organisation's invites" ON organisation_invites FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid())
-    OR email = (SELECT email FROM auth.users WHERE id = auth.uid()));
-CREATE POLICY "Admins can create invites" ON organisation_invites FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Admins can delete invites" ON organisation_invites FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_invites.organisation_id AND user_id = auth.uid() AND role = 'admin')
-    OR email = (SELECT email FROM auth.users WHERE id = auth.uid()));
-
--- 3. Organisation requests (users requesting to join)
-CREATE TABLE organisation_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(organisation_id, user_id)
-);
-
-ALTER TABLE organisation_requests ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own requests" ON organisation_requests FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
-CREATE POLICY "Admins can view org requests" ON organisation_requests FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_requests.organisation_id AND user_id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Users can request to join" ON organisation_requests FOR INSERT TO authenticated
-  WITH CHECK (user_id = auth.uid() AND NOT EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_requests.organisation_id AND user_id = auth.uid()));
-CREATE POLICY "Users can cancel own requests" ON organisation_requests FOR DELETE TO authenticated
-  USING (user_id = auth.uid());
-CREATE POLICY "Admins can delete requests" ON organisation_requests FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM organisation_members WHERE organisation_id = organisation_requests.organisation_id AND user_id = auth.uid() AND role = 'admin'));
-
--- NOTE: review_visibility table is DEPRECATED
--- Visibility is now derived from org membership (see Review Visibility Logic section above)
-
--- Indexes
-CREATE INDEX idx_organisation_members_org ON organisation_members(organisation_id);
-CREATE INDEX idx_organisation_members_user ON organisation_members(user_id);
-CREATE INDEX idx_organisation_invites_org ON organisation_invites(organisation_id);
-CREATE INDEX idx_organisation_invites_token ON organisation_invites(token);
-CREATE INDEX idx_organisation_requests_org ON organisation_requests(organisation_id);
-CREATE INDEX idx_organisation_requests_user ON organisation_requests(user_id);
-
--- 4. User follows and follow requests
-CREATE TABLE user_follows (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  follower_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  following_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(follower_id, following_id)
-);
-
-CREATE TABLE follow_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(requester_id, target_id)
-);
-
--- Add is_private to profiles
-ALTER TABLE profiles ADD COLUMN is_private BOOLEAN DEFAULT false;
-
-ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE follow_requests ENABLE ROW LEVEL SECURITY;
-
--- User follows policies
-CREATE POLICY "Anyone can view follows" ON user_follows FOR SELECT USING (true);
-CREATE POLICY "Users can follow others" ON user_follows FOR INSERT TO authenticated
-  WITH CHECK (follower_id = auth.uid());
-CREATE POLICY "Users can unfollow" ON user_follows FOR DELETE TO authenticated
-  USING (follower_id = auth.uid());
-
--- Follow requests policies
-CREATE POLICY "Users can view own requests" ON follow_requests FOR SELECT TO authenticated
-  USING (requester_id = auth.uid() OR target_id = auth.uid());
-CREATE POLICY "Users can create requests" ON follow_requests FOR INSERT TO authenticated
-  WITH CHECK (requester_id = auth.uid());
-CREATE POLICY "Users can delete own requests" ON follow_requests FOR DELETE TO authenticated
-  USING (requester_id = auth.uid() OR target_id = auth.uid());
-
-CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
-CREATE INDEX idx_user_follows_following ON user_follows(following_id);
-CREATE INDEX idx_follow_requests_requester ON follow_requests(requester_id);
-CREATE INDEX idx_follow_requests_target ON follow_requests(target_id);
-
--- 5. Tags (descriptive attributes for reviews)
-CREATE TABLE tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  icon TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE review_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  review_id UUID NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
-  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(review_id, tag_id)
-);
-
-ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE review_tags ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Anyone can view tags" ON tags FOR SELECT USING (true);
-CREATE POLICY "Anyone can view review_tags" ON review_tags FOR SELECT USING (true);
-CREATE POLICY "Users can add tags to their reviews" ON review_tags FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM reviews WHERE id = review_tags.review_id AND user_id = auth.uid()));
-CREATE POLICY "Users can remove tags from their reviews" ON review_tags FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM reviews WHERE id = review_tags.review_id AND user_id = auth.uid()));
-
-CREATE INDEX idx_review_tags_review ON review_tags(review_id);
-CREATE INDEX idx_review_tags_tag ON review_tags(tag_id);
-
--- Seed default tags
-INSERT INTO tags (name, icon) VALUES
-  ('High Protein', '💪'),
-  ('Healthy', '🥗'),
-  ('Good Value', '💰'),
-  ('Quick', '⚡'),
-  ('Large Portion', '🍽️'),
-  ('Vegan Options', '🌱'),
-  ('Quiet', '🤫'),
-  ('Outdoor Seating', '☀️')
-ON CONFLICT (name) DO NOTHING;
-```
-
-### Local Development with Supabase
+- `001_schema.sql` — app tables (restaurants, reviews, tags, review_tags, settings, profiles,
+  organisations + members/invites/requests, user_follows, follow_requests) and indexes
+- `002_better_auth.sql` — the Better Auth tables (user, session, account, verification)
 
 ```bash
-# Install Supabase CLI
-brew install supabase/tap/supabase
-
-# Start local Supabase (requires Docker)
-supabase init
-supabase start
-
-# Create .env.local with local credentials (shown after supabase start)
-# PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-# PUBLIC_SUPABASE_ANON_KEY=<anon_key>
-
-# Reset local DB (applies migrations + seed)
-supabase db reset
-
-# Stop local Supabase
-supabase stop
+psql "$DATABASE_URL" -f /Users/will/Documents/personal/tastefull/migrations/001_schema.sql
+psql "$DATABASE_URL" -f /Users/will/Documents/personal/tastefull/migrations/002_better_auth.sql
 ```
+
+Later numbered files in that directory are follow-up migrations and one-off Node data/storage
+migration scripts.
+
+The `supabase/` directory is retained as a historical record of the pre-migration schema and the
+`notify-new-review` edge function. Nothing reads it and it is not applied to anything — the hosted
+Supabase project is left running, unattended, as a fallback. Do not add migrations there.
+
+### Local Development
+
+There is no local database or emulator — development runs against the Neon branch directly.
+
+```bash
+# .env / .env.local at the repo root needs the Neon connection string
+# DATABASE_URL=postgresql://...neon.tech/...?sslmode=require
+# plus the Better Auth secret / base URL
+
+pnpm install
+pnpm dev
+```
+
+Credentials for the migration scripts live in `/Users/will/Documents/personal/tastefull/.env`.
 
 ## Development
 
@@ -508,4 +340,7 @@ Auto-deploys to Cloudflare Workers via GitHub Actions on push to master.
 - `src/components/AddReview.tsx` - New place form with geocoding
 - `src/lib/distance.ts` - Haversine distance calculation
 - `src/lib/store.ts` - Zustand filter state
-- `src/lib/supabase.ts` - Supabase client
+- `packages/shared/src/lib/api.ts` - Typed data-access functions (all DB access goes through here)
+- `packages/shared/src/lib/auth-client.ts` - Better Auth client (`signIn`, `useSession`, `getUser`, …)
+- `packages/web/src/lib/auth.ts` - Better Auth server config
+- `packages/web/src/lib/api-helpers.ts` - `withApi` helper providing `{ pool, user, params, body }`

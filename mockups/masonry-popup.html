@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restaurant Popup — Masonry Gallery + Review Drawer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-warm: #f5f2ed;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --border: #e8e4de;
+    --accent: #c45d3e;
+    --accent-light: #e8d5ce;
+    --great: #2d7a4f;
+    --good: #b8860b;
+    --poor: #a64d4d;
+    --paper: #f8e0c8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875em;
+  }
+
+  /* ── Page wrapper ── */
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+
+  .page > h1 { font-size: 40px; margin-bottom: 8px; }
+  .page > .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 48px;
+    max-width: 640px;
+    line-height: 1.7;
+  }
+
+  .demo-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 16px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .demo-section {
+    margin-bottom: 80px;
+  }
+
+  .demo-section h2 {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+
+  .demo-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 32px;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  /* ── Shared from project ── */
+
+  .rating-great { color: var(--great); }
+  .rating-good { color: var(--good); }
+  .rating-poor { color: var(--poor); }
+
+  .rating-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .dish-badge {
+    font-style: italic;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .tag-small {
+    position: relative;
+    display: inline-flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    isolation: isolate;
+  }
+
+  .tag-small::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+    z-index: -2;
+  }
+
+  .tag-small::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: white;
+    clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+    z-index: -1;
+  }
+
+  /* ── Modal overlay (simulated) ── */
+
+  .modal-overlay {
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    border-radius: 4px;
+  }
+
+  /* ═══════════════════════════════════════════
+     Restaurant Detail Popup (Masonry + Drawer)
+     ═══════════════════════════════════════════ */
+
+  .restaurant-popup {
+    max-width: 760px;
+    width: 100%;
+    background: white;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .restaurant-popup::-webkit-scrollbar-track {
+    background: white;
+  }
+
+  .popup-header {
+    padding: 28px 32px 20px;
+  }
+
+  /* ── Masonry Photo Grid ── */
+
+  .masonry-wrap {
+    padding: 4px;
+  }
+
+  .masonry-grid {
+    column-count: 3;
+    column-gap: 4px;
+  }
+
+  .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 4px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .masonry-item img {
+    width: 100%;
+    display: block;
+  }
+
+  .masonry-item.active {
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
+  }
+
+  .masonry-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 10px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.5));
+    color: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .masonry-item:hover .masonry-overlay {
+    opacity: 1;
+  }
+
+  .masonry-overlay .mo-score {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .masonry-overlay .mo-name {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* ── Review Drawer ── */
+
+  .masonry-drawer {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-warm);
+    padding: 20px 32px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    position: relative;
+  }
+
+  .masonry-drawer-photo {
+    width: 240px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .masonry-drawer-photo img {
+    width: 100%;
+    display: block;
+  }
+
+  .masonry-drawer-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .masonry-drawer-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+
+  .masonry-drawer-close:hover {
+    color: var(--text);
+  }
+
+  /* ── Text Reviews ── */
+
+  .masonry-text-reviews {
+    padding: 0 32px 20px;
+  }
+
+  .masonry-text-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Review Row ── */
+
+  .popup-review-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .review-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--bg-warm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .review-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ── Collapsible Add Review ── */
+
+  .popup-add-review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 20px 32px;
+    border-top: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .popup-add-review-header:hover {
+    background: var(--bg-warm);
+  }
+
+  .popup-add-review-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .popup-add-review-chevron {
+    transition: transform 0.2s;
+  }
+
+  .popup-add-review-chevron.open {
+    transform: rotate(180deg);
+  }
+
+  .popup-add-review-body {
+    border-top: 1px dashed var(--border);
+  }
+
+  /* ── Receipt Review Form ── */
+
+  .receipt {
+    background: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .popup-receipt-form {
+    max-height: none;
+    overflow-y: visible;
+    overscroll-behavior: auto;
+    padding: 20px 28px 24px;
+  }
+
+  .receipt-section-label {
+    text-align: center;
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #666;
+  }
+
+  .receipt-dashes {
+    border-bottom: 1px dashed #999;
+    margin: 14px 0;
+  }
+
+  .receipt-rating {
+    text-align: center;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+
+  .receipt-rating .number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .receipt-rating .out-of {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    color: #777;
+  }
+
+  .receipt-rating .word {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 2px;
+  }
+
+  .receipt-rating-empty .number {
+    color: #999;
+  }
+
+  .receipt-rating-empty .word {
+    color: #999;
+  }
+
+  .receipt-photo-zone {
+    border: 1px dashed #999;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin: 6px auto;
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 50%;
+    max-width: 200px;
+  }
+
+  .receipt-photo-zone:hover {
+    border-color: var(--accent);
+    background: rgba(196, 93, 62, 0.03);
+  }
+
+  .receipt-photo-zone .hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+  }
+
+  .receipt .receipt-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #666;
+  }
+
+  .receipt-input {
+    width: 75%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dotted #888;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 6px 0;
+    color: var(--text);
+    outline: none;
+    text-align: right;
+  }
+
+  .receipt-input::placeholder {
+    color: #999;
+    font-style: italic;
+  }
+
+  .receipt-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dotted #888;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 6px 0;
+    color: var(--text);
+    outline: none;
+    border-radius: 0;
+    resize: none;
+    overflow: hidden;
+    min-height: 26px;
+    line-height: 1.5;
+  }
+
+  .receipt-textarea::placeholder {
+    color: #999;
+    font-style: italic;
+  }
+
+  .receipt-tags {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+    align-items: center;
+  }
+
+  .receipt-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid #999;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .receipt-tag:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .receipt-tag.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .receipt-tag.add {
+    border-style: dashed;
+    color: #999;
+  }
+
+  .receipt-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+
+  .receipt-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 8px 20px;
+    border: 1px solid #999;
+    background: transparent;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.15s;
+  }
+
+  .receipt-btn:hover {
+    border-color: #2a2a2a;
+    color: #2a2a2a;
+  }
+
+  .receipt-btn.primary {
+    background: #2a2a2a;
+    border-color: #2a2a2a;
+    color: var(--paper);
+  }
+
+  .receipt-btn.primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* ── Mobile ── */
+
+  @media (max-width: 768px) {
+    .restaurant-popup {
+      max-height: 95vh;
+    }
+
+    .popup-header {
+      padding: 20px 16px 16px;
+    }
+
+    .masonry-grid {
+      column-count: 2;
+    }
+
+    .masonry-drawer {
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .masonry-drawer-photo {
+      width: 100%;
+      max-height: 240px;
+    }
+
+    .masonry-text-reviews {
+      padding: 0 16px 16px;
+    }
+
+    .popup-add-review-header {
+      padding: 16px;
+    }
+
+    .popup-receipt-form {
+      padding: 16px 20px 20px;
+    }
+  }
+
+  /* ── Demo helpers ── */
+  .demo-divider {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 60px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <h1>Masonry Gallery + Review Drawer</h1>
+  <p class="subtitle">
+    Pinterest-style masonry photo grid at the top. Hover a photo to see rating overlay.
+    Click a photo to open a "drawer" below the grid showing that review at full size.
+    Reviews without photos are listed below. Receipt-style add/edit form at the bottom.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════
+       DEMO 1: Full popup with drawer open (many photos)
+       ═══════════════════════════════════════════════════ -->
+
+  <div class="demo-section">
+    <p class="demo-label">Demo 1 — Drawer open</p>
+    <h2>El Pastor</h2>
+    <p class="demo-desc">
+      8 reviews, 6 photos. The first photo is clicked, showing the expanded drawer with
+      full review details. Hover any photo to see the rating overlay.
+    </p>
+
+    <div class="modal-overlay">
+      <div class="restaurant-popup" style="max-height: none;">
+        <!-- Header -->
+        <div class="popup-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <h2 style="font-size: 28px;">El Pastor</h2>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1; padding: 0 0 0 16px;">×</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Mexican · 7A Stoney St, London
+          </p>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span class="rating-badge rating-great" style="font-size: 16px;">8.2 — Great</span>
+            <span style="color: var(--text-muted); font-size: 13px;">8 reviews · 6 photos</span>
+          </div>
+        </div>
+
+        <!-- Masonry photo grid -->
+        <div class="masonry-wrap">
+          <div class="masonry-grid">
+            <!-- Photo 1: Active (drawer open) -->
+            <div class="masonry-item active">
+              <img src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=500&fit=crop" alt="Tacos al pastor">
+              <div class="masonry-overlay" style="opacity: 1;">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">will</span>
+              </div>
+            </div>
+
+            <!-- Photo 2 -->
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=350&fit=crop" alt="Quesadilla">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">alex</span>
+              </div>
+            </div>
+
+            <!-- Photo 3 -->
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1613514785940-daed07799d9b?w=400&h=450&fit=crop" alt="Burrito bowl">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">rachel</span>
+              </div>
+            </div>
+
+            <!-- Photo 4 -->
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?w=400&h=300&fit=crop" alt="Churros">
+              <div class="masonry-overlay">
+                <span class="mo-score">7/10</span>
+                <span class="mo-name">sam</span>
+              </div>
+            </div>
+
+            <!-- Photo 5 -->
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1564767655658-4e6b365884ff?w=400&h=380&fit=crop" alt="Guacamole">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">will</span>
+              </div>
+            </div>
+
+            <!-- Photo 6 -->
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1625398407796-82650a8c135f?w=400&h=420&fit=crop" alt="Corn">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">alex</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drawer: expanded review for photo 1 -->
+        <div class="masonry-drawer">
+          <button class="masonry-drawer-close">×</button>
+          <div class="masonry-drawer-photo">
+            <img src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=480&h=480&fit=crop" alt="Tacos al pastor">
+          </div>
+          <div class="masonry-drawer-content">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="review-avatar" style="background: #d4edda;">
+                <span style="color: var(--great);">W</span>
+              </div>
+              <span style="font-weight: 500; font-size: 14px;">will</span>
+              <span class="mono rating-great" style="font-size: 14px;">9/10</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; font-style: italic; margin-bottom: 6px;">
+              Al Pastor Taco
+            </p>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">
+              Incredible spit-roasted pork with pineapple salsa. The tortillas are fresh and the
+              meat is perfectly charred. Best tacos south of the river by a mile.
+            </p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <span class="tag-small">Good Value</span>
+              <span class="tag-small">High Protein</span>
+              <span class="tag-small">Quick</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text-only reviews -->
+        <div class="masonry-text-reviews">
+          <p class="masonry-text-label">Reviews without photos</p>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #fff3cd;">
+                <span style="color: var(--good);">S</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-good" style="font-size: 13px;">7/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">sam</span>
+                  <span class="dish-badge">Chicken Burrito</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Good tacos but overpriced for the portion size. The queue at lunch is ridiculous.</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                  <span class="tag-small">High Protein</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar">
+                <span>?</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="mono rating-great" style="font-size: 13px;">8/10</span>
+                  <span style="font-weight: 500; font-size: 13px; color: var(--text-muted);">Anonymous</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Collapsible add review (expanded) -->
+        <div class="popup-add-review-header">
+          <span class="popup-add-review-label">Add your review</span>
+          <svg class="popup-add-review-chevron open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="popup-add-review-body">
+          <div class="receipt popup-receipt-form">
+            <div class="receipt-section-label">New Review</div>
+
+            <!-- Rating -->
+            <div class="receipt-rating receipt-rating-empty">
+              <span class="number">&nbsp;</span><span class="out-of">/10</span>
+              <div class="word">tap to rate</div>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Photo zone -->
+            <div class="receipt-photo-zone">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span class="hint">photo</span>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Dish -->
+            <div class="receipt-row">
+              <span class="receipt-label">Dish</span>
+              <input class="receipt-input" type="text" placeholder="e.g. Pad Thai" disabled>
+            </div>
+
+            <!-- Comment -->
+            <div style="padding: 5px 0;">
+              <span class="receipt-label" style="display: block; margin-bottom: 4px;">Comment</span>
+              <textarea class="receipt-textarea" placeholder="Your thoughts..." rows="2" disabled></textarea>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Tags -->
+            <div class="receipt-tags">
+              <span class="receipt-tag">High Protein</span>
+              <span class="receipt-tag">Healthy</span>
+              <span class="receipt-tag active">Good Value</span>
+              <span class="receipt-tag add">+</span>
+            </div>
+
+            <!-- Buttons -->
+            <div class="receipt-btns">
+              <button class="receipt-btn primary">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════
+       DEMO 2: Popup with no drawer (just grid + reviews)
+       ═══════════════════════════════════════════════════ -->
+
+  <div class="demo-section">
+    <p class="demo-label">Demo 2 — Grid only, no drawer</p>
+    <h2>Padella</h2>
+    <p class="demo-desc">
+      6 reviews, 4 photos. No photo is selected — the drawer is closed. All reviews with
+      photos are in the masonry grid; text-only reviews below.
+    </p>
+
+    <div class="modal-overlay">
+      <div class="restaurant-popup" style="max-height: none;">
+        <!-- Header -->
+        <div class="popup-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <h2 style="font-size: 28px;">Padella</h2>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1;">×</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Italian · 6 Southwark St, London
+          </p>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span class="rating-badge rating-great" style="font-size: 16px;">8.7 — Great</span>
+            <span style="color: var(--text-muted); font-size: 13px;">6 reviews · 4 photos</span>
+          </div>
+        </div>
+
+        <!-- Masonry photo grid -->
+        <div class="masonry-wrap">
+          <div class="masonry-grid">
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&h=500&fit=crop" alt="Pici cacio e pepe">
+              <div class="masonry-overlay">
+                <span class="mo-score">10/10</span>
+                <span class="mo-name">will</span>
+              </div>
+            </div>
+
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400&h=350&fit=crop" alt="Pappardelle ragu">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">rachel</span>
+              </div>
+            </div>
+
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=420&fit=crop" alt="Tagliatelle">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">alex</span>
+              </div>
+            </div>
+
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=400&h=380&fit=crop" alt="Tiramisu">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">sam</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text-only reviews -->
+        <div class="masonry-text-reviews">
+          <p class="masonry-text-label">Reviews without photos</p>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #d4edda;">
+                <span style="color: var(--great);">M</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-great" style="font-size: 13px;">8/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">mike</span>
+                  <span class="dish-badge">Pici Cacio e Pepe</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Best pasta in London Bridge, no question. The queue moves fast.</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                  <span class="tag-small">Good Value</span>
+                  <span class="tag-small">Quick</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #d4edda;">
+                <span style="color: var(--great);">J</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-great" style="font-size: 13px;">9/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">jenny</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Genuinely world-class fresh pasta for under a tenner. Mad.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Collapsed add review -->
+        <div class="popup-add-review-header">
+          <span class="popup-add-review-label">Add your review</span>
+          <svg class="popup-add-review-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════
+       DEMO 3: No photos — all text reviews
+       ═══════════════════════════════════════════════════ -->
+
+  <div class="demo-section">
+    <p class="demo-label">Demo 3 — No photos</p>
+    <h2>Bao Borough</h2>
+    <p class="demo-desc">
+      4 reviews, no photos. No masonry grid — all reviews appear in the text list.
+    </p>
+
+    <div class="modal-overlay">
+      <div class="restaurant-popup" style="max-height: none;">
+        <!-- Header -->
+        <div class="popup-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <h2 style="font-size: 28px;">Bao Borough</h2>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1;">×</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Taiwanese · 13 Stoney St, London
+          </p>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span class="rating-badge rating-good" style="font-size: 16px;">7.3 — Good</span>
+            <span style="color: var(--text-muted); font-size: 13px;">4 reviews</span>
+          </div>
+        </div>
+
+        <!-- All reviews as text -->
+        <div class="masonry-text-reviews" style="padding-top: 0;">
+          <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--border); padding-top: 16px;">
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #d4edda;">
+                <span style="color: var(--great);">W</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-great" style="font-size: 13px;">8/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">will</span>
+                  <span class="dish-badge">Classic Bao</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">The fried chicken bao is out of this world. Fluffy bun, crispy coating, perfect slaw.</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                  <span class="tag-small">Quick</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #fff3cd;">
+                <span style="color: var(--good);">A</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-good" style="font-size: 13px;">7/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">alex</span>
+                  <span class="dish-badge">Confit Pork Bao</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Very tasty but tiny portions for the price. You need at least 3 bao to feel full.</p>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #fff3cd;">
+                <span style="color: var(--good);">R</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-good" style="font-size: 13px;">7/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">rachel</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Good but the hype makes you expect more. The sides are better than the bao honestly.</p>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar">
+                <span>?</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="mono rating-good" style="font-size: 13px;">7/10</span>
+                  <span style="font-weight: 500; font-size: 13px; color: var(--text-muted);">Anonymous</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Collapsed add review -->
+        <div class="popup-add-review-header">
+          <span class="popup-add-review-label">Add your review</span>
+          <svg class="popup-add-review-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════
+       DEMO 4: Single photo
+       ═══════════════════════════════════════════════════ -->
+
+  <div class="demo-section">
+    <p class="demo-label">Demo 4 — Single photo</p>
+    <h2>Flat Iron</h2>
+    <p class="demo-desc">
+      3 reviews, 1 photo. The masonry grid has a single image spanning the full width.
+    </p>
+
+    <div class="modal-overlay">
+      <div class="restaurant-popup" style="max-height: none;">
+        <!-- Header -->
+        <div class="popup-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <h2 style="font-size: 28px;">Flat Iron</h2>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1;">×</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Steakhouse · 17 Beak St, London
+          </p>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span class="rating-badge rating-good" style="font-size: 16px;">7.0 — Good</span>
+            <span style="color: var(--text-muted); font-size: 13px;">3 reviews · 1 photo</span>
+          </div>
+        </div>
+
+        <!-- Masonry with 1 photo -->
+        <div class="masonry-wrap">
+          <div class="masonry-grid" style="column-count: 1;">
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1558030006-450675393462?w=720&h=400&fit=crop" alt="Flat iron steak">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">will</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text-only reviews -->
+        <div class="masonry-text-reviews">
+          <p class="masonry-text-label">Reviews without photos</p>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #fff3cd;">
+                <span style="color: var(--good);">S</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-good" style="font-size: 13px;">6/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">sam</span>
+                  <span class="dish-badge">Flat Iron Steak</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Decent steak for the price. Nothing fancy but solid.</p>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #fff3cd;">
+                <span style="color: var(--good);">A</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-good" style="font-size: 13px;">7/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">alex</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Free ice cream at the end is a nice touch.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Collapsed add review -->
+        <div class="popup-add-review-header">
+          <span class="popup-add-review-label">Edit your review</span>
+          <svg class="popup-add-review-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════
+       DEMO 5: Many photos (10+)
+       ═══════════════════════════════════════════════════ -->
+
+  <div class="demo-section">
+    <p class="demo-label">Demo 5 — Many photos (10+)</p>
+    <h2>Dishoom</h2>
+    <p class="demo-desc">
+      12 reviews, 10 photos. Shows how the masonry grid scales to handle many photos. The
+      3-column layout naturally creates visual variety from different aspect ratios.
+    </p>
+
+    <div class="modal-overlay">
+      <div class="restaurant-popup" style="max-height: none;">
+        <!-- Header -->
+        <div class="popup-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <h2 style="font-size: 28px;">Dishoom</h2>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1;">×</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Indian · 7 Boundary St, London
+          </p>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span class="rating-badge rating-great" style="font-size: 16px;">8.5 — Great</span>
+            <span style="color: var(--text-muted); font-size: 13px;">12 reviews · 10 photos</span>
+          </div>
+        </div>
+
+        <!-- Masonry photo grid with lots of photos -->
+        <div class="masonry-wrap">
+          <div class="masonry-grid">
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&h=500&fit=crop" alt="Chicken tikka">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">will</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=360&fit=crop" alt="Naan bread">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">rachel</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400&h=450&fit=crop" alt="Biryani">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">alex</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400&h=300&fit=crop" alt="Chai">
+              <div class="masonry-overlay">
+                <span class="mo-score">10/10</span>
+                <span class="mo-name">jenny</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1606491956689-2ea866880049?w=400&h=420&fit=crop" alt="Dal">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">sam</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400&h=380&fit=crop" alt="Samosa">
+              <div class="masonry-overlay">
+                <span class="mo-score">7/10</span>
+                <span class="mo-name">mike</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=350&fit=crop" alt="Lamb chops">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">will</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=460&fit=crop" alt="Paneer">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">rachel</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1505253758473-96b7015fcd40?w=400&h=320&fit=crop" alt="Kulfi">
+              <div class="masonry-overlay">
+                <span class="mo-score">8/10</span>
+                <span class="mo-name">alex</span>
+              </div>
+            </div>
+            <div class="masonry-item">
+              <img src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&h=400&fit=crop" alt="Curry">
+              <div class="masonry-overlay">
+                <span class="mo-score">9/10</span>
+                <span class="mo-name">jenny</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text-only reviews -->
+        <div class="masonry-text-reviews">
+          <p class="masonry-text-label">Reviews without photos</p>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #d4edda;">
+                <span style="color: var(--great);">T</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-great" style="font-size: 13px;">9/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">tom</span>
+                  <span class="dish-badge">Black Daal</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">The black daal is life-changing. Been coming here for years and it's never disappointed.</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                  <span class="tag-small">Vegan Options</span>
+                  <span class="tag-small">Large Portion</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="popup-review-row">
+              <div class="review-avatar" style="background: #f8d7da;">
+                <span style="color: var(--poor);">L</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <span class="mono rating-good" style="font-size: 13px;">6/10</span>
+                  <span style="font-weight: 500; font-size: 13px;">lisa</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">Too noisy and the wait was over an hour even with a booking. Food was good though.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Collapsed add review -->
+        <div class="popup-add-review-header">
+          <span class="popup-add-review-label">Add your review</span>
+          <svg class="popup-add-review-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════
+       DEMO 6: Edit existing review (receipt form filled)
+       ═══════════════════════════════════════════════════ -->
+
+  <div class="demo-section">
+    <p class="demo-label">Demo 6 — Edit existing review (filled form)</p>
+    <h2>Receipt form with data</h2>
+    <p class="demo-desc">
+      Shows what the receipt form looks like when editing an existing review with a rating,
+      dish, comment, photo, and tags already filled in.
+    </p>
+
+    <div class="modal-overlay">
+      <div class="restaurant-popup" style="max-height: none;">
+        <div class="popup-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <h2 style="font-size: 28px;">Flat Iron</h2>
+            <span style="font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1;">×</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Steakhouse · 17 Beak St, London
+          </p>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span class="rating-badge rating-good" style="font-size: 16px;">7.0 — Good</span>
+            <span style="color: var(--text-muted); font-size: 13px;">3 reviews · 1 photo</span>
+          </div>
+        </div>
+
+        <!-- Expanded edit form -->
+        <div class="popup-add-review-header">
+          <span class="popup-add-review-label">Edit your review</span>
+          <svg class="popup-add-review-chevron open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="popup-add-review-body">
+          <div class="receipt popup-receipt-form">
+            <div class="receipt-section-label">Your Review</div>
+
+            <!-- Filled rating -->
+            <div class="receipt-rating">
+              <span class="number rating-great">8</span><span class="out-of">/10</span>
+              <div class="word" style="color: var(--great);">Great</div>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Photo preview -->
+            <div class="receipt-photo-zone" style="border-style: solid; border-color: var(--accent); padding: 0; overflow: hidden; cursor: default;">
+              <img src="https://images.unsplash.com/photo-1558030006-450675393462?w=200&h=200&fit=crop" alt="Steak" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Filled dish -->
+            <div class="receipt-row">
+              <span class="receipt-label">Dish</span>
+              <input class="receipt-input" type="text" value="Flat Iron Steak" disabled style="color: var(--text);">
+            </div>
+
+            <!-- Filled comment -->
+            <div style="padding: 5px 0;">
+              <span class="receipt-label" style="display: block; margin-bottom: 4px;">Comment</span>
+              <div class="receipt-textarea" style="color: var(--text);">Really tender steak, well seasoned. The chimichurri sauce is excellent. Free ice cream at the end is a nice bonus.</div>
+            </div>
+
+            <div class="receipt-dashes"></div>
+
+            <!-- Tags with selections -->
+            <div class="receipt-tags">
+              <span class="receipt-tag active">Good Value</span>
+              <span class="receipt-tag active">High Protein</span>
+              <span class="receipt-tag">Quick</span>
+              <span class="receipt-tag">Healthy</span>
+              <span class="receipt-tag add">+</span>
+            </div>
+
+            <!-- Buttons -->
+            <div class="receipt-btns">
+              <button class="receipt-btn primary">Update</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

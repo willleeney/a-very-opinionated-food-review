@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Component Inventory — Old vs New</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-warm: #f5f2ed;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --border: #e8e4de;
+    --accent: #c45d3e;
+    --accent-light: #e8d5ce;
+    --great: #2d7a4f;
+    --good: #b8860b;
+    --poor: #a64d4d;
+    --paper: #f8e0c8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    padding: 60px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 60px;
+  }
+
+  .variant-section {
+    margin-bottom: 56px;
+    padding-bottom: 56px;
+    border-bottom: 1px solid var(--border);
+  }
+  .variant-section:last-child { border-bottom: none; }
+
+  .variant-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .variant-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .variant-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .variant-usage {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .variant-usage strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* Side-by-side comparison */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+
+  .comparison-side {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 24px;
+    background: white;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .comparison-side.on-warm { background: var(--bg-warm); }
+  .comparison-side.on-paper { background: var(--paper); }
+  .comparison-side.on-dark { background: rgba(0,0,0,0.92); }
+
+  .comparison-label {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    padding: 2px 6px;
+  }
+  .comparison-label.old { color: var(--text-muted); }
+  .comparison-label.new { color: var(--accent); }
+  .comparison-label.new-dark { color: rgba(255,255,255,0.5); }
+
+  .state-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .state-label:first-child, .state-label.first {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .group-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 32px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .divider {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 8px;
+  }
+
+  /* ═══════════════════════════════════════
+     OLD STYLES (current codebase)
+     ═══════════════════════════════════════ */
+
+  /* Old .btn — simple rectangle */
+  .old-btn {
+    background: transparent;
+    border: 1px solid var(--text);
+    color: var(--text);
+    padding: 12px 24px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .old-btn.accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Old .receipt-btn — simple rectangle */
+  .old-receipt-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 8px 20px;
+    border: 1px solid #999;
+    background: transparent;
+    cursor: pointer;
+    color: #555;
+  }
+  .old-receipt-btn.primary {
+    background: #2a2a2a;
+    border-color: #2a2a2a;
+    color: var(--paper);
+  }
+
+  /* Old .tag — chamfered, large */
+  .old-tag {
+    position: relative;
+    display: inline-flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    isolation: isolate;
+  }
+  .old-tag::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+    z-index: -2;
+  }
+  .old-tag::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background: white;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    z-index: -1;
+  }
+  .old-tag.selected::before { background: var(--accent); }
+  .old-tag.selected::after { background: var(--accent); }
+  .old-tag.selected { color: white; }
+
+  /* Old .default-chip — chamfered, medium */
+  .old-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    isolation: isolate;
+  }
+  .old-chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    z-index: -2;
+  }
+  .old-chip::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background: white;
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    z-index: -1;
+  }
+  .old-chip.active::before { background: var(--accent); }
+  .old-chip.active::after { background: var(--accent); }
+  .old-chip.active { color: white; }
+
+  /* Old .social-tab — same as old-chip */
+  .old-social {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-secondary);
+    cursor: pointer;
+    isolation: isolate;
+  }
+  .old-social::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    z-index: -2;
+  }
+  .old-social::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background: white;
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    z-index: -1;
+  }
+  .old-social.active::before { background: var(--accent); }
+  .old-social.active::after { background: var(--accent); }
+  .old-social.active { color: white; }
+
+  /* Old .tag-mini — rectangular */
+  .old-tag-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+  }
+  .old-tag-mini-name { color: var(--text-muted); }
+  .old-tag-mini-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* Old .receipt-tag — rectangular */
+  .old-receipt-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid #999;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .old-receipt-tag.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* ═══════════════════════════════════════
+     NEW STYLES (proposed)
+     ═══════════════════════════════════════ */
+
+  /* New .btn — chamfered edges */
+  .new-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 12px 24px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    isolation: isolate;
+  }
+  .new-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--text);
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+    z-index: -2;
+  }
+  .new-btn::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background: var(--bg);
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    z-index: -1;
+  }
+  .new-btn.accent::before { background: var(--accent); }
+  .new-btn.accent::after { background: var(--accent); }
+  .new-btn.accent { color: white; }
+
+  /* New .receipt-btn — chamfered edges */
+  .new-receipt-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #555;
+    isolation: isolate;
+  }
+  .new-receipt-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #999;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    z-index: -2;
+  }
+  .new-receipt-btn::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background: var(--paper);
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    z-index: -1;
+  }
+  .new-receipt-btn.primary::before { background: #2a2a2a; }
+  .new-receipt-btn.primary::after { background: #2a2a2a; }
+  .new-receipt-btn.primary { color: var(--paper); }
+
+  /* ── Unified chip — 3 sizes (replaces .tag, .default-chip, .social-tab) ── */
+
+  .new-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+    isolation: isolate;
+  }
+  .new-chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    z-index: -2;
+  }
+  .new-chip::after {
+    content: '';
+    position: absolute;
+    background: white;
+    z-index: -1;
+  }
+  .new-chip.active::before { background: var(--accent); }
+  .new-chip.active::after { background: var(--accent); }
+  .new-chip.active { color: white; }
+
+  /* Large — replaces .tag (filter bar tags, form tag pickers) */
+  .new-chip.lg {
+    padding: 8px 12px;
+    font-size: 12px;
+    gap: 8px;
+    flex-direction: row-reverse;
+  }
+  .new-chip.lg::before {
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+  }
+  .new-chip.lg::after {
+    inset: 1.5px;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+
+  /* Medium — replaces .default-chip and .social-tab */
+  .new-chip.md {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+  .new-chip.md::before {
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+  }
+  .new-chip.md::after {
+    inset: 1.5px;
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+  }
+
+  /* Small — replaces .default-chip.small */
+  .new-chip.sm {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .new-chip.sm::before {
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+  }
+  .new-chip.sm::after {
+    inset: 1.5px;
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+  }
+
+  .new-chip .icon { line-height: 1; }
+  .new-chip.lg .icon { font-size: 13px; }
+
+  /* New .tag-mini — rounded 3px (matches .tag-small) */
+  .new-tag-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+  .new-tag-mini-name { color: var(--text-muted); }
+  .new-tag-mini-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* New .receipt-tag — Option A: chamfered */
+  .new-receipt-tag-chamfer {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border: none;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    isolation: isolate;
+  }
+  .new-receipt-tag-chamfer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #999;
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    z-index: -2;
+  }
+  .new-receipt-tag-chamfer::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--paper);
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+    z-index: -1;
+  }
+  .new-receipt-tag-chamfer.active::before { background: var(--accent); }
+  .new-receipt-tag-chamfer.active::after { background: var(--accent); }
+  .new-receipt-tag-chamfer.active { color: var(--text); }
+
+  /* New .receipt-tag — Option B: rounded */
+  .new-receipt-tag-round {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .new-receipt-tag-round.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text);
+    border-radius: 3px;
+  }
+
+  /* ── Data display (unchanged) ── */
+
+  .rating-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .rating-great { color: var(--great); }
+  .rating-good { color: var(--good); }
+  .rating-poor { color: var(--poor); }
+
+  .dish-badge {
+    font-style: italic;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .lightbox-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8);
+    font-family: 'JetBrains Mono', monospace;
+    display: inline-block;
+  }
+
+  .mini-score {
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 5px;
+    display: inline-block;
+  }
+  .mini-score.rating-great { color: #6fcf97; }
+  .mini-score.rating-good { color: #f2c94c; }
+  .mini-score.rating-poor { color: #eb5757; }
+
+  /* Full-width demo (non-comparison) */
+  .variant-demo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 24px;
+    background: white;
+    border: 1px solid var(--border);
+  }
+  .variant-demo.on-dark { background: rgba(0,0,0,0.92); }
+
+  /* Tag-small (unchanged, for reference) */
+  .tag-small {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    font-size: 11px;
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+  .tag-small .icon { font-size: 11px; line-height: 1; }
+</style>
+</head>
+<body>
+
+<h1>Component Inventory</h1>
+<p class="subtitle">Old (current) vs New (proposed) — side by side. No emojis.</p>
+
+<!-- ═══════════════════════════════════ -->
+<!-- BUTTONS -->
+<!-- ═══════════════════════════════════ -->
+
+<p class="group-title">Buttons</p>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.btn / .btn-accent</span>
+    <span class="variant-desc">General purpose button</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Auth forms, Settings page, NetworkView, AddReview cancel<br>
+    <strong>Change:</strong> Rectangular &rarr; chamfered clip-path edges
+  </div>
+  <div class="comparison">
+    <div class="comparison-side">
+      <span class="comparison-label old">OLD</span>
+      <button class="old-btn">Default</button>
+      <button class="old-btn accent">Accent</button>
+    </div>
+    <div class="comparison-side">
+      <span class="comparison-label new">NEW</span>
+      <button class="new-btn">Default</button>
+      <button class="new-btn accent">Accent</button>
+    </div>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.receipt-btn</span>
+    <span class="variant-desc">Receipt-style monospace button</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> AddReview receipt form footer, PhotoUpload<br>
+    <strong>Change:</strong> Rectangular &rarr; chamfered clip-path edges
+  </div>
+  <div class="comparison">
+    <div class="comparison-side on-paper">
+      <span class="comparison-label old">OLD</span>
+      <button class="old-receipt-btn">Cancel</button>
+      <button class="old-receipt-btn primary">Save</button>
+    </div>
+    <div class="comparison-side on-paper">
+      <span class="comparison-label new">NEW</span>
+      <button class="new-receipt-btn">Cancel</button>
+      <button class="new-receipt-btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<!-- CHIPS — UNIFIED -->
+<!-- ═══════════════════════════════════ -->
+
+<p class="group-title">Chips (unified from .tag, .default-chip, .social-tab)</p>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.tag</span>
+    <span class="variant-desc">Large chip — filter bar tags, form tag pickers</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> FilterBar tag row, InlineReviewForm tag picker, AddReview tag picker<br>
+    <strong>Change:</strong> Was its own component &rarr; now unified chip (lg size)
+  </div>
+  <div class="comparison">
+    <div class="comparison-side">
+      <span class="comparison-label old">OLD</span>
+      <button class="old-tag">High Protein</button>
+      <button class="old-tag">Quick</button>
+      <button class="old-tag selected">Good Value</button>
+    </div>
+    <div class="comparison-side">
+      <span class="comparison-label new">NEW</span>
+      <button class="new-chip lg">High Protein</button>
+      <button class="new-chip lg">Quick</button>
+      <button class="new-chip lg active">Good Value</button>
+    </div>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.default-chip</span>
+    <span class="variant-desc">Medium chip — category filter</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> FilterBar category row, CategoryChips component<br>
+    <strong>Change:</strong> Was its own component &rarr; now unified chip (md size). Visually identical.
+  </div>
+  <div class="comparison">
+    <div class="comparison-side">
+      <span class="comparison-label old">OLD</span>
+      <button class="old-chip">All</button>
+      <button class="old-chip">Japanese</button>
+      <button class="old-chip active">Italian</button>
+    </div>
+    <div class="comparison-side">
+      <span class="comparison-label new">NEW</span>
+      <button class="new-chip md">All</button>
+      <button class="new-chip md">Japanese</button>
+      <button class="new-chip md active">Italian</button>
+    </div>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.social-tab</span>
+    <span class="variant-desc">Medium chip — social/org filter tabs</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> FilterBar visibility row — Everyone / Following / org tabs<br>
+    <strong>Change:</strong> Was its own component &rarr; now unified chip (md size). Visually identical.
+  </div>
+  <div class="comparison">
+    <div class="comparison-side">
+      <span class="comparison-label old">OLD</span>
+      <button class="old-social">Everyone</button>
+      <button class="old-social active">Following</button>
+      <button class="old-social">StackOne</button>
+    </div>
+    <div class="comparison-side">
+      <span class="comparison-label new">NEW</span>
+      <button class="new-chip md">Everyone</button>
+      <button class="new-chip md active">Following</button>
+      <button class="new-chip md">StackOne</button>
+    </div>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.default-chip.small</span>
+    <span class="variant-desc">Small chip</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Compact filter contexts<br>
+    <strong>Change:</strong> Now unified chip (sm size)
+  </div>
+  <div class="comparison">
+    <div class="comparison-side">
+      <span class="comparison-label old">OLD</span>
+      <button class="old-chip" style="padding: 4px 10px; font-size: 12px;">All</button>
+      <button class="old-chip" style="padding: 4px 10px; font-size: 12px;">Japanese</button>
+      <button class="old-chip active" style="padding: 4px 10px; font-size: 12px;">Italian</button>
+    </div>
+    <div class="comparison-side">
+      <span class="comparison-label new">NEW</span>
+      <button class="new-chip sm">All</button>
+      <button class="new-chip sm">Japanese</button>
+      <button class="new-chip sm active">Italian</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<!-- TAG-MINI -->
+<!-- ═══════════════════════════════════ -->
+
+<p class="group-title">Table tags</p>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.tag-mini</span>
+    <span class="variant-desc">Compact tag for table cells</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Dashboard table rows — compact tag display with accent count badge<br>
+    <strong>Change:</strong> Sharp rectangle &rarr; rounded 3px (matches .tag-small)
+  </div>
+  <div class="comparison">
+    <div class="comparison-side on-warm">
+      <span class="comparison-label old">OLD</span>
+      <span class="old-tag-mini"><span class="old-tag-mini-name">High Protein</span> <span class="old-tag-mini-count">3</span></span>
+      <span class="old-tag-mini"><span class="old-tag-mini-name">Quick</span> <span class="old-tag-mini-count">2</span></span>
+      <span class="old-tag-mini"><span class="old-tag-mini-name">Good Value</span> <span class="old-tag-mini-count">1</span></span>
+    </div>
+    <div class="comparison-side on-warm">
+      <span class="comparison-label new">NEW</span>
+      <span class="new-tag-mini"><span class="new-tag-mini-name">High Protein</span> <span class="new-tag-mini-count">3</span></span>
+      <span class="new-tag-mini"><span class="new-tag-mini-name">Quick</span> <span class="new-tag-mini-count">2</span></span>
+      <span class="new-tag-mini"><span class="new-tag-mini-name">Good Value</span> <span class="new-tag-mini-count">1</span></span>
+    </div>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.tag-small</span>
+    <span class="variant-desc">Review row tag (already rounded 3px — no change)</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Restaurant popup review rows
+  </div>
+  <div class="variant-demo">
+    <span class="tag-small">High Protein</span>
+    <span class="tag-small">Quick</span>
+    <span class="tag-small">Good Value</span>
+    <span class="tag-small">Vegan Options</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<!-- RECEIPT TAGS -->
+<!-- ═══════════════════════════════════ -->
+
+<p class="group-title">Receipt tags</p>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.receipt-tag</span>
+    <span class="variant-desc">Monospace tag on receipt paper — two proposed options</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> AddReview receipt form, InlineReviewForm (popup receipt form) — tag picker
+  </div>
+  <div class="comparison">
+    <div class="comparison-side on-paper">
+      <span class="comparison-label old">OLD</span>
+      <span class="state-label first">Default</span>
+      <button class="old-receipt-tag">HIGH PROTEIN</button>
+      <button class="old-receipt-tag">QUICK</button>
+      <button class="old-receipt-tag">GOOD VALUE</button>
+      <span class="state-label">Selected</span>
+      <button class="old-receipt-tag active">HIGH PROTEIN</button>
+      <button class="old-receipt-tag active">QUICK</button>
+    </div>
+    <div class="comparison-side on-paper">
+      <span class="comparison-label new">NEW</span>
+      <span class="state-label first">Option A: Chamfered</span>
+      <button class="new-receipt-tag-chamfer">HIGH PROTEIN</button>
+      <button class="new-receipt-tag-chamfer">QUICK</button>
+      <button class="new-receipt-tag-chamfer active">GOOD VALUE</button>
+      <span class="state-label">Option B: Rounded 3px</span>
+      <button class="new-receipt-tag-round">HIGH PROTEIN</button>
+      <button class="new-receipt-tag-round">QUICK</button>
+      <button class="new-receipt-tag-round active">GOOD VALUE</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<!-- DATA DISPLAY (UNCHANGED) -->
+<!-- ═══════════════════════════════════ -->
+
+<p class="group-title">Data display (unchanged)</p>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.rating-badge</span>
+    <span class="variant-desc">Monospace rating with color</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Dashboard table, restaurant popup header, review rows
+  </div>
+  <div class="variant-demo">
+    <span class="rating-badge rating-great">8.5</span>
+    <span class="divider">/</span>
+    <span class="rating-badge rating-good">6.2</span>
+    <span class="divider">/</span>
+    <span class="rating-badge rating-poor">3.0</span>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.dish-badge</span>
+    <span class="variant-desc">Italic dish name label</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Restaurant popup review rows
+  </div>
+  <div class="variant-demo">
+    <span class="dish-badge">Chicken Katsu Curry</span>
+    <span class="divider">|</span>
+    <span class="dish-badge">Margherita Pizza</span>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.lightbox-tag</span>
+    <span class="variant-desc">Semi-transparent tag on dark background</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Photo lightbox overlay
+  </div>
+  <div class="variant-demo on-dark">
+    <span class="lightbox-tag">High Protein</span>
+    <span class="lightbox-tag">Quick</span>
+  </div>
+</div>
+
+<div class="variant-section">
+  <div class="variant-header">
+    <span class="variant-name">.mini-score</span>
+    <span class="variant-desc">Tiny rating overlay on photo thumbnails</span>
+  </div>
+  <div class="variant-usage">
+    <strong>Used in:</strong> Restaurant popup split gallery
+  </div>
+  <div class="variant-demo on-dark">
+    <span class="mini-score rating-great">9</span>
+    <span class="mini-score rating-good">7</span>
+    <span class="mini-score rating-poor">3</span>
+  </div>
+</div>
+
+
+</body>
+</html>

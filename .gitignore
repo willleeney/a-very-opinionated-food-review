@@ -7,6 +7,10 @@ dist/
 # dependencies
 node_modules/
 
+# mobile native builds
+packages/mobile/ios/
+packages/mobile/android/
+
 # logs
 npm-debug.log*
 yarn-debug.log*
@@ -29,7 +33,12 @@ pnpm-debug.log*
 playwright-report/
 test-results/
 blob-report/
+e2e/screenshots/
 
 # supabase local dev - keep migrations but ignore local state
 supabase/.branches/
 supabase/.temp/
+
+# Cloudflare Worker local bindings (contains secrets)
+.dev.vars
+.dev.vars.*

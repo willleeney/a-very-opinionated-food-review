@@ -73,6 +73,19 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', '.astro/', '*.config.js', '*.config.ts'],
+    // Flat-config ignores are matched relative to the config file, so bare
+    // 'dist/' never matched 'packages/*/dist' — which is why linting the repo
+    // reported thousands of errors from build output. Globs must be recursive.
+    ignores: [
+      '**/node_modules/',
+      '**/dist/',
+      '**/.astro/',
+      '**/.wrangler/',
+      // Capacitor native projects — generated, and full of vendored JS
+      'packages/mobile/android/',
+      'packages/mobile/ios/',
+      '*.config.js',
+      '*.config.ts',
+    ],
   },
 ];

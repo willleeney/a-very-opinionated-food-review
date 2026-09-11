@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tag Border Variations</title>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-warm: #f5f2ed;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --border: #e8e4de;
+    --accent: #c45d3e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid; /* Tailwind v4 preflight */ }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px;
+    line-height: 1.6;
+  }
+
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  p.subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 40px; }
+
+  .section {
+    margin-bottom: 48px;
+    padding: 24px;
+    background: white;
+    border: 1px solid var(--border);
+  }
+  .section h2 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .section .desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+  }
+  .tags {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* Shared tag content styles */
+  .tag-name { color: var(--text-muted); font-size: 11px; }
+  .tag-count { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 600; color: var(--accent); }
+
+  /* ========================================
+     VARIATION A: border (plain)
+     ======================================== */
+  .tagA {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+  }
+
+  /* ========================================
+     VARIATION B: outline
+     ======================================== */
+  .tagB {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    outline: 1px solid var(--border);
+  }
+
+  /* ========================================
+     VARIATION C: outline with offset -1px
+     ======================================== */
+  .tagC {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    outline: 1px solid var(--border);
+    outline-offset: -1px;
+  }
+
+  /* ========================================
+     VARIATION D: box-shadow inset
+     ======================================== */
+  .tagD {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  /* ========================================
+     VARIATION E: box-shadow outset
+     ======================================== */
+  .tagE {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  /* ========================================
+     VARIATION F: background-clip padding-box/border-box
+     ======================================== */
+  .tagF {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    background:
+      linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box,
+      linear-gradient(var(--border), var(--border)) border-box;
+    border: 1px solid transparent;
+  }
+
+  /* ========================================
+     VARIATION G: pseudo-element ::before with border
+     ======================================== */
+  .tagG {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+  }
+  .tagG::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--border);
+    pointer-events: none;
+  }
+
+  /* ========================================
+     VARIATION H: pseudo-element two-layer (inset 1px)
+     ======================================== */
+  .tagH {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    isolation: isolate;
+  }
+  .tagH::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    z-index: -2;
+  }
+  .tagH::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--bg-warm);
+    z-index: -1;
+  }
+
+  /* ========================================
+     VARIATION I: pseudo-element two-layer (inset 1.5px)
+     ======================================== */
+  .tagI {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    isolation: isolate;
+  }
+  .tagI::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    z-index: -2;
+  }
+  .tagI::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background: var(--bg-warm);
+    z-index: -1;
+  }
+
+  /* ========================================
+     VARIATION J: border-image
+     ======================================== */
+  .tagJ {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-image: linear-gradient(var(--border), var(--border)) 1;
+  }
+
+  /* ========================================
+     VARIATION K: border + backface-visibility hidden
+     ======================================== */
+  .tagK {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* ========================================
+     VARIATION L: border + will-change transform
+     ======================================== */
+  .tagL {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    will-change: transform;
+  }
+
+  /* ========================================
+     VARIATION M: border + translateZ(0)
+     ======================================== */
+  .tagM {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    transform: translateZ(0);
+  }
+
+  /* ========================================
+     VARIATION N: 2px border (thicker)
+     ======================================== */
+  .tagN {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 2px 7px;
+    font-size: 11px;
+    border: 2px solid var(--border);
+  }
+
+  /* ========================================
+     VARIATION O: SVG border via background-image
+     ======================================== */
+  .tagO {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='0.5' y='0.5' width='calc(100%25 - 1px)' height='calc(100%25 - 1px)' fill='none' stroke='%23e8e4de' stroke-width='1'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+  }
+
+  /* ========================================
+     VARIATION P: border + contain: paint
+     ======================================== */
+  .tagP {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    contain: paint;
+  }
+
+  /* ========================================
+     VARIATION Q: No border, just darker bg
+     ======================================== */
+  .tagQ {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--border);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+  }
+
+  /* ========================================
+     VARIATION R: chamfered clip-path (like tag-small)
+     ======================================== */
+  .tagR {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    isolation: isolate;
+  }
+  .tagR::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+    z-index: -2;
+  }
+  .tagR::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--bg-warm);
+    clip-path: polygon(2px 0%, calc(100% - 2px) 0%, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0% calc(100% - 2px), 0% 2px);
+    z-index: -1;
+  }
+
+  /* ========================================
+     VARIATION S: background-clip + chamfered clip-path
+     ======================================== */
+  .tagS {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    background:
+      linear-gradient(var(--bg-warm), var(--bg-warm)) padding-box,
+      linear-gradient(var(--border), var(--border)) border-box;
+    border: 1px solid transparent;
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+  }
+
+  /* ========================================
+     VARIATION T: No visible border at all
+     ======================================== */
+  .tagT {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-warm);
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+  }
+
+  /* ========================================
+     TABLE CONTEXT - to test in real layout
+     ======================================== */
+  .test-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 40px;
+    border: 1px solid var(--border);
+  }
+  .test-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .test-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+  <h1>Tag Border Variations</h1>
+  <p class="subtitle">All rendered with Tailwind v4 preflight (* { border: 0 solid; }). Pick the one with even borders.</p>
+
+  <div class="section">
+    <h2>A — border: 1px solid</h2>
+    <div class="desc">border: 1px solid var(--border)</div>
+    <div class="tags">
+      <span class="tagA"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagA"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagA"><span class="tag-name">Quick</span></span>
+      <span class="tagA"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagA"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>B — outline</h2>
+    <div class="desc">outline: 1px solid var(--border)</div>
+    <div class="tags">
+      <span class="tagB"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagB"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagB"><span class="tag-name">Quick</span></span>
+      <span class="tagB"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagB"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>C — outline with offset -1px</h2>
+    <div class="desc">outline: 1px solid var(--border); outline-offset: -1px</div>
+    <div class="tags">
+      <span class="tagC"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagC"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagC"><span class="tag-name">Quick</span></span>
+      <span class="tagC"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagC"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>D — box-shadow inset</h2>
+    <div class="desc">box-shadow: inset 0 0 0 1px var(--border)</div>
+    <div class="tags">
+      <span class="tagD"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagD"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagD"><span class="tag-name">Quick</span></span>
+      <span class="tagD"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagD"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>E — box-shadow outset</h2>
+    <div class="desc">box-shadow: 0 0 0 1px var(--border)</div>
+    <div class="tags">
+      <span class="tagE"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagE"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagE"><span class="tag-name">Quick</span></span>
+      <span class="tagE"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagE"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>F — background-clip (padding-box / border-box)</h2>
+    <div class="desc">background: gradient padding-box, gradient border-box; border: 1px solid transparent</div>
+    <div class="tags">
+      <span class="tagF"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagF"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagF"><span class="tag-name">Quick</span></span>
+      <span class="tagF"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagF"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>G — ::before with border</h2>
+    <div class="desc">::before { inset: 0; border: 1px solid var(--border) }</div>
+    <div class="tags">
+      <span class="tagG"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagG"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagG"><span class="tag-name">Quick</span></span>
+      <span class="tagG"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagG"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>H — ::before/::after two-layer (1px inset)</h2>
+    <div class="desc">::before { inset: 0; bg: border } ::after { inset: 1px; bg: warm }</div>
+    <div class="tags">
+      <span class="tagH"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagH"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagH"><span class="tag-name">Quick</span></span>
+      <span class="tagH"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagH"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>I — ::before/::after two-layer (1.5px inset)</h2>
+    <div class="desc">::before { inset: 0; bg: border } ::after { inset: 1.5px; bg: warm }</div>
+    <div class="tags">
+      <span class="tagI"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagI"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagI"><span class="tag-name">Quick</span></span>
+      <span class="tagI"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagI"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>J — border-image</h2>
+    <div class="desc">border: 1px solid; border-image: linear-gradient(...) 1</div>
+    <div class="tags">
+      <span class="tagJ"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagJ"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagJ"><span class="tag-name">Quick</span></span>
+      <span class="tagJ"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagJ"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>K — border + backface-visibility: hidden</h2>
+    <div class="desc">border: 1px solid + backface-visibility: hidden (GPU layer)</div>
+    <div class="tags">
+      <span class="tagK"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagK"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagK"><span class="tag-name">Quick</span></span>
+      <span class="tagK"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagK"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>L — border + will-change: transform</h2>
+    <div class="desc">border: 1px solid + will-change: transform</div>
+    <div class="tags">
+      <span class="tagL"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagL"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagL"><span class="tag-name">Quick</span></span>
+      <span class="tagL"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagL"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>M — border + transform: translateZ(0)</h2>
+    <div class="desc">border: 1px solid + transform: translateZ(0)</div>
+    <div class="tags">
+      <span class="tagM"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagM"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagM"><span class="tag-name">Quick</span></span>
+      <span class="tagM"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagM"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>N — 2px border</h2>
+    <div class="desc">border: 2px solid var(--border)</div>
+    <div class="tags">
+      <span class="tagN"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagN"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagN"><span class="tag-name">Quick</span></span>
+      <span class="tagN"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagN"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>P — border + contain: paint</h2>
+    <div class="desc">border: 1px solid + contain: paint</div>
+    <div class="tags">
+      <span class="tagP"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagP"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagP"><span class="tag-name">Quick</span></span>
+      <span class="tagP"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagP"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Q — No border, just darker background</h2>
+    <div class="desc">background: var(--border); no border</div>
+    <div class="tags">
+      <span class="tagQ"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagQ"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagQ"><span class="tag-name">Quick</span></span>
+      <span class="tagQ"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagQ"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>R — Chamfered clip-path (like tag-small)</h2>
+    <div class="desc">::before/::after with clip-path polygon, 3px chamfer</div>
+    <div class="tags">
+      <span class="tagR"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagR"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagR"><span class="tag-name">Quick</span></span>
+      <span class="tagR"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagR"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>S — background-clip + chamfered clip-path</h2>
+    <div class="desc">background-clip padding/border + clip-path polygon chamfer</div>
+    <div class="tags">
+      <span class="tagS"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagS"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagS"><span class="tag-name">Quick</span></span>
+      <span class="tagS"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagS"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>T — No border at all</h2>
+    <div class="desc">background: var(--bg-warm); no border of any kind</div>
+    <div class="tags">
+      <span class="tagT"><span class="tag-name">Vietnamese</span><span class="tag-count">3</span></span>
+      <span class="tagT"><span class="tag-name">High Protein</span><span class="tag-count">5</span></span>
+      <span class="tagT"><span class="tag-name">Quick</span></span>
+      <span class="tagT"><span class="tag-name">Japanese</span><span class="tag-count">2</span></span>
+      <span class="tagT"><span class="tag-name">Healthy</span><span class="tag-count">1</span></span>
+    </div>
+  </div>
+
+  <!-- Also test inside a table, like the real app -->
+  <h2 style="margin-top: 48px; margin-bottom: 16px;">In table context (like real app)</h2>
+  <table class="test-table">
+    <thead>
+      <tr><th>Name</th><th>Cuisine</th><th>Tags</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Pho House</td>
+        <td><span class="tagA"><span class="tag-name">Vietnamese</span></span></td>
+        <td>
+          <span class="tagA"><span class="tag-name">Quick</span><span class="tag-count">3</span></span>
+          <span class="tagA"><span class="tag-name">Good Value</span><span class="tag-count">2</span></span>
+        </td>
+      </tr>
+      <tr>
+        <td>Sushi Den</td>
+        <td><span class="tagF"><span class="tag-name">Japanese</span></span></td>
+        <td>
+          <span class="tagF"><span class="tag-name">High Protein</span><span class="tag-count">4</span></span>
+          <span class="tagF"><span class="tag-name">Healthy</span><span class="tag-count">2</span></span>
+        </td>
+      </tr>
+      <tr>
+        <td>Burger Joint</td>
+        <td><span class="tagG"><span class="tag-name">American</span></span></td>
+        <td>
+          <span class="tagG"><span class="tag-name">Large Portion</span><span class="tag-count">5</span></span>
+          <span class="tagG"><span class="tag-name">Good Value</span><span class="tag-count">3</span></span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
