@@ -14,6 +14,11 @@
 		"binding": "ASSETS",
 		"directory": "./dist"
 	},
+  // Declared here rather than attached by hand in the dashboard, so the domain
+  // follows the Worker definition instead of being invisible config.
+  "routes": [
+    { "pattern": "tastefull.io", "custom_domain": true }
+  ],
   "r2_buckets": [
     {
       "binding": "MEDIA",
