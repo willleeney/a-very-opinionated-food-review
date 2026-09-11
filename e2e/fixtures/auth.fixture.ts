@@ -3,7 +3,7 @@ import { loginViaAPI, type TestUser } from '../helpers/auth'
 
 /**
  * Extended test with `authenticatedPage` fixture.
- * Signs in via Supabase API (fast, no UI interaction) and suppresses Astro dev toolbar.
+ * Signs in via the Better Auth API (fast, no UI interaction) and suppresses Astro dev toolbar.
  */
 export const test = base.extend<{ authenticatedPage: ReturnType<typeof base.extend> extends infer T ? T : never } & { authenticatedPage: import('@playwright/test').Page }>({
   authenticatedPage: async ({ page }, use) => {

@@ -1,6 +1,9 @@
 /**
- * Known seed data from supabase/seed.sql.
- * Use these constants in tests for deterministic assertions.
+ * Expected restaurant/tag/org fixtures for deterministic assertions.
+ *
+ * NOTE: these came from the old supabase/seed.sql. There is no equivalent seed
+ * for Neon yet, so specs asserting on them only pass against a database that
+ * contains this data.
  */
 
 export const RESTAURANTS = {

@@ -1,24 +1,11 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { useSession } from '../lib/auth-client'
 import { Dashboard } from './Dashboard'
 import { LandingPage } from './LandingPage'
 
 export function HomePage() {
-  const [viewState, setViewState] = useState<'loading' | 'landing' | 'dashboard'>('loading')
+  const { data: session, isPending } = useSession()
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setViewState(session?.user ? 'dashboard' : 'landing')
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setViewState(session?.user ? 'dashboard' : 'landing')
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  if (viewState === 'loading') {
+  if (isPending) {
     return (
       <div className="loading" data-testid="app-loading">
         <div className="spinner" />
@@ -26,7 +13,7 @@ export function HomePage() {
     )
   }
 
-  if (viewState === 'dashboard') {
+  if (session?.user) {
     return <div data-testid="dashboard-view"><Dashboard /></div>
   }
 

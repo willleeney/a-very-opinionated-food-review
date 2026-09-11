@@ -1,16 +1,15 @@
-import type { User } from '@supabase/supabase-js'
 import type { OrganisationWithMembership } from '../lib/database.types'
-import { supabase } from '../lib/supabase'
+import { signOut } from '../lib/auth-client'
 
 interface TopNavProps {
-  user: User | null
+  user: { id: string; name: string; email: string } | null
   currentOrgSlug?: string | null
   userOrgs: OrganisationWithMembership[]
 }
 
 export function TopNav({ user, currentOrgSlug, userOrgs }: TopNavProps) {
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await signOut()
     window.location.href = '/'
   }
 

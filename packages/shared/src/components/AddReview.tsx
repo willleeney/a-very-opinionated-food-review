@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 import L from 'leaflet'
-import { supabase } from '../lib/supabase'
+import { uploadReviewPhoto } from '../lib/storage'
+import * as api from '../lib/api'
 import type { RestaurantCategory, Tag } from '../lib/database.types'
 import { PhotoUpload } from './PhotoUpload'
 import type { PhotoUploadHandle } from './PhotoUpload'
@@ -54,7 +55,7 @@ interface PlaceResult {
   lng?: number
 }
 
-export function AddReview({ userId, organisationId, availableCuisines = [], onAdded }: AddReviewProps) {
+export function AddReview({ organisationId, availableCuisines = [], onAdded }: AddReviewProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [nameQuery, setNameQuery] = useState('')
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null)
@@ -107,8 +108,12 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
   // Fetch available tags on mount
   useEffect(() => {
     async function fetchTags() {
-      const { data } = await supabase.from('tags').select('*').order('name')
-      if (data) setAvailableTags(data)
+      try {
+        const data = await api.getTags()
+        if (data) setAvailableTags(data)
+      } catch (err) {
+        console.error('Failed to fetch tags:', err)
+      }
     }
     fetchTags()
   }, [])
@@ -165,13 +170,7 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
     if (!name.trim()) return
     setCreatingTag(true)
     try {
-      const { data: newTag, error: createError } = await supabase
-        .from('tags')
-        .insert({ name: name.trim() })
-        .select()
-        .single()
-
-      if (createError) throw createError
+      const newTag = await api.createTag(name.trim())
 
       setAvailableTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)))
       setSelectedTags(prev => [...prev, newTag.id])
@@ -309,62 +308,40 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
 
     try {
       // Check for duplicate restaurant (case-insensitive name match)
-      const { data: existing } = await supabase
-        .from('restaurants')
-        .select('id, name')
-        .ilike('name', name.trim())
-        .limit(1)
+      const existing = await api.searchRestaurantByName(name.trim())
 
-      if (existing && existing.length > 0) {
-        setError(`"${existing[0].name}" already exists. Search for it in the list to add a review.`)
+      if (existing) {
+        setError(`"${existing.name}" already exists. Search for it in the list to add a review.`)
         setLoading(false)
         return
       }
 
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from('restaurants')
-        .insert({
-          name,
-          cuisine: cuisine || '',
-          categories,
-          latitude: latitude,
-          longitude: longitude,
-          created_by: userId,
-        })
-        .select()
-        .single()
-
-      if (restaurantError) throw restaurantError
+      const restaurant = await api.createRestaurant({
+        name,
+        cuisine: cuisine || '',
+        categories,
+        latitude: latitude,
+        longitude: longitude,
+      })
 
       // Only add review if overall rating is provided (required)
       if (overallRating) {
-        const { data: review, error: reviewError } = await supabase.from('reviews').insert({
+        const review = await api.createReview({
           restaurant_id: restaurant.id,
-          user_id: userId,
           rating: parseInt(overallRating),
           comment: comment || null,
           dish: dish || null,
           organisation_id: organisationId || null,
-        }).select().single()
-
-        if (reviewError) throw reviewError
+        })
 
         // Upload photo if selected (crop to square first)
         if (review && photoRef.current?.hasNewPhoto) {
           const croppedBlob = await photoRef.current.getCroppedBlob()
           if (croppedBlob) {
-            const filePath = `${userId}/${review.id}.jpg`
-            const { error: uploadError } = await supabase.storage
-              .from('review-photos')
-              .upload(filePath, croppedBlob, { upsert: true, contentType: 'image/jpeg' })
-            if (uploadError) throw uploadError
-
-            const { data: { publicUrl } } = supabase.storage
-              .from('review-photos')
-              .getPublicUrl(filePath)
+            const publicUrl = await uploadReviewPhoto(review.id, croppedBlob)
 
             const photoUrlWithCache = `${publicUrl}?t=${Date.now()}`
-            await supabase.from('reviews').update({ photo_url: photoUrlWithCache }).eq('id', review.id)
+            await api.updateReviewPhoto(review.id, photoUrlWithCache)
           }
         }
 
@@ -374,8 +351,7 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
             review_id: review.id,
             tag_id: tagId,
           }))
-          const { error: tagError } = await supabase.from('review_tags').insert(tagInserts)
-          if (tagError) throw tagError
+          await api.createReviewTags(tagInserts)
         }
       }
 
@@ -470,7 +446,7 @@ export function AddReview({ userId, organisationId, availableCuisines = [], onAd
                       attributionControl={false}
                       style={{ height: '100%', width: '100%' }}
                     >
-                      <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                      <TileLayer url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png" />
                       <Marker position={[latitude, longitude]} icon={pinIcon} />
                     </MapContainer>
                   </div>

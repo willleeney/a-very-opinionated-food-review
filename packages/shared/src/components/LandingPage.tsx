@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import * as api from '../lib/api'
 import { MapView } from './MapView'
 import { RatingHistogram } from './RatingHistogram'
 import { getRatingClass } from '../lib/ratings'
 import { useFilterStore } from '../lib/store'
-import type { Restaurant, Review, RestaurantWithReviews, Tag, ReviewTag } from '../lib/database.types'
+import type { Restaurant, Review, RestaurantWithReviews, Tag } from '../lib/database.types'
 
 // Placeholder comments for unauthenticated landing page (no real review text exposed)
 const TEASER_COMMENTS = [
@@ -53,35 +53,44 @@ export function LandingPage() {
 
   useEffect(() => {
     async function fetchData() {
-      // Only fetch ratings — no comments, no user_ids (unauthenticated visitors shouldn't see those)
-      const [restResult, tagsResult, reviewTagsResult] = await Promise.all([
-        supabase.from('restaurants').select('*, reviews(id, rating, created_at)'),
-        supabase.from('tags').select('*'),
-        supabase.from('review_tags').select('*, tags(*)')
-      ])
+      try {
+        // Reviews come back in full from the API, but only ratings and dates are
+        // rendered — comments and reviewer identity stay hidden for unauthenticated visitors
+        const [restaurantsData, tagsData, reviewTagsData] = await Promise.all([
+          api.getRestaurants(),
+          api.getTags(),
+          api.getReviewTags()
+        ])
 
-      const rawRestaurants = (restResult.data || []) as (Restaurant & { reviews: Review[] })[]
-      const allTags = (tagsResult.data || []) as Tag[]
-      const allReviewTags = (reviewTagsResult.data || []) as (ReviewTag & { tags: Tag | null })[]
+        const rawRestaurants = restaurantsData as unknown as (Restaurant & { reviews: Review[] })[]
+        const allTags = tagsData as Tag[]
 
-      const tagMap: Record<string, Tag[]> = {}
-      for (const rt of allReviewTags) {
-        if (!tagMap[rt.review_id]) tagMap[rt.review_id] = []
-        if (rt.tags) tagMap[rt.review_id].push(rt.tags)
+        const tagsById: Record<string, Tag> = {}
+        for (const t of allTags) tagsById[t.id] = t
+
+        const tagMap: Record<string, Tag[]> = {}
+        for (const rt of reviewTagsData) {
+          if (!tagMap[rt.review_id]) tagMap[rt.review_id] = []
+          const tag = tagsById[rt.tag_id]
+          if (tag) tagMap[rt.review_id].push(tag)
+        }
+
+        const processed: RestaurantWithReviews[] = rawRestaurants.map(r => {
+          const reviews = (r.reviews || []).filter((rev: Review) => rev.rating !== null)
+          const avgRating = reviews.length > 0
+            ? reviews.reduce((sum: number, rev: Review) => sum + (rev.rating ?? 0), 0) / reviews.length
+            : null
+          return { ...r, avgRating, reviews: r.reviews || [] }
+        })
+
+        setRestaurants(processed)
+        setTags(allTags)
+        setReviewTags(tagMap)
+      } catch (err) {
+        console.error('Failed to load landing page data:', err)
+      } finally {
+        setLoading(false)
       }
-
-      const processed: RestaurantWithReviews[] = rawRestaurants.map(r => {
-        const reviews = (r.reviews || []).filter((rev: Review) => rev.rating !== null)
-        const avgRating = reviews.length > 0
-          ? reviews.reduce((sum: number, rev: Review) => sum + (rev.rating ?? 0), 0) / reviews.length
-          : null
-        return { ...r, avgRating, reviews: r.reviews || [] }
-      })
-
-      setRestaurants(processed)
-      setTags(allTags)
-      setReviewTags(tagMap)
-      setLoading(false)
     }
     fetchData()
   }, [])

@@ -4,7 +4,7 @@
  * Captures 57 screenshots covering every screen state at mobile (390x844)
  * and desktop (1280x800) viewports, with multiple user roles.
  *
- * Prerequisites: local Supabase running + Astro dev server on localhost:4321
+ * Prerequisites: Astro dev server on localhost:4321 (talks to Neon + Better Auth)
  *
  * Usage:
  *   npx tsx e2e/capture-screens.ts
@@ -19,9 +19,6 @@ const __dirname = path.dirname(__filename)
 
 const VIEWPORT = { width: 390, height: 844 }
 const BASE = process.env.BASE_URL || 'http://localhost:4321'
-const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
-const SUPABASE_ANON_KEY = process.env.PUBLIC_SUPABASE_ANON_KEY
-  || 'eyJhbGciOiJFUzI1NiIsImtpZCI6ImI4MTI2OWYxLTIxZDgtNGYyZS1iNzE5LWMyMjQwYTg0MGQ5MCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjIwODQ5NjM5ODh9.MUKKfsb0voQu2gq4tW3UjuDBEaTVRoVe7K6ZfILtOCzuaPBqAJrrBdkefOPxe1tcNFr8hbZ5lTRWlXTRIaZewg'
 
 const outFlag = process.argv.indexOf('--out')
 const OUT = outFlag !== -1 ? process.argv[outFlag + 1] : path.resolve(__dirname, 'screenshots')
@@ -38,23 +35,13 @@ async function shot(page: Page, name: string) {
 }
 
 async function loginViaAPI(page: Page, email: string) {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email, password: 'password123' }),
+  // page.request shares cookies with the browser context, so Better Auth's
+  // Set-Cookie from the sign-in endpoint becomes the page's session cookie.
+  const response = await page.request.post(`${BASE}/api/auth/sign-in/email`, {
+    data: { email, password: 'password123' },
   })
-  if (!response.ok) throw new Error(`Login failed for ${email}: ${response.status}`)
-  const session = await response.json()
+  if (!response.ok()) throw new Error(`Login failed for ${email}: ${response.status()}`)
   await page.goto(BASE)
-  await page.evaluate((s: any) => {
-    const key = Object.keys(localStorage).find(k => k.includes('supabase')) || 'sb-127-auth-token'
-    localStorage.setItem(key, JSON.stringify({
-      access_token: s.access_token, refresh_token: s.refresh_token,
-      expires_at: s.expires_at, expires_in: s.expires_in,
-      token_type: s.token_type, user: s.user,
-    }))
-  }, session)
-  await page.reload()
   await page.waitForLoadState('networkidle')
 }
 

@@ -1,6 +1,5 @@
 export interface AppConfig {
-  supabaseUrl: string
-  supabaseAnonKey: string
+  authUrl: string
   googleMapsApiKey: string
 }
 
@@ -13,8 +12,7 @@ export function initConfig(config: AppConfig) {
 export function getConfig(): AppConfig {
   if (_config) return _config
   return {
-    supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || '',
-    supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    authUrl: import.meta.env.PUBLIC_AUTH_URL || import.meta.env.VITE_AUTH_URL || '',
     googleMapsApiKey: import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
   }
 }

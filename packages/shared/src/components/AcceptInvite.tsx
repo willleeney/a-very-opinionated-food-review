@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import * as api from '../lib/api'
+import { getUser, type AuthUser } from '../lib/auth-client'
 import type { Organisation, OrganisationInvite, Profile } from '../lib/database.types'
-import type { User } from '@supabase/supabase-js'
 
 interface AcceptInviteProps {
   token: string
@@ -13,7 +13,7 @@ interface InviteWithDetails extends OrganisationInvite {
 }
 
 export function AcceptInvite({ token }: AcceptInviteProps) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [invite, setInvite] = useState<InviteWithDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
@@ -22,27 +22,18 @@ export function AcceptInvite({ token }: AcceptInviteProps) {
 
   useEffect(() => {
     // Check auth state
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    getUser().then((user) => {
+      setUser(user)
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
     // Fetch invite details
     const fetchInvite = async () => {
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('organisation_invites')
-        .select('*, organisations(*)')
-        .eq('token', token)
-        .single()
-
-      if (inviteError || !inviteData) {
+      let inviteData: api.OrgInvite
+      try {
+        inviteData = await api.getInviteByToken(token)
+      } catch {
         setError('This invite link is invalid or has expired.')
         setLoading(false)
         return
@@ -56,15 +47,16 @@ export function AcceptInvite({ token }: AcceptInviteProps) {
       }
 
       // Fetch inviter profile
-      const { data: inviterProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', inviteData.invited_by)
-        .single()
+      let inviterProfile: Profile | null = null
+      try {
+        inviterProfile = await api.getProfile(inviteData.invited_by) as Profile
+      } catch {
+        inviterProfile = null
+      }
 
       setInvite({
         ...inviteData,
-        organisation: inviteData.organisations as Organisation | null,
+        organisation: inviteData.organisation as Organisation | null,
         inviter: inviterProfile,
       })
       setLoading(false)
@@ -86,29 +78,29 @@ export function AcceptInvite({ token }: AcceptInviteProps) {
     setError(null)
 
     // Add user as member
-    const { error: memberError } = await supabase
-      .from('organisation_members')
-      .insert({
+    try {
+      await api.addOrgMember({
         organisation_id: invite.organisation_id,
         user_id: user.id,
         role: 'member',
       })
-
-    if (memberError) {
-      if (memberError.message.includes('duplicate')) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to join organisation.'
+      if (message.includes('duplicate')) {
         setError('You are already a member of this organisation.')
       } else {
-        setError(memberError.message)
+        setError(message)
       }
       setProcessing(false)
       return
     }
 
-    // Delete the invite
-    await supabase
-      .from('organisation_invites')
-      .delete()
-      .eq('id', invite.id)
+    // Delete the invite (best-effort — membership already succeeded)
+    try {
+      await api.deleteInvite(invite.id)
+    } catch {
+      // ignore
+    }
 
     // Note: Review visibility is now derived from org membership,
     // so user's reviews are automatically visible to this org
@@ -167,7 +159,7 @@ export function AcceptInvite({ token }: AcceptInviteProps) {
           </p>
         )}
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-          {invite?.inviter?.name || 'Someone'} invited you to join this organisation
+          {invite?.inviter?.display_name || 'Someone'} invited you to join this organisation
         </p>
       </div>
 

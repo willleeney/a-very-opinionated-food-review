@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { supabase } from '../lib/supabase'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import * as api from '../lib/api'
 
 // Test data
 const mockOrganisation = {
@@ -11,14 +11,16 @@ const mockOrganisation = {
   created_at: '2024-01-01T00:00:00Z',
 }
 
-const mockAdmin = {
-  id: 'admin-user-id',
-  email: 'admin@stackone.com',
-}
-
-const mockMember = {
-  id: 'member-user-id',
-  email: 'member@stackone.com',
+/** Stub global fetch with a single JSON response. */
+function mockFetch(body: unknown, ok = true) {
+  const text = body === undefined ? '' : JSON.stringify(body)
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok,
+    json: async () => body,
+    text: async () => text,
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
 }
 
 describe('Organisations', () => {
@@ -26,117 +28,72 @@ describe('Organisations', () => {
     vi.clearAllMocks()
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   describe('Creating an organisation', () => {
     it('should allow authenticated users to create an organisation', async () => {
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: mockOrganisation, error: null })
+      const fetchMock = mockFetch(mockOrganisation)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
+      const data = await api.createOrg({ name: 'StackOne', slug: 'stackone' })
 
-      const { data, error } = await supabase
-        .from('organisations')
-        .insert({
-          name: 'StackOne',
-          slug: 'stackone',
-          office_location: { lat: 51.5047, lng: -0.0886 },
-          tagline: 'Runway East, London Bridge',
-        })
-        .select()
-        .single()
-
-      expect(supabase.from).toHaveBeenCalledWith('organisations')
-      expect(mockInsert).toHaveBeenCalled()
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/data/organisations',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ name: 'StackOne', slug: 'stackone' }),
+        }),
+      )
+      expect(data).toEqual(mockOrganisation)
     })
   })
 
   describe('Updating organisation name', () => {
     it('should allow admin to update organisation name', async () => {
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null })
+      const fetchMock = mockFetch(undefined)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-      } as any)
+      await api.updateOrg(mockOrganisation.id, { name: 'New Name' })
 
-      await supabase
-        .from('organisations')
-        .update({ name: 'New Name' })
-        .eq('id', mockOrganisation.id)
-
-      expect(supabase.from).toHaveBeenCalledWith('organisations')
-      expect(mockUpdate).toHaveBeenCalledWith({ name: 'New Name' })
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/data/organisations',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ id: mockOrganisation.id, name: 'New Name' }),
+        }),
+      )
     })
 
     it('should not allow non-admin to update organisation name', async () => {
-      // This would be enforced by RLS policies in the database
-      // Here we test that the query structure is correct
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'Row level security policy violation' }
-      })
+      // Authorisation is enforced server-side; the client surfaces the error
+      mockFetch('Forbidden', false)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-      } as any)
-
-      const { error } = await supabase
-        .from('organisations')
-        .update({ name: 'New Name' })
-        .eq('id', mockOrganisation.id)
-
-      expect(error).toBeDefined()
+      await expect(
+        api.updateOrg(mockOrganisation.id, { name: 'New Name' }),
+      ).rejects.toThrow()
     })
   })
 
-  describe('Updating office location', () => {
-    it('should allow admin to update office location', async () => {
-      const newLocation = { lat: 51.5074, lng: -0.1278 }
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null })
+  describe('Office location', () => {
+    it('should expose the office location on the fetched organisation', async () => {
+      mockFetch(mockOrganisation)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-      } as any)
+      const data = await api.getOrgBySlug('stackone')
 
-      await supabase
-        .from('organisations')
-        .update({ office_location: newLocation })
-        .eq('id', mockOrganisation.id)
-
-      expect(mockUpdate).toHaveBeenCalledWith({ office_location: newLocation })
+      expect(data.office_location).toEqual({ lat: 51.5047, lng: -0.0886 })
     })
   })
 
   describe('Fetching organisations', () => {
     it('should fetch organisation by slug', async () => {
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: mockOrganisation, error: null })
+      const fetchMock = mockFetch(mockOrganisation)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        eq: mockEq,
-        single: mockSingle,
-      } as any)
+      const data = await api.getOrgBySlug('stackone')
 
-      const { data, error } = await supabase
-        .from('organisations')
-        .select('*')
-        .eq('slug', 'stackone')
-        .single()
-
-      expect(supabase.from).toHaveBeenCalledWith('organisations')
-      expect(mockSelect).toHaveBeenCalledWith('*')
-      expect(mockEq).toHaveBeenCalledWith('slug', 'stackone')
+      expect(fetchMock.mock.calls[0][0]).toContain(
+        '/api/data/organisations?slug=stackone',
+      )
+      expect(data).toEqual(mockOrganisation)
     })
   })
 })

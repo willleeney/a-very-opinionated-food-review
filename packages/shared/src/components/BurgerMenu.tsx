@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import type { User } from '@supabase/supabase-js'
+import { signOut } from '../lib/auth-client'
 import type { OrganisationWithMembership } from '../lib/database.types'
 
 interface BurgerMenuProps {
-  user: User
+  user: { id: string; name: string; email: string }
   currentOrgSlug?: string | null
   userOrgs: OrganisationWithMembership[]
 }
@@ -24,7 +23,7 @@ export function BurgerMenu({ user: _user, currentOrgSlug: _currentOrgSlug, userO
   }, [])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await signOut()
     window.location.href = '/'
   }
 

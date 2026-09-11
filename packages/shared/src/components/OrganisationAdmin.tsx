@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
-import type { Organisation, OrganisationMember, OrganisationInvite, OrganisationRequest, Profile, OrganisationWithMembership } from '../lib/database.types'
-import type { User } from '@supabase/supabase-js'
+import * as api from '../lib/api'
+import type { OrganisationMember, OrganisationInvite, OrganisationRequest, OrganisationWithMembership } from '../lib/database.types'
+import { getUser, type AuthUser } from '../lib/auth-client'
 import { TopNav } from './TopNav'
 
 interface OrganisationAdminProps {
@@ -9,15 +9,15 @@ interface OrganisationAdminProps {
 }
 
 interface MemberWithProfile extends OrganisationMember {
-  profile?: Profile | null
+  profile?: api.Profile | null
 }
 
 interface InviteWithInviter extends OrganisationInvite {
-  inviter?: Profile | null
+  inviter?: api.Profile | null
 }
 
 interface RequestWithProfile extends OrganisationRequest {
-  profile?: Profile | null
+  profile?: api.Profile | null
 }
 
 interface UserOrg {
@@ -28,8 +28,8 @@ interface UserOrg {
 }
 
 export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [org, setOrg] = useState<Organisation | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [org, setOrg] = useState<api.Organisation | null>(null)
   const [members, setMembers] = useState<MemberWithProfile[]>([])
   const [invites, setInvites] = useState<InviteWithInviter[]>([])
   const [requests, setRequests] = useState<RequestWithProfile[]>([])
@@ -47,13 +47,14 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
 
   const fetchData = useCallback(async () => {
     // Fetch organisation
-    const { data: orgData, error: orgError } = await supabase
-      .from('organisations')
-      .select('*')
-      .eq('slug', organisationSlug)
-      .single()
+    let orgData: api.Organisation | null = null
+    try {
+      orgData = await api.getOrgBySlug(organisationSlug)
+    } catch {
+      orgData = null
+    }
 
-    if (orgError || !orgData) {
+    if (!orgData) {
       setError('Organisation not found')
       setLoading(false)
       return
@@ -63,102 +64,91 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setOrgName(orgData.name)
 
     // Fetch members with profiles
-    const { data: membersData } = await supabase
-      .from('organisation_members')
-      .select('*')
-      .eq('organisation_id', orgData.id)
+    try {
+      const membersData = await api.getOrgMembers(orgData.id)
 
-    if (membersData) {
       // Fetch profiles for members
       const userIds = membersData.map(m => m.user_id)
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', userIds)
+      const profiles = userIds.length > 0 ? await api.getProfiles(userIds) : []
 
       const membersWithProfiles = membersData.map(m => ({
         ...m,
-        profile: profiles?.find(p => p.id === m.user_id) || null
+        profile: profiles.find(p => p.id === m.user_id) || null
       }))
       setMembers(membersWithProfiles)
 
       // Check if current user is admin
       const currentUserMembership = membersData.find(m => m.user_id === user?.id)
       setIsAdmin(currentUserMembership?.role === 'admin')
+    } catch (err) {
+      console.error('Failed to fetch members:', err)
     }
 
     // Fetch invites
-    const { data: invitesData } = await supabase
-      .from('organisation_invites')
-      .select('*')
-      .eq('organisation_id', orgData.id)
+    try {
+      const invitesData = await api.getOrgInvites(orgData.id)
 
-    if (invitesData) {
       // Fetch profiles for inviters
       const inviterIds = invitesData.map(i => i.invited_by)
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', inviterIds)
+      const profiles = inviterIds.length > 0 ? await api.getProfiles(inviterIds) : []
 
       const invitesWithInviters = invitesData.map(i => ({
         ...i,
-        inviter: profiles?.find(p => p.id === i.invited_by) || null
+        inviter: profiles.find(p => p.id === i.invited_by) || null
       }))
       setInvites(invitesWithInviters)
+    } catch (err) {
+      console.error('Failed to fetch invites:', err)
     }
 
     // Fetch join requests
-    const { data: requestsData } = await supabase
-      .from('organisation_requests')
-      .select('*')
-      .eq('organisation_id', orgData.id)
+    try {
+      const requestsData = await api.getOrgRequests(orgData.id)
 
-    if (requestsData) {
-      // Fetch profiles for requesters
-      const requesterIds = requestsData.map(r => r.user_id)
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', requesterIds)
-
+      // The endpoint joins the requester's profile for org admins — a separate
+      // /api/data/profiles lookup would come back with the email masked, since
+      // a requester shares no org with the admin yet.
       const requestsWithProfiles = requestsData.map(r => ({
         ...r,
-        profile: profiles?.find(p => p.id === r.user_id) || null
+        profile: {
+          id: r.user_id,
+          display_name: r.requester_display_name ?? null,
+          email: r.requester_email ?? null,
+          avatar_url: r.requester_avatar_url ?? null,
+          is_private: false,
+          created_at: null,
+        },
       }))
       setRequests(requestsWithProfiles)
+    } catch (err) {
+      console.error('Failed to fetch join requests:', err)
     }
 
     setLoading(false)
   }, [organisationSlug, user?.id])
 
   const fetchUserOrgs = useCallback(async (userId: string) => {
-    const { data: memberships } = await supabase
-      .from('organisation_members')
-      .select('role, organisations(*)')
-      .eq('user_id', userId)
+    try {
+      const memberships = await api.getUserMemberships(userId, true)
 
-    if (memberships) {
-      const orgs: UserOrg[] = memberships.map((m) => ({
-        id: (m.organisations as Organisation).id,
-        name: (m.organisations as Organisation).name,
-        slug: (m.organisations as Organisation).slug,
-        role: m.role as 'admin' | 'member',
-      }))
+      const orgs: UserOrg[] = memberships
+        .filter(m => m.organisation)
+        .map((m) => ({
+          id: m.organisation!.id,
+          name: m.organisation!.name,
+          slug: m.organisation!.slug,
+          role: m.role as 'admin' | 'member',
+        }))
       setUserOrgs(orgs)
+    } catch (err) {
+      console.error('Failed to fetch user orgs:', err)
     }
   }, [])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    getUser().then((u) => {
+      setUser(u)
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
@@ -176,16 +166,12 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisations')
-      .update({ name: orgName })
-      .eq('id', org.id)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.updateOrg(org.id, { name: orgName })
       setSuccess('Organisation details updated')
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update organisation')
     }
     setSaving(false)
   }
@@ -198,20 +184,16 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_invites')
-      .insert({
+    try {
+      await api.createInvite({
         organisation_id: org.id,
-        email: inviteEmail,
-        invited_by: user.id
+        email: inviteEmail
       })
-
-    if (error) {
-      setError(error.message)
-    } else {
       setSuccess(`Invite sent to ${inviteEmail}`)
       setInviteEmail('')
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send invite')
     }
     setSaving(false)
   }
@@ -220,15 +202,11 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_invites')
-      .delete()
-      .eq('id', inviteId)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.deleteInvite(inviteId)
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel invite')
     }
   }
 
@@ -239,24 +217,23 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setSuccess(null)
 
     // Add user as member
-    const { error: memberError } = await supabase
-      .from('organisation_members')
-      .insert({
+    try {
+      await api.addOrgMember({
         organisation_id: org.id,
         user_id: request.user_id,
         role: 'member',
       })
-
-    if (memberError) {
-      setError(memberError.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add member')
       return
     }
 
     // Delete the request
-    await supabase
-      .from('organisation_requests')
-      .delete()
-      .eq('id', request.id)
+    try {
+      await api.deleteOrgRequest(request.id)
+    } catch (err) {
+      console.error('Failed to delete join request:', err)
+    }
 
     // Note: Review visibility is now derived from org membership,
     // so user's reviews are automatically visible to this org
@@ -269,15 +246,11 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_requests')
-      .delete()
-      .eq('id', requestId)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.deleteOrgRequest(requestId)
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reject request')
     }
   }
 
@@ -294,13 +267,10 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setSuccess(null)
 
     // Make the target user an admin
-    const { error: promoteError } = await supabase
-      .from('organisation_members')
-      .update({ role: 'admin' })
-      .eq('id', targetMember.id)
-
-    if (promoteError) {
-      setError(promoteError.message)
+    try {
+      await api.updateOrgMember(targetMember.id, 'admin')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to transfer admin rights')
       setSaving(false)
       return
     }
@@ -308,13 +278,10 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     // Demote current user to member
     const currentMember = members.find(m => m.user_id === user.id)
     if (currentMember) {
-      const { error: demoteError } = await supabase
-        .from('organisation_members')
-        .update({ role: 'member' })
-        .eq('id', currentMember.id)
-
-      if (demoteError) {
-        setError(demoteError.message)
+      try {
+        await api.updateOrgMember(currentMember.id, 'member')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to transfer admin rights')
         setSaving(false)
         return
       }
@@ -333,16 +300,12 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_members')
-      .delete()
-      .eq('id', memberId)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.removeOrgMember(memberId)
       setSuccess('Member removed')
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove member')
     }
   }
 
@@ -361,17 +324,13 @@ export function OrganisationAdmin({ organisationSlug }: OrganisationAdminProps) 
     setSuccess(null)
     setSaving(true)
 
-    const { error } = await supabase
-      .from('organisations')
-      .delete()
-      .eq('id', org.id)
-
-    if (error) {
-      setError(error.message)
-      setSaving(false)
-    } else {
+    try {
+      await api.deleteOrg(org.id)
       // Redirect to home after deletion
       window.location.href = '/'
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete organisation')
+      setSaving(false)
     }
   }
 

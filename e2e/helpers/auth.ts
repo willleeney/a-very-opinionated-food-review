@@ -1,6 +1,7 @@
 import { type Page } from '@playwright/test'
 
-// Seed user credentials from supabase/seed.sql
+// Test user credentials. Created in Neon by e2e/global-setup.ts and removed again
+// by e2e/global-teardown.ts.
 export const TEST_USERS = {
   james: { email: 'james@stackone.com', password: 'password123', name: 'James Mitchell' },
   sarah: { email: 'sarah@stackone.com', password: 'password123', name: 'Sarah Kim' },
@@ -29,51 +30,25 @@ export async function loginViaUI(page: Page, user: TestUser = 'james') {
 }
 
 /**
- * Log in via Supabase API directly (faster, no UI interaction needed).
- * Sets the session tokens in localStorage so the app picks them up.
+ * Log in via the Better Auth API directly (faster, no UI interaction needed).
+ *
+ * `page.request` shares its cookie jar with the browser context, so the
+ * Set-Cookie from Better Auth's sign-in endpoint becomes the page's session
+ * cookie. Better Auth issues (and signs) that cookie itself, so we never have
+ * to know its name or forge a `session` row.
  */
 export async function loginViaAPI(page: Page, user: TestUser = 'james') {
   const { email, password } = TEST_USERS[user]
 
-  // Get the Supabase URL from the page's environment
-  const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
-  const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || ''
-
-  // Sign in via Supabase REST API
-  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseAnonKey,
-    },
-    body: JSON.stringify({ email, password }),
+  const response = await page.request.post('/api/auth/sign-in/email', {
+    data: { email, password },
   })
 
-  if (!response.ok) {
-    throw new Error(`Login failed for ${email}: ${response.status} ${await response.text()}`)
+  if (!response.ok()) {
+    throw new Error(`Login failed for ${email}: ${response.status()} ${await response.text()}`)
   }
 
-  const session = await response.json()
-
-  // Navigate to the app first (need a page context for localStorage)
+  // Load the app with the session cookie in place
   await page.goto('/')
-
-  // Set the session in localStorage (Supabase stores it here)
-  await page.evaluate((sessionData) => {
-    const storageKey = Object.keys(localStorage).find(k => k.includes('supabase'))
-      || `sb-${new URL(sessionData.supabaseUrl).hostname.split('.')[0]}-auth-token`
-
-    localStorage.setItem(storageKey, JSON.stringify({
-      access_token: sessionData.access_token,
-      refresh_token: sessionData.refresh_token,
-      expires_at: sessionData.expires_at,
-      expires_in: sessionData.expires_in,
-      token_type: sessionData.token_type,
-      user: sessionData.user,
-    }))
-  }, { ...session, supabaseUrl })
-
-  // Reload to pick up the session
-  await page.reload()
   await page.waitForLoadState('networkidle')
 }

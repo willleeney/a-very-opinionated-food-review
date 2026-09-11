@@ -1,22 +1,23 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { useState } from 'react'
+import { signIn, signUp, requestPasswordReset, resetPassword } from '../lib/auth-client'
 import { getOrigin, openExternal, isNativePlatform } from '../lib/navigation'
+
+// Password reset links land back here with ?token=... in the query string.
+function getResetToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get('token')
+}
 
 export function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>('login')
-
-  // Check if user arrived via password reset link
-  useEffect(() => {
-    supabase.auth.onAuthStateChange((event, _session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('reset')
-      }
-    })
-  }, [])
+  const [resetToken] = useState(getResetToken)
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>(
+    resetToken ? 'reset' : 'login'
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,37 +25,58 @@ export function Auth() {
     setError(null)
 
     if (mode === 'forgot') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${getOrigin()}/login`
+      const { error } = await requestPasswordReset({
+        email,
+        redirectTo: `${getOrigin()}/login`,
       })
       if (error) {
-        setError(error.message)
+        setError(error.message ?? 'Could not send the reset link')
       } else {
         setError('Check your email for the password reset link!')
       }
     } else if (mode === 'reset') {
-      const { error } = await supabase.auth.updateUser({ password })
+      const { error } = await resetPassword({
+        newPassword: password,
+        token: resetToken || '',
+      })
       if (error) {
-        setError(error.message)
+        setError(error.message ?? 'Could not update your password')
       } else {
         setError('Password updated successfully!')
         setTimeout(() => { window.location.href = '/' }, 1500)
       }
-    } else {
-      const { error } = mode === 'login'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
-
+    } else if (mode === 'signup') {
+      const { error } = await signUp.email({
+        email,
+        password,
+        name: name || email.split('@')[0],
+      })
       if (error) {
-        setError(error.message)
-      } else if (mode === 'signup') {
-        setError('Check your email for the confirmation link!')
+        setError(error.message ?? 'Could not create your account')
+      } else {
+        window.location.href = '/'
+      }
+    } else {
+      const { error } = await signIn.email({ email, password })
+      if (error) {
+        setError(error.message ?? 'Could not sign you in')
       } else {
         window.location.href = '/'
       }
     }
 
     setLoading(false)
+  }
+
+  const handleSocialSignIn = async (provider: 'apple' | 'google') => {
+    const { data, error: oauthError } = await signIn.social({
+      provider,
+      callbackURL: `${getOrigin()}/`,
+    })
+    if (data?.url && isNativePlatform()) {
+      await openExternal(data.url)
+    }
+    if (oauthError) setError(oauthError.message ?? 'Could not sign you in')
   }
 
   return (
@@ -96,6 +118,22 @@ export function Auth() {
                   placeholder="you@company.com"
                   style={{ width: '100%' }}
                   data-testid="auth-email"
+                />
+              </div>
+            )}
+
+            {mode === 'signup' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  style={{ width: '100%' }}
+                  data-testid="auth-name"
                 />
               </div>
             )}
@@ -157,19 +195,7 @@ export function Auth() {
 
                 <button
                   type="button"
-                  onClick={async () => {
-                    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-                      provider: 'apple',
-                      options: {
-                        redirectTo: `${getOrigin()}/`,
-                        skipBrowserRedirect: isNativePlatform(),
-                      }
-                    })
-                    if (data?.url && isNativePlatform()) {
-                      await openExternal(data.url)
-                    }
-                    if (oauthError) setError(oauthError.message)
-                  }}
+                  onClick={() => handleSocialSignIn('apple')}
                   className="btn"
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#000', color: '#fff', borderColor: '#000' }}
                 >
@@ -181,19 +207,7 @@ export function Auth() {
 
                 <button
                   type="button"
-                  onClick={async () => {
-                    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-                      provider: 'google',
-                      options: {
-                        redirectTo: `${getOrigin()}/`,
-                        skipBrowserRedirect: isNativePlatform(),
-                      }
-                    })
-                    if (data?.url && isNativePlatform()) {
-                      await openExternal(data.url)
-                    }
-                    if (oauthError) setError(oauthError.message)
-                  }}
+                  onClick={() => handleSocialSignIn('google')}
                   className="btn"
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >

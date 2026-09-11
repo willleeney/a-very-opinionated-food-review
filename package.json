@@ -12,10 +12,6 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "supabase": "supabase start --exclude studio,edge-runtime,logflare,vector,imgproxy,realtime,storage-api,supavisor",
-    "supabase:full": "supabase start",
-    "supabase:reset": "supabase db reset",
-    "supabase:stop": "supabase stop",
     "screenshots": "tsx e2e/capture-screens.ts",
     "lint": "eslint packages --ext .ts,.tsx",
     "typecheck": "pnpm --filter @tastefull/web typecheck"
@@ -23,6 +19,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
     "@eslint/js": "^9.39.2",
+    "@neondatabase/serverless": "^1.1.0",
     "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

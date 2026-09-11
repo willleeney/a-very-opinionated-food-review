@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import * as api from '../lib/api'
+import { uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from '../lib/storage'
+import { getUser, signOut, type AuthUser } from '../lib/auth-client'
 import type { Organisation, OrganisationInvite, OrganisationRequest, Profile, OrganisationWithMembership } from '../lib/database.types'
-import type { User } from '@supabase/supabase-js'
 import { TopNav } from './TopNav'
 
 interface OrgWithRole extends Organisation {
@@ -19,7 +20,7 @@ interface RequestWithOrg extends OrganisationRequest {
 }
 
 export function PersonalSettings() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [orgs, setOrgs] = useState<OrgWithRole[]>([])
   const [invites, setInvites] = useState<InviteWithOrg[]>([])
   const [pendingRequests, setPendingRequests] = useState<RequestWithOrg[]>([])
@@ -45,83 +46,65 @@ export function PersonalSettings() {
   const fetchData = useCallback(async () => {
     if (!user) return
 
-    // Fetch user's profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name, is_private, avatar_url')
-      .eq('id', user.id)
-      .single()
+    try {
+      // Fetch user's profile
+      const profile = await api.getProfile(user.id)
 
-    if (profile) {
-      setDisplayName(profile.display_name || '')
-      setIsPrivate(profile.is_private || false)
-      setAvatarUrl(profile.avatar_url || null)
-    }
+      if (profile) {
+        setDisplayName(profile.display_name || '')
+        setIsPrivate(profile.is_private || false)
+        setAvatarUrl(profile.avatar_url || null)
+      }
 
-    // Fetch user's organisations
-    const { data: memberships } = await supabase
-      .from('organisation_members')
-      .select('id, role, organisation_id, organisations(*)')
-      .eq('user_id', user.id)
+      // Fetch user's organisations
+      const memberships = await api.getUserMemberships(user.id, true)
 
-    if (memberships) {
-      const userOrgs: OrgWithRole[] = memberships.map((m) => ({
-        ...(m.organisations as Organisation),
-        role: m.role as 'admin' | 'member',
-        membershipId: m.id,
-      }))
-      setOrgs(userOrgs)
-    }
+      if (memberships) {
+        const userOrgs: OrgWithRole[] = memberships.map((m) => ({
+          ...(m.organisation as Organisation),
+          role: m.role as 'admin' | 'member',
+          membershipId: m.id,
+        }))
+        setOrgs(userOrgs)
+      }
 
-    // Fetch pending invites for user's email
-    const { data: invitesData } = await supabase
-      .from('organisation_invites')
-      .select('*, organisations(*)')
-      .eq('email', user.email ?? '')
+      // Fetch pending invites for user's email
+      const invitesData = await api.getInvitesForEmail(user.email ?? '')
 
-    if (invitesData) {
-      // Fetch inviter profiles
-      const inviterIds = invitesData.map(i => i.invited_by)
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', inviterIds)
+      if (invitesData) {
+        // Fetch inviter profiles
+        const inviterIds = invitesData.map(i => i.invited_by)
+        const profiles = await api.getProfiles(inviterIds)
 
-      const invitesWithOrgs: InviteWithOrg[] = invitesData.map((i) => ({
-        ...i,
-        organisation: i.organisations as Organisation | null,
-        inviter: profiles?.find(p => p.id === i.invited_by) || null,
-      }))
-      setInvites(invitesWithOrgs)
-    }
+        const invitesWithOrgs: InviteWithOrg[] = invitesData.map((i) => ({
+          ...i,
+          organisation: (i.organisation as Organisation | undefined) ?? null,
+          inviter: (profiles?.find(p => p.id === i.invited_by) as Profile | undefined) || null,
+        }))
+        setInvites(invitesWithOrgs)
+      }
 
-    // Fetch pending join requests
-    const { data: requestsData } = await supabase
-      .from('organisation_requests')
-      .select('*, organisations(*)')
-      .eq('user_id', user.id)
+      // Fetch pending join requests
+      const requestsData = await api.getUserRequests(user.id)
 
-    if (requestsData) {
-      const requestsWithOrgs: RequestWithOrg[] = requestsData.map((r) => ({
-        ...r,
-        organisation: r.organisations as Organisation | null,
-      }))
-      setPendingRequests(requestsWithOrgs)
+      if (requestsData) {
+        const requestsWithOrgs: RequestWithOrg[] = requestsData.map((r) => ({
+          ...r,
+          organisation: (r.organisation as Organisation | undefined) ?? null,
+        }))
+        setPendingRequests(requestsWithOrgs)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load settings')
     }
 
     setLoading(false)
   }, [user])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    getUser().then((u) => {
+      setUser(u)
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
@@ -138,15 +121,11 @@ export function PersonalSettings() {
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ display_name: displayName })
-      .eq('id', user.id)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.updateProfile({ display_name: displayName })
       setSuccess({ text: 'Name updated' })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update name')
     }
     setSaving(false)
   }
@@ -160,16 +139,12 @@ export function PersonalSettings() {
 
     const newValue = !isPrivate
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_private: newValue })
-      .eq('id', user.id)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.updateProfile({ is_private: newValue })
       setIsPrivate(newValue)
       setSuccess({ text: newValue ? 'Account set to private' : 'Account set to public' })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update privacy')
     }
     setSavingPrivacy(false)
   }
@@ -179,9 +154,10 @@ export function PersonalSettings() {
 
     const file = e.target.files[0]
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
+    // Validate file type. The server only stores formats it can verify by magic
+    // bytes, so check the same list here rather than any image/* type.
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setError('Please select a JPEG, PNG, WebP or GIF image')
       return
     }
 
@@ -196,34 +172,12 @@ export function PersonalSettings() {
     setSuccess(null)
 
     try {
-      // Get file extension
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const filePath = `${user.id}/avatar.${ext}`
-
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true })
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath)
+      // Upload to R2 (throws on failure), returns the /api/media URL
+      const publicUrl = await uploadAvatar(file)
 
       // Update profile with avatar URL (add cache buster)
       const avatarUrlWithCache = `${publicUrl}?t=${Date.now()}`
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrlWithCache })
-        .eq('id', user.id)
-
-      if (updateError) {
-        throw updateError
-      }
+      await api.updateProfile({ avatar_url: avatarUrlWithCache })
 
       setAvatarUrl(avatarUrlWithCache)
       setSuccess({ text: 'Profile picture updated' })
@@ -244,15 +198,14 @@ export function PersonalSettings() {
     setSuccess(null)
 
     try {
-      // Update profile to remove avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: null })
-        .eq('id', user.id)
-
-      if (updateError) {
-        throw updateError
+      // Delete the object from R2 — never block clearing the field on this
+      const name = avatarUrl.split('?')[0].split('/').pop()
+      if (name) {
+        await deleteAvatar(name).catch(() => {})
       }
+
+      // Update profile to remove avatar URL
+      await api.updateProfile({ avatar_url: null })
 
       setAvatarUrl(null)
       setSuccess({ text: 'Profile picture removed' })
@@ -269,16 +222,12 @@ export function PersonalSettings() {
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_members')
-      .delete()
-      .eq('id', membershipId)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.removeOrgMember(membershipId)
       setSuccess({ text: `Left ${orgName}` })
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to leave ${orgName}`)
     }
   }
 
@@ -289,24 +238,19 @@ export function PersonalSettings() {
     setSuccess(null)
 
     // Add user as member
-    const { error: memberError } = await supabase
-      .from('organisation_members')
-      .insert({
+    try {
+      await api.addOrgMember({
         organisation_id: invite.organisation_id,
         user_id: user.id,
         role: 'member',
       })
 
-    if (memberError) {
-      setError(memberError.message)
+      // Delete the invite
+      await api.deleteInvite(invite.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to accept invite')
       return
     }
-
-    // Delete the invite
-    await supabase
-      .from('organisation_invites')
-      .delete()
-      .eq('id', invite.id)
 
     // Note: Review visibility is now derived from org membership,
     // so user's reviews are automatically visible to this org
@@ -319,16 +263,12 @@ export function PersonalSettings() {
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_invites')
-      .delete()
-      .eq('id', inviteId)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.deleteInvite(inviteId)
       setSuccess({ text: 'Invite declined' })
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to decline invite')
     }
   }
 
@@ -341,20 +281,18 @@ export function PersonalSettings() {
     setSearching(true)
     setError(null)
 
-    const { data, error: searchError } = await supabase
-      .from('organisations')
-      .select('*')
-      .ilike('name', `%${searchQuery}%`)
-      .limit(10)
+    try {
+      const data = await api.searchOrgs(searchQuery)
 
-    if (searchError) {
-      setError(searchError.message)
-    } else if (data) {
-      // Filter out orgs user is already a member of or has pending request for
-      const orgIds = new Set(orgs.map(o => o.id))
-      const requestOrgIds = new Set(pendingRequests.map(r => r.organisation_id))
-      const filtered = data.filter(o => !orgIds.has(o.id) && !requestOrgIds.has(o.id))
-      setSearchResults(filtered)
+      if (data) {
+        // Filter out orgs user is already a member of or has pending request for
+        const orgIds = new Set(orgs.map(o => o.id))
+        const requestOrgIds = new Set(pendingRequests.map(r => r.organisation_id))
+        const filtered = data.filter(o => !orgIds.has(o.id) && !requestOrgIds.has(o.id))
+        setSearchResults(filtered as Organisation[])
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Search failed')
     }
 
     setSearching(false)
@@ -366,19 +304,13 @@ export function PersonalSettings() {
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_requests')
-      .insert({
-        organisation_id: org.id,
-        user_id: user.id,
-      })
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.createOrgRequest(org.id)
       setSuccess({ text: `Requested to join ${org.name}` })
       setSearchResults(searchResults.filter(o => o.id !== org.id))
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to request to join ${org.name}`)
     }
   }
 
@@ -386,16 +318,12 @@ export function PersonalSettings() {
     setError(null)
     setSuccess(null)
 
-    const { error } = await supabase
-      .from('organisation_requests')
-      .delete()
-      .eq('id', requestId)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await api.deleteOrgRequest(requestId)
       setSuccess({ text: `Cancelled request to join ${orgName}` })
       fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to cancel request to join ${orgName}`)
     }
   }
 
@@ -414,29 +342,24 @@ export function PersonalSettings() {
       .replace(/^-|-$/g, '')
 
     // Create the organisation
-    const { data: newOrg, error: orgError } = await supabase
-      .from('organisations')
-      .insert({ name: newOrgName.trim(), slug })
-      .select()
-      .single()
-
-    if (orgError) {
-      setError(orgError.message)
+    let newOrg: api.Organisation
+    try {
+      newOrg = await api.createOrg({ name: newOrgName.trim(), slug })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create organisation')
       setCreatingOrg(false)
       return
     }
 
     // Add current user as admin
-    const { error: memberError } = await supabase
-      .from('organisation_members')
-      .insert({
+    try {
+      await api.addOrgMember({
         organisation_id: newOrg.id,
         user_id: user.id,
         role: 'admin',
       })
-
-    if (memberError) {
-      setError(memberError.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add you as admin')
       setCreatingOrg(false)
       return
     }
@@ -554,7 +477,7 @@ export function PersonalSettings() {
                   {uploadingAvatar ? 'Uploading...' : 'Upload image'}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={handleAvatarUpload}
                     disabled={uploadingAvatar}
                     style={{ display: 'none' }}
@@ -897,24 +820,9 @@ export function PersonalSettings() {
 
                   try {
                     setError(null)
-                    // Delete user data in order (reviews → org memberships → follows → profile)
-                    if (user) {
-                      await supabase.from('review_tags').delete().in(
-                        'review_id',
-                        (await supabase.from('reviews').select('id').eq('user_id', user.id)).data?.map(r => r.id) || []
-                      )
-                      await supabase.from('reviews').delete().eq('user_id', user.id)
-                      await supabase.from('organisation_members').delete().eq('user_id', user.id)
-                      await supabase.from('organisation_requests').delete().eq('user_id', user.id)
-                      await supabase.from('user_follows').delete().eq('follower_id', user.id)
-                      await supabase.from('user_follows').delete().eq('following_id', user.id)
-                      await supabase.from('follow_requests').delete().eq('requester_id', user.id)
-                      await supabase.from('follow_requests').delete().eq('target_id', user.id)
-                      await supabase.from('push_tokens').delete().eq('user_id', user.id)
-                      await supabase.from('profiles').delete().eq('id', user.id)
-                    }
-                    // Sign out (actual auth.users row deletion requires admin/server-side)
-                    await supabase.auth.signOut()
+                    // Server deletes all user data in the correct order
+                    await api.deleteAccount()
+                    await signOut()
                     window.location.href = '/'
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Failed to delete account')

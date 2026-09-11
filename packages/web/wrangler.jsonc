@@ -1,6 +1,10 @@
 {
 	"main": "dist/_worker.js/index.js",
-	"name": "a-very-opinionated-food-review",
+	// Renaming this creates a NEW Worker on deploy — it does not rename the
+	// existing one. The tastefull.io custom domain and the Worker secrets live on
+	// the old `a-very-opinionated-food-review` Worker and must be moved across as
+	// part of the cutover.
+	"name": "tastefull",
   "compatibility_date": "2026-01-22",
   "compatibility_flags": [
     "nodejs_compat",
@@ -10,6 +14,12 @@
 		"binding": "ASSETS",
 		"directory": "./dist"
 	},
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "tastefull-media"
+    }
+  ],
 	"observability": {
     "enabled": true
   }

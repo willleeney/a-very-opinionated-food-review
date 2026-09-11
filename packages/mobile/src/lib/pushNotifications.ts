@@ -1,8 +1,31 @@
 import { PushNotifications } from '@capacitor/push-notifications'
 import { Capacitor } from '@capacitor/core'
-import { supabase } from '@tastefull/shared/lib/supabase'
 
-export async function registerPushNotifications(userId: string) {
+// The mobile app is not served from the same origin as the API, so requests
+// need an absolute base URL — same mechanism as the Better Auth client.
+const API_BASE = import.meta.env.VITE_AUTH_URL || import.meta.env.VITE_API_URL || ''
+
+async function savePushToken(token: string, platform: 'ios' | 'android') {
+  const res = await fetch(`${API_BASE}/api/data/push-tokens`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ token, platform }),
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
+
+async function deletePushTokens() {
+  const res = await fetch(`${API_BASE}/api/data/push-tokens`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({}),
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
+
+export async function registerPushNotifications() {
   if (!Capacitor.isNativePlatform()) return
 
   const permission = await PushNotifications.requestPermissions()
@@ -11,15 +34,7 @@ export async function registerPushNotifications(userId: string) {
   await PushNotifications.register()
 
   PushNotifications.addListener('registration', async ({ value: token }) => {
-    // Save token to Supabase
-    await supabase.from('push_tokens').upsert(
-      {
-        user_id: userId,
-        token,
-        platform: Capacitor.getPlatform() as 'ios' | 'android',
-      },
-      { onConflict: 'user_id,token' },
-    )
+    await savePushToken(token, Capacitor.getPlatform() as 'ios' | 'android')
   })
 
   PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
@@ -31,9 +46,9 @@ export async function registerPushNotifications(userId: string) {
   })
 }
 
-export async function unregisterPushNotifications(userId: string) {
+export async function unregisterPushNotifications() {
   if (!Capacitor.isNativePlatform()) return
 
   // Remove all tokens for this user
-  await supabase.from('push_tokens').delete().eq('user_id', userId)
+  await deletePushTokens()
 }
