@@ -78,7 +78,7 @@ export const ALL: APIRoute = (context) =>
 
       if (method === 'PUT') {
         if (!user) return error('Unauthorized', 401)
-        if (!body?.id || !body?.name) return error('id and name are required')
+        if (!body?.id) return error('id is required')
 
         const { rows: admin } = await pool.query(
           'SELECT 1 FROM organisation_members WHERE organisation_id = $1 AND user_id = $2 AND role = $3',
@@ -86,9 +86,52 @@ export const ALL: APIRoute = (context) =>
         )
         if (admin.length === 0) return error('Not an admin of this organisation', 403)
 
+        // Partial update: only touch the fields actually sent, so saving a
+        // homebase cannot blank the name and vice versa.
+        const updates: string[] = []
+        const values: unknown[] = []
+
+        if (body.name !== undefined) {
+          if (typeof body.name !== 'string' || !body.name.trim()) {
+            return error('name cannot be empty')
+          }
+          values.push(body.name.trim())
+          updates.push(`name = $${values.length}`)
+        }
+
+        if (body.office_location !== undefined) {
+          const loc = body.office_location
+          if (loc !== null) {
+            // Existing rows carry a human-readable name and address alongside the
+            // coordinates, so keep them rather than reducing the value to {lat,lng}.
+            const { lat, lng, name, address } = (loc ?? {}) as {
+              lat?: unknown; lng?: unknown; name?: unknown; address?: unknown
+            }
+            if (
+              typeof lat !== 'number' || typeof lng !== 'number' ||
+              Number.isNaN(lat) || Number.isNaN(lng) ||
+              Math.abs(lat) > 90 || Math.abs(lng) > 180
+            ) {
+              return error('office_location must be {lat, lng} or null')
+            }
+            values.push(JSON.stringify({
+              lat,
+              lng,
+              ...(typeof name === 'string' && name ? { name } : {}),
+              ...(typeof address === 'string' && address ? { address } : {}),
+            }))
+          } else {
+            values.push(null)
+          }
+          updates.push(`office_location = $${values.length}`)
+        }
+
+        if (updates.length === 0) return error('No updatable fields provided')
+
+        values.push(body.id)
         const { rows } = await pool.query(
-          'UPDATE organisations SET name = $1 WHERE id = $2 RETURNING *',
-          [body.name, body.id]
+          `UPDATE organisations SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`,
+          values
         )
         if (rows.length === 0) return error('Organisation not found', 404)
         return json(rows[0])

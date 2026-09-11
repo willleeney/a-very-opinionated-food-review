@@ -427,6 +427,10 @@ export type OrganisationWithMembership = Organisation & {
 export type OfficeLocation = {
   lat: number
   lng: number
+  /** Human-readable label, e.g. "Runway East". Present on existing rows. */
+  name?: string | null
+  /** e.g. "20 St Thomas St, SE1 9RS". Present on existing rows. */
+  address?: string | null
 }
 
 // Social filter type

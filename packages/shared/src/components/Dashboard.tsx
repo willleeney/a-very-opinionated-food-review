@@ -879,11 +879,20 @@ export function Dashboard({ organisationSlug }: DashboardProps) {
   const activeOrg = socialFilter !== 'everyone' && socialFilter !== 'following' && socialFilter !== 'just_me'
     ? userOrgs.find(o => o.slug === socialFilter)
     : null
+  // Falls back to the user's own org homebase so the global view opens over
+  // wherever they actually eat, rather than the hardcoded London Bridge default.
+  // A remembered map position still takes precedence over this.
+  const homeOrg = userOrgs.find(o => o.office_location) ?? null
+  const homeOrgLocation = (homeOrg?.office_location ?? null) as OfficeLocation | null
   const activeOfficeLocation = currentOrg?.office_location as OfficeLocation | null
     || (activeOrg?.office_location as OfficeLocation | null)
     || officeLocation
-  const activeOrgName = currentOrg?.name || activeOrg?.name || null
-  const showOffice = !!currentOrg || !!activeOrg
+    || homeOrgLocation
+  const activeOrgName = currentOrg?.name || activeOrg?.name || homeOrg?.name || null
+  // Show the marker whenever there is a homebase to show. Previously this was
+  // gated on being in an org context, so on the global view the map centred on
+  // the homebase but drew no pin for it.
+  const showOffice = !!activeOfficeLocation
 
   // Helper to check if a review is visible (for stats calculation)
   // Same logic as isReviewVisible - based on profile privacy
