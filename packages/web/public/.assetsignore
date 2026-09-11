@@ -1,0 +1,3 @@
+# Astro emits the SSR bundle into dist/_worker.js, which is also the assets
+# directory. Without this, wrangler uploads server code as a public asset.
+_worker.js
