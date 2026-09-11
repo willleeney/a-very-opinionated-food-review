@@ -17,8 +17,8 @@
     "@tastefull/shared": "workspace:*",
     "astro": "^5.16.13",
     "better-auth": "^1.7.3",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
