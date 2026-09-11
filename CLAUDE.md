@@ -123,14 +123,16 @@ The following agent skills are installed for iOS release automation:
 ### Map Integration
 - Click marker to see details in popup
 - "View on map" button in table scrolls to map and highlights
-- Draggable markers for editing locations (with save confirmation)
-- Office location is editable (stored in settings table)
+- Markers are read-only. Coordinates come solely from the Google Places result
+  chosen in Add Place — there is no drag-to-move and no click-to-place, so there
+  is deliberately no server route for updating a restaurant's location.
+- Office location is read-only in the UI (`organisations.office_location`)
 
 ### Forms
 - Inline where possible (reviews in expanded row)
-- Modal for complex forms (adding new place with geocoding)
-- Address lookup via OpenStreetMap Nominatim API
-- Click-to-place fallback on map
+- Modal for complex forms (adding new place)
+- Place lookup via the Google Places autocomplete API, which supplies the
+  coordinates directly
 
 ## Layout
 
@@ -336,7 +338,7 @@ Auto-deploys to Cloudflare Workers via GitHub Actions on push to master.
 
 - `src/styles/global.css` - All design tokens and component styles
 - `src/components/Dashboard.tsx` - Main page component
-- `src/components/MapView.tsx` - Leaflet map with editable markers
+- `src/components/MapView.tsx` - Leaflet map (read-only markers)
 - `src/components/AddReview.tsx` - New place form with geocoding
 - `src/lib/distance.ts` - Haversine distance calculation
 - `src/lib/store.ts` - Zustand filter state

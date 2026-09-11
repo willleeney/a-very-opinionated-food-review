@@ -359,6 +359,14 @@ section {
   padding-bottom: 60px;
 }
 
+/* .container uses `margin: 0 auto`, and auto cross-axis margins beat the
+   default `align-items: stretch`. As a flex item it therefore shrank to fit its
+   text and centred itself, so the hero sat indented while every other
+   .container on the page started at the gutter. Force it to fill the row. */
+.hero > .container {
+  width: 100%;
+}
+
 /* Stats - minimal */
 .stat {
   text-align: center;
